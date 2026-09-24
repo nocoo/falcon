@@ -16,7 +16,7 @@
 
 响应根包含实际 `model`、按 question ID 对应的 `answers`、`usage.input_tokens/output_tokens`。显示 requested model 和 resolved model，避免 `jev-latest` 升级后历史混淆。上游错误可包括 401、422、429、529；未记录的其他 HTTP 状态同样需正确转发。
 
-首版支持这三种题型，不猜测未知题型。局部验证不应发明官方未声明的 token 限额或固定题数。未知请求顶层字段明确 422，不能静默丢弃；结构内 JSON 原样保留。
+首版支持这三种题型，不猜测未知题型。局部验证不应发明官方未声明的 token 限额或固定题数。严格校验已知必需字段、已知字段的类型和大小边界；未知顶层字段及 question 附加字段作为 JSON 原样保留并透传，由上游决定是否支持。官方 SDK 的 `extra_body` 与原始 question 字典扩展不能被本地静默丢弃或先行 422。未知字段不具有 Falcon 路由、鉴权或 profile 覆写权限。
 
 响应成功校验：question ID 集合一致、type 匹配；Choice winner 属于 criteria，probability key 集合一致，值有限且在 [0,1]，总和容差 0.02；confidence 在 [0,1]；Noul 在 [0,1]；Score 的 legend / probabilities 等级对应请求，score 在合法范围。容差仅用于接纳文档示例中的舍入，不重归一化、不修改返回值；非法响应存原文并标记 invalid_response，返回本地 502。usage 缺失或不完整则保留 nullable 并提示协议异常，不制造 token。
 
@@ -61,13 +61,15 @@ HTTP 请求的 `model` 必填；官方 SDK会带默认 model。MCP 可省略 mod
 
 使用官方 Swift SDK 0.12.1 与 2025-11-25 Streamable HTTP 语义。支持 `initialize`、`notifications/initialized`、`ping`、`tools/list`、`tools/call`；声明 tools capability，不声明 resources、prompts、subscriptions 或后台 tasks。
 
-只有一个工具 `jev_decide`：参数 `{state, questions, model?}`，三类 question 使用 JSON Schema `oneOf` 和 discriminator；根与题级 `additionalProperties: false`，允许原本可结构化字段中的任意合法 JSON。工具说明强调模型输出不等于执行许可。
+只有一个工具 `jev_decide`：参数以 `{state, questions, model?}` 为已知字段，三类 question 使用 JSON Schema `oneOf`，以 `type` 的 const 区分；根与题级允许附加 JSON 字段，已知必需字段仍严格验证。工具的 arguments 映射为有效上游 JSON，附加字段全部保留；JSON-RPC 的 id/method 等外层协议字段不转发。工具说明强调模型输出不等于执行许可。
 
 成功 `CallToolResult.structuredContent` 为 `{request_id, response}`，response 是上游完整 JSON；`content` 同时带同一对象的 JSON 文本以供客户端读取。`isError=false`，输出 schema 明确这层包装。业务失败返回 `isError=true` 与 `{request_id?, error:{origin, code, message, retryable, outcome_unknown}}`。MCP 协议错误（无效方法/参数）使用 JSON-RPC error；HTTP 认证失败在协议之外返回 401/403，不能假装是工具结果。
 
-正常请求客户端发送 `Accept: application/json, text/event-stream`；服务采用 application/json 响应；notification 返回 202 空体，GET / DELETE 405，不创建 Mcp-Session-Id。初始化协商版本；后续校验 `MCP-Protocol-Version`；不支持版本返回 400。未带版本头按规范兼容规则由 SDK处理，不复制自制协商逻辑。
+正常请求客户端发送 `Accept: application/json, text/event-stream`；服务采用 application/json 响应；notification 返回 202 空体，GET / DELETE 405，不创建 Mcp-Session-Id。initialize 在该 POST 内按 SDK 支持集合协商版本并返回，由客户端保存；后续每个 POST 独立校验 `MCP-Protocol-Version` 是否属于支持集合，不支持则 400。缺少版本头按规范视为 2025-03-26，再按 SDK 支持集合判定。不保存客户端先前协商值，因此不宣称检测了“当前头与该客户端先前协商版本一致”；请求 key 认证与版本支持检查每次都执行。
 
-**并发隔离**：SDK 的 stateless transport 以 JSON-RPC id 关联 waiter。不同客户端可能同时使用 id=1，不能共用一个全局 transport。每个 HTTP POST 使用独立 server/transport 上下文（共享只含业务的 DecisionService），注册相同工具后处理一次请求，结束或超时必定 disconnect；来源身份来自该 HTTP 上下文，不用全局 currentSource。该无状态模式的初始化跨 POST 行为、资源回收与实际客户端互操作必须在实现第一阶段验证，未验证不能宣称 MCP 已可用。
+**并发隔离与生命周期**：SDK 的 stateless transport 以 JSON-RPC id 关联 waiter。不同客户端可能同时使用 id=1，不能共用一个全局 transport。每个 HTTP POST 使用独立 server/transport 上下文（共享只含业务的 DecisionService），显式采用 `Server.Configuration.default`（0.12.1 为 `strict=false`），注册相同工具后处理一次请求，结束或超时必定 disconnect。不得在这种每请求实例模式下开启 strict，否则后续 tools/list、tools/call 会被新实例当成未初始化。来源身份来自该 HTTP 上下文，不用全局 currentSource。
+
+这是有限能力的无状态 MCP server：客户端按标准执行 initialize → initialized → list/call，但服务不跨 POST 保存初始化状态、clientInfo/capabilities 或证明先前已初始化，不发起依赖客户端 capabilities 的请求。来源归属依然由每次 key 决定，metadata 只能逐次自报。首阶段必须用实际标准客户端跑完整跨 POST 序列、两客户端同 id 并发与 disconnect 清理；这是该架构能否进入下一层的退出条件，未通过则修订设计，不留作上线后的已知缺陷。
 
 首版不支持跨 POST 的取消追踪/恢复会话，不宣称处理了客户端断开即取消推理；已有推理直到响应或 30 秒截止，结果仍归入记录。notification cancellation 可被协议接收但属于 best effort，不承诺取消上游。transport 任务超时必须释放 waiter。
 

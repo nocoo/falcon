@@ -42,6 +42,7 @@
 | --- | --- |
 | [MCP Swift SDK 0.12.1](https://github.com/modelcontextprotocol/swift-sdk/tree/0.12.1) | tag SHA `a0ae212ebf6eab5f754c3129608bc5557637e605`；Package.swift 要求 Swift tools 6.1 |
 | [StatelessHTTPServerTransport](https://github.com/modelcontextprotocol/swift-sdk/blob/0.12.1/Sources/MCP/Base/Transports/HTTPServer/StatelessHTTPServerTransport.swift) | 已读源码：JSON response、无 SSE/session、GET/DELETE 405、notification 202；waiter 以 RPC id 索引，因此文档要求每 HTTP 请求隔离实例 |
+| [MCP Server](https://github.com/modelcontextprotocol/swift-sdk/blob/0.12.1/Sources/MCP/Server/Server.swift) | 独立审阅后补查：Configuration.default 为 strict=false；strict 的初始化状态属于实例。设计明确逐 POST 版本支持校验，不宣称保存跨 POST 协商状态 |
 | [MCP transport specification](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports) | Origin 校验、loopback、认证、Accept、协议头、GET 405 合法；连接断开不等价取消 |
 | [Hummingbird](https://github.com/hummingbird-project/hummingbird) | 已读 README：SwiftNIO HTTP server、loopback 绑定、路由与生命周期；尚未构建 Falcon 适配 |
 | [GRDB](https://github.com/groue/GRDB.swift) | 已读 Package.swift，系统 SQLite、Swift API；尚未确定并锁定与其他依赖兼容的发布版本 |

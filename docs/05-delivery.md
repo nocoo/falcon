@@ -22,12 +22,12 @@ UI 主题与原生布局从第 1 层生效，第 4 层负责全状态精修；�
 
 | 类别 | 必须覆盖的失败或边界 |
 | --- | --- |
-| Jev 契约 | 三类题、结构化 instructions/criteria、255 Choice、Score 2/10 级、批量独立题、未知/缺失 answer、错误类型、NaN/非法概率、缺 usage、resolved model |
-| 代理认证 | 错 key/撤销/禁用、每次请求重新认证、轮换在途快照、不转发内部 key、客户端身份伪报、Host/Origin、redirect 与 key 出站边界 |
-| MCP | initialize / initialized / ping / list / call、版本协商、202 notification、GET/DELETE 405、错误映射、同 id 多客户端并发、waiter 清理、每请求上下文生命周期 |
+| Jev 契约 | 三类题、结构化 instructions/criteria、255 Choice、Score 2/10 级、批量独立题、extra_body/附加 question 字段透传、未知/缺失 answer、错误类型、NaN/非法概率、缺 usage、resolved model |
+| 代理认证 | 错 key/撤销/禁用、每次请求重新认证、并发更换 URL+key 的整体快照、配置提交失败、旧凭据在途引用回收、不转发内部 key、客户端身份伪报、Host/Origin、redirect 与 key 出站边界 |
+| MCP | 标准客户端跨 POST 的 initialize / initialized / ping / list / call 全序列、独立版本头校验、202 notification、GET/DELETE 405、错误映射、同 id 多客户端并发、waiter 清理、显式宽松模式与实例生命周期 |
 | HTTP | 每一 endpoint/method；分块/超长 body、错误 Content-Type/Encoding、断开、deadline、并发超额、未配置与 pause |
 | 存储 | 写入失败不调用上游、响应写入失败但上游已执行、重启 interrupted、事务原子性、列表游标同时间稳定性、归档/重命名不破坏历史 |
-| 留存 | 恰好 168h、到期详情清空、唤醒清理、questions/reviews 级联、清理后统计、WAL checkpoint、满盘不提前删未到期数据、手动清空与迟到回调竞争 |
+| 留存 | 恰好 168h、三份原文与 questions/reviews 级联、到期详情清空、唤醒清理、清理后统计、WAL checkpoint/页回收、8 个并发请求的容量原子预留/单次释放、满盘不提前删未到期数据、手动清空与迟到回调竞争 |
 | 统计 | 请求/题/token 不重复、未知不补零、成功率分母、精确 p95、低样本、跨时区/夏令时、同名不同题指纹不混合 |
 | UI | 首次配置、第一条请求、筛选与钻取、review 草稿切换、复制/导出、轮换/撤销、错误恢复、保留滚动与选中、键盘和 VoiceOver |
 
