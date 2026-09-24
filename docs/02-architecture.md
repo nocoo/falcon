@@ -66,6 +66,14 @@ HTTP 和 MCP 只负责协议映射；业务管线不依赖 SwiftUI。UI 直接�
 
 **交付状态独立**：`succeeded` 只表示 Jev 成功且记录成功；HTTP 写回失败另存 `delivery=failed/unknown`。正常写回也仅是 `delivery=written`，不声称 Agent 已读取或执行。
 
+### 回看所需的时间事实
+
+每条 request 以 HTTP 请求头接收时的 UTC `received_at` 和内存中的单调时钟为起点。持久化相对起点的毫秒 offset：`upstream_started_ms`、`response_received_ms`（上游 body 完整收到）、`terminal_ms`（校验/处理结束，终态事务提交前）、`delivery_finished_ms`（本地响应写回完成）。实际未发生或无法确认的阶段为 null；崩溃恢复不以恢复时刻补写历史终点。
+
+前三个可用 offset 与终态/原文一起提交。返回完成只能在写回结束后另做有界的元数据更新，失败时保留已提交的响应与 unknown delivery/timing，不能把缺失值当零，也不因此重新发上游。`terminal_ms` 不含最后一次审计提交及下游写回，UI 将其标为“代理处理耗时”；`delivery_finished_ms` 才是“返回总耗时”，也仅证明本地写回完成。返回时刻从 received_at + offset 推导并标明本机观测，墙钟变化时附异常标记。
+
+本地准备 = upstream_started_ms；上游往返 = response_received_ms − upstream_started_ms；收尾处理 = terminal_ms − response_received_ms；处理总耗时 = terminal_ms；返回总耗时 = delivery_finished_ms。差值仅在两端存在时计算；上游等待含网络与服务处理，不标成 Jev 内部推理耗时。批量问题共用 request 时间，不分摊出逐题耗时。回放只消费这些字段，规则见 [08](08-review-playback.md)。
+
 ## 数据模型
 
 | 表 / 实体 | 关键字段与规则 |
@@ -73,7 +81,7 @@ HTTP 和 MCP 只负责协议映射；业务管线不依赖 SwiftUI。UI 直接�
 | `upstream_profiles` | UUID、名称、base URL、default model、keychain reference、revision、enabled；不保存明文 key |
 | `sources` | UUID、名称、profile ID、enabled、archived、created_at；source ID 永不复用 |
 | `source_keys` | UUID、source ID、token digest、display suffix、created_at、revoked_at；同一来源只有一把 active key |
-| `requests` | UUID、source/key ID、来源名称快照、profile ID/revision/base URL 快照、transport、caller metadata、received_at、expires_at、status、delivery、requested/resolved model、三段耗时、HTTP 状态、错误分类、token nullable、`received_request` / `effective_request` / `upstream_response` 三个独立 BLOB |
+| `requests` | UUID、source/key ID、来源名称快照、profile ID/revision/base URL 快照、transport、caller metadata、received_at、expires_at、status、delivery、requested/resolved model、四个 nullable 阶段 offset、HTTP 状态、错误分类、token nullable、`received_request` / `effective_request` / `upstream_response` 三个独立 BLOB |
 | `questions` | request ID + question ID 联合主键，type、结果摘要、confidence nullable、top probability、margin nullable；用于筛选的投影，不重复保存 state |
 | `reviews` | request ID 唯一外键、state、note、updated_at；与 request 级联删除 |
 
@@ -88,7 +96,7 @@ HTTP 和 MCP 只负责协议映射；业务管线不依赖 SwiftUI。UI 直接�
 ## 七天留存与容量
 
 - `expires_at = received_at + 604800 秒`，UTC 持久化；用户 UI 使用本地时区。这里是滚动 168 小时，不是七个日历日。
-- 每次列表、详情、搜索、统计和导出都强制 `expires_at > now`。恰好到期即不可见；已打开详情到期时清空并显示已过期。request、questions、review 同生命周期，无永久汇总绕过留存。
+- 每次列表、详情、搜索、统计、导出和回放都强制 `expires_at > now`，这里的 now 永远是当前真实时钟，不是回放游标。恰好到期即不可见；已打开详情及回放缓存到期时清空并显示已过期。request、questions、review 同生命周期，无永久汇总绕过留存。
 - 启动、唤醒和每分钟清理批量删除过期记录；清理失败进入存储故障，不继续积累调用。睡眠/退出期间无法物理删除，恢复后先清理再服务。
 - SQLite 启用 secure delete；清理后在无长事务时 checkpoint WAL 并 truncate。控制读事务寿命，防止旧页在 WAL 长期保留。说明这是应用逻辑清理，不保证 SSD、快照或用户外部备份的物理擦除。
 - 数据目录 `~/Library/Application Support/Falcon/`，目录 0700、DB / WAL / SHM 0600，排除系统备份；只操作自己的目录。正文默认本地明文存储，依赖当前用户权限与系统磁盘保护，不声称有应用级加密。
@@ -111,7 +119,7 @@ HTTP 和 MCP 只负责协议映射；业务管线不依赖 SwiftUI。UI 直接�
 | 错误率 | 所选已终结请求中失败数 / 已终结请求数；UI 给分母，运行中单列 |
 | 上游成功率 | 成功响应数 / 已转发且已终结数；本地拒绝不进入分母 |
 | Token | 对有 usage 的 request 分别求 input/output 和；标注 usage 未知的请求数，不按题拆分 |
-| 耗时 | local-prep、upstream、total 分开；p50/p95 用已完成调用的 total，最近秩法 `ceil(p*n)`，显示样本数；不平均各来源 percentile |
+| 耗时 | 本地准备、上游往返、收尾、处理总耗时和返回总耗时分别标注；默认 p50/p95 用已终态且 terminal_ms 已知的处理总耗时，返回视图只用 delivery=written 且 delivery_finished_ms 已知的样本，明确名称、分母及缺失数；最近秩法 `ceil(p*n)`，不平均各来源 percentile |
 | 置信度 | 只统计返回合法 confidence 的 Choice / Score，按题计数；Noul 单独展示 yes 概率 |
 | 决策分布 | 只对同题型、同 instructions/criteria 内容指纹的题分组，避免同名 question ID 语义混淆 |
 | 金额 | 首版不显示伪精确费用；官方账单未接入，只展示 token。后续有明确费率与版本才做“估算” |

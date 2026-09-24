@@ -10,34 +10,35 @@ Showtime 可借鉴的是统一 theme、柔和表面、细边线和 240 ms 的受
 
 ## 单窗口信息架构
 
-窗口建议初始 1280 × 820 pt、最小 980 × 640 pt。统一原生标题栏、交通灯、toolbar，保留拖动、全屏与系统窗口恢复。Sidebar 为 184–224 pt；决定列表和详情的分隔线可拖拽。设置与关于在同一个窗口，系统文件选择和破坏性确认采用 sheet。
+决策回看占据主要空间。窗口建议初始 1600 × 1000 pt，启动时按当前屏幕可用区域缩放，最小目标 1120 × 720 pt；不得超出屏幕。统一原生标题栏、交通灯、toolbar，保留拖动、全屏与窗口恢复。导航侧栏 160–184 pt，请求列表 260–320 pt，剩余宽度全部交给详情；两者均可独立收起。设置与关于在同一窗口，系统文件选择和破坏性确认采用 sheet。
+
+默认 1600 pt 布局下详情净宽目标至少 1000 pt，正文占工作区可用高度至少 70%。`Focus review` 一键收起导航和请求列表，保留紧凑来源/时间筛选、上一条/下一条及回放控制；退出后恢复列宽、选中项和滚动位置。不能让大标题、统计卡片或常驻空面板挤占阅读区。大屏展开更多正文，不能只把留白拉宽。
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ ● ● ●   Falcon     ● Running · 127.0.0.1:19823       Search         Pause   │
-├──────────────┬──────────────────────────────────────────────────────────────┤
-│ Decisions    │ Last 24h   All sources   All outcomes    Review: All        │
-│ Usage        │ 842 requests   2,314 questions   96.8% success   p95 1.2s   │
-│ Sources      ├──────────────────────┬───────────────────────────────────────┤
-│ Connections  │ 14:32:08  Codex      │ Codex / Falcon · 3 questions         │
-│              │ proceed · 0.82       │ Completed  1.08s  412 in / 57 out    │
-│              │                      ├───────────────────────────────────────┤
-│              │ 14:31:55  Pi         │ State  ·  Questions  ·  Raw           │
-│              │ local · 0.63         │ { task, facts, constraints ... }     │
-│              │                      │                                       │
-│              │ 14:31:10  Grok       │ execution        Choice               │
-│              │ Timed out            │ local      ████████████     0.82      │
-│              │                      │ delegate   ██               0.18      │
-│              │                      │ confidence 0.64 · margin 0.64         │
-│              │                      ├───────────────────────────────────────┤
-│ 7 days       │ 12 new · Show latest │ Unreviewed ▾    Note…   Copy ▾       │
-│ Settings     │                      │                                       │
-└──────────────┴──────────────────────┴───────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│ ● ● ●  Falcon      ● Running             Search          Focus review    Pause service│
+├───────────┬────────────────┬─────────────────────────────────────────────────────────┤
+│ Decisions │ Time / Sources │ Codex · project-a · 14:32:08.120 → 14:32:09.248           │
+│ Usage     │                │ Upstream 1.08s · Returned in 1.128s · 3 questions          │
+│ Sources   │ 14:32 Codex    ├──────────────────────┬──────────────────────────────────┤
+│ Connections│ 3 questions   │ State                │ Questions · Definitions · Result │
+│           │                │ task                 │ execution · Choice                │
+│           │ 14:31 Pi       │ facts                │ instructions: Choose a mode…      │
+│           │ 1 question     │ constraints          │ option     definition       p     │
+│           │                │                      │ local      One bounded…    0.82 ✓ │
+│           │ 14:30 Grok     │ Expand / Search      │ delegate   Independent…    0.18   │
+│           │ Timed out      │                      │ confidence 0.64 · margin 0.64     │
+│           │                │                      │ next_step · Choice …              │
+│           │                ├──────────────────────┴──────────────────────────────────┤
+│ Settings  │ 12 new         │ Unreviewed ▾   Note…     Raw JSON       Copy / Export    │
+├───────────┴────────────────┴─────────────────────────────────────────────────────────┤
+│ Replay  ▶  Previous / Next  ─────────●────────────────  1×   14:32:08.700  Sources ▾  │
+└──────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-以上数据全部为合成布局示例，不是实测结果。最上面仅一行紧凑摘要，不做四个高大的 KPI 卡片。默认导航 Decisions，Usage 是主动分析入口。
+以上数据全部为合成布局示例，不是实测结果。默认导航 Decisions；总体 KPI 放在 Usage，回看页优先显示当前记录的输入与结果。回放控制仅在用户进入 Replay 时出现；多来源轨道按需展开，不能长期占据正文高度。
 
-可用内容宽度不足 1080 pt 时，侧栏可折叠为系统导航，详情改为占满工作区的 drill-in，并保留返回和列表滚动位置。不能通过缩小字号或让三列溢出适配小窗口。分隔线、图表和长 JSON 均需验证 1× / 2× 屏幕。
+详情净宽低于 960 pt 时自动建议 Focus review，用户进入后收起两列导航；仍不足时 State 与题目纵向排列在同一个 overview 中，不改回互斥 tab。分隔线可拖动，长 JSON 和长选项定义可展开、查找和复制；不能通过缩小字号或横向溢出适配小窗口。分隔线、图表和长 JSON 均需验证 1× / 2× 屏幕。
 
 ## Decisions：默认工作台
 
@@ -47,17 +48,24 @@ Showtime 可借鉴的是统一 theme、柔和表面、细边线和 240 ms 的受
 
 自动到来的记录不抢选中、不滚动用户正在阅读的区域；用户离开顶端后显示 `12 new · Show latest`。查看历史不停止后台记录；Live 按钮只控制列表追随，Pause service 才停止新推理。
 
-详情首屏包括：来源、接收时间、调用状态、request ID 短标识、model、耗时和 token。完整 ID 与配置快照在元数据展开层；不在每页重复大标题、说明段和巨大空白。
+详情首屏包括来源、项目自报标签、毫秒级接收/返回时间、调用状态、request ID 短标识、model、上游往返/处理/返回耗时和 token。日期跨日时显示完整日期，时区和 UTC 原值可核验；返回时点未知则标为 Unknown。完整 ID 与配置快照在元数据展开层。
 
-详情正文三个可切换视图共享同一选中记录：
+默认 overview 同时呈现输入与问题/结果，不用切换 tab 才能核对：
 
-- **State**：默认格式化树，浅层展开；string 显示可选择文本。折叠仅影响显示，完整数据仍可展开/复制。提供按字段查找与匹配计数。
-- **Questions**：逐题显示 ID、instructions 和完整 criteria，右侧或下方显示结果。Choice 用水平概率条，赢家靠前但可切回原始选项顺序；255 项虚拟化，初始前 8 项加“Show all 255”，不得删除零概率项。Score 按等级顺序显示分布和连续位置；Noul 显示 yes 概率与可选 yes/no 定义。
-- **Raw**：Received request / Effective upstream request / Upstream response 分页，原始 JSON 文本可复制。HTTP headers 仅允许列表字段，不出现鉴权内容；正文超限、未接收完整或响应未知时明显标识。
+- **State（左列，约 40%）**：格式化树与可选择文本，按实际结构展开；长字段有局部展开和查找。独立滚动位置随 request ID 保留，不能切题时丢失上下文。
+- **Questions / Definitions（右列，约 60%）**：逐题显示 ID、类型、完整 instructions；criteria 逐项展示 option/level 与其定义，旁边对齐 Jev 的概率与最终选项。这里的 Definitions 是展示分区，不新增或改写官方请求字段。用户所说的 define 尚待确认；若原文实际附带 `define` 字段，单独原样显示并标清 JSON 路径，不能假定 Jev 对未知字段的解释。
+- **Decision**：与对应问题和定义在同一行/区块，保留实际返回值、完整分布和 confidence。Choice 255 项使用虚拟化，初始前 8 项加“Show all 255”，保留零概率项及原始顺序入口；长定义可展开且不能被图表遮盖。Score 按等级排列，Noul 显示 yes 概率及定义。多题逐题成组，提供紧凑题目索引，不把共享返回时间拆成虚构的逐题时间。
+- **Raw**：通过明确入口打开当前记录的全宽原文视图，可在 received/effective/response 间切换；返回 overview 保持阅读位置。headers 仅显示允许列表字段；未完整接收、超限和结果未知有明确标识。
 
 `confidence` 的帮助文字为“分布集中程度，不是准确率”；margin 为最大的两个 probability 之差，若只有一个合法选项则不展示。上游没有 reasoning 时，不出现“AI reasoning”空面板，更不能调用第二个模型补造解释。
 
 底部固定紧凑 review bar：状态 picker、备注入口、复制菜单、导出。notes 在稳定选中 ID 下持久化；切换记录时提交或保留该记录草稿，不能写到新记录。删除/到期时清理对应草稿，避免正文泄漏到长期配置。
+
+## 来源时间线与动画回放
+
+请求列表支持来源多选、精确时间范围和按接收时间定位。可展开按来源分轨的时间线：同一来源稳定占一轨，区段表示实际请求持续时间，并发请求重叠显示，不画成串行。点选区段即定位完整详情；密集区间先聚合，放大后显示单条。
+
+Replay 作为独立查看模式，与 Live 和 Pause service 明确分开。建议支持“单条过程回放”和“选定时间段回放”两种入口，具体播放、时间事实和七天到期约束见 [08 回看与回放](08-review-playback.md)。播放与暂停不改变服务、结果、统计或 review 标注。
 
 ## Usage：从整体直接落到证据
 
@@ -114,18 +122,18 @@ Connections 表格列出 profile 名称、目标 host、default model、配置�
 | 复制成功 | 文案/图标原位反馈 1.5 秒 | 不弹阻塞 modal |
 | 存储/凭据故障 | 常驻状态条带修复入口 | 不能只放在短暂 toast 中 |
 
-不可见窗口和静态页面没有持续 TimelineView、粒子或轮询动画。动画响应用户动作与真实状态变化，应用后台仍记录但不做无意义重绘。
+不可见窗口和静态页面没有持续 TimelineView、粒子或轮询动画。主动 Replay 期间只更新可见游标和发生变化的行，暂停、关闭窗口或离开页面即停止播放器计时；后台服务继续记录。
 
 ## 状态矩阵与可访问性
 
 必须分别设计：未配置、配置完成但尚无请求、有数据、搜索无结果、加载中、上游错误、超时、响应未知、磁盘已满、来源禁用、key 撤销、记录到期、服务暂停、关窗后台运行。错误页保留已有可读历史，不整窗替换成错误遮罩。
 
-键盘：Cmd-1 Decisions、Cmd-2 Usage、Cmd-3 Sources、Cmd-4 Connections、Cmd-, Settings、Cmd-F 搜索、方向键换行、Space 展开选中详情、Esc 关闭弹层。文本编辑聚焦时不能劫持 Space 或删除快捷键；复制遵循选中文本优先。
+键盘：Cmd-1 Decisions、Cmd-2 Usage、Cmd-3 Sources、Cmd-4 Connections、Cmd-, Settings、Cmd-F 搜索、方向键换行。Space 仅在 Replay 控制区域聚焦时播放/暂停，普通列表用 Return 打开详情；文本编辑聚焦时不劫持 Space。Esc 关闭弹层，复制遵循选中文本优先。
 
 控件使用原生 Button / Picker / TextField / Table；自定义样式保留 role、label、disabled 和 focus ring。概率图提供 VoiceOver 文本序列（选项、概率、是否选中）；图表有可阅读的数据表替代。状态同时使用文字与图标；支持 Reduce Motion、Reduce Transparency、Increase Contrast 和系统文字尺寸变化，不以 hover 作为唯一操作入口。
 
 ## 品质验收证据
 
-实现时用真实 SwiftUI 视图与隔离合成数据渲染 Light/Dark 的正常、多题、255 选项、长 JSON、超时、空态、满盘等场景；检查 980×640 与 1280×820、1×/2×、键盘与 VoiceOver。截图只能证明静态外观；动效、焦点、滚动、等待和错误修复需实际运行验证。设计文档不把“世界级”当作可以自动盖章的指标，最终视觉审阅由用户进行。
+实现时用真实 SwiftUI 视图与隔离合成数据渲染 Light/Dark 的正常、多题、255 选项、长 JSON、超时、空态、满盘等场景；检查 1120×720、1440×900、1600×1000、全屏与 Focus review、1×/2×、键盘与 VoiceOver。大窗口须同时看见 State、当前题 instructions/criteria 与 Decision；小窗口通过同一 overview 滚动访问完整内容。截图只能证明静态外观；回放、焦点、滚动、等待和错误修复需实际运行验证。
 
 [下一篇：交付与验证](05-delivery.md) · [目录](README.md)

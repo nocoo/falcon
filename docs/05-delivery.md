@@ -11,10 +11,10 @@
 | 0 当前 | 产品、架构、协议、视觉、验收、证据与独立审阅 | README、AGENTS、docs | 文档一致、来源可核实、review 无未解决阻断项；`docs: define falcon design` |
 | 1 可用闭环 | 真原生窗口、一个来源/上游的正常管理、HTTP → Jev fixture → SQLite → 列表与详情；并在隔离 fixture 中完成 MCP 架构验证 | `Falcon.xcodeproj`、`Package.swift`、`Sources/Falcon/App/`、`Sources/FalconCore/{DecisionService,JevClient,DecisionStore}.swift`、`Tests/FalconCoreTests/`、`Tests/FalconIntegrationTests/` | 真实 HTTP、持久化和 UI 闭环；标准 MCP 客户端跨 POST 的 initialize → initialized → list/call、同 id 并发隔离、disconnect 清理全部通过，缺一不得进入第 2 层；`feat: add native decision proxy` |
 | 2 完整接入 | 多来源/profile、轮换/撤销、官方 MCP SDK、官方 Python SDK互操作 | `Sources/FalconCore/{SourceStore,CredentialStore,ProxyServer,MCPAdapter}.swift`、`Tests/FalconIntegrationTests/` | 同 id 并发来源隔离、认证、MCP 初始化与三类结果通过；`feat: add source keys and mcp` |
-| 3 完整观察 | 七天清理、筛选、review、统计、JSON/CSV 导出 | `Sources/FalconCore/{RetentionPolicy,UsageQueries}.swift`、`Sources/Falcon/Features/{Decisions,Usage,Sources,Connections}/` | 端到端主旅程、时间/分页/容量边界通过；`feat: add decision review and usage` |
+| 3 完整观察 | 七天清理、来源时间线、宽详情与 Focus review、review、统计、只读历史回放、JSON/CSV 导出 | `Sources/FalconCore/{RetentionPolicy,UsageQueries}.swift`、`Sources/Falcon/Features/{Decisions,Usage,Sources,Connections}/`、`Sources/Falcon/Features/Decisions/ReplayViewModel.swift` | 端到端回看/回放、零出站调用、阶段时点/返回耗时、到期缓存清理及分页/容量边界通过；`feat: add decision review and usage` |
 | 4 完成度 | 统一 token、材质、动效、浅深色、无障碍、性能与正式打包 | `Sources/Falcon/Design/`、`Tests/FalconUITests/`、`scripts/`、`docs/evidence/` | 真实截图和交互审阅、资源预算实测、质量 gate 证据；按独立变更继续原子提交 |
 
-UI 主题与原生布局从第 1 层生效，第 4 层负责全状态精修；不能先交丑陋临时界面再整套替换。认证、前置审计写入、体积/并发上限、七天隐藏查询和测试隔离也必须在第一条生产请求之前生效；第 3 层扩展并验证其完整管理体验。
+UI 主题、大空间 overview 与输入/问题/结果同时可见从第 1 层生效，第 4 层负责全状态精修；不能先交窄详情或互斥 tab 再整套替换。阶段时间事实从第 1 层记录，第 3 层的历史回放直接读取已留存字段。认证、前置审计写入、体积/并发上限、七天隐藏查询和测试隔离也必须在第一条生产请求之前生效；第 3 层扩展并验证其完整管理体验。
 
 第 1 层必须验证 Hummingbird + MCP + GRDB 的兼容构建和 Release 体积，并在隔离测试 fixture 中通过上述完整标准 MCP 客户端序列；这是架构门槛，不是可选提前测试。第 2 层才将已验证的 MCP 适配接入正式应用和来源管理。若门槛失败先修订设计；体积不满足预算则先用链接产物证据定位依赖，不立刻手写 HTTP/MCP 替代成熟实现。
 
@@ -28,8 +28,9 @@ UI 主题与原生布局从第 1 层生效，第 4 层负责全状态精修；�
 | HTTP | 每一 endpoint/method；分块/超长 body、错误 Content-Type/Encoding、断开、deadline、并发超额、未配置与 pause |
 | 存储 | 写入失败不调用上游、响应写入失败但上游已执行、重启 interrupted、事务原子性、列表游标同时间稳定性、归档/重命名不破坏历史 |
 | 留存 | 恰好 168h、三份原文与 questions/reviews 级联、到期详情清空、唤醒清理、清理后统计、WAL checkpoint/页回收、8 个并发请求的容量原子预留/单次释放、满盘不提前删未到期数据、手动清空与迟到回调竞争 |
-| 统计 | 请求/题/token 不重复、未知不补零、成功率分母、精确 p95、低样本、跨时区/夏令时、同名不同题指纹不混合 |
-| UI | 首次配置、第一条请求、筛选与钻取、review 草稿切换、复制/导出、轮换/撤销、错误恢复、保留滚动与选中、键盘和 VoiceOver |
+| 统计 | 请求/题/token 不重复、未知不补零、处理/返回耗时及分母区分、返回写回后元数据更新失败、精确 p95、低样本、跨时区/夏令时、同名不同题指纹不混合 |
+| UI | 大小窗口同时核对输入/定义/结果、Focus review 恢复布局、首次配置、筛选与钻取、review 草稿切换、复制/导出、错误恢复、保留滚动与选中、键盘和 VoiceOver |
+| 回放 | 注入时钟、逐事件与拖动/倍速、并发来源不串行化、多题共用响应时点、零出站调用且 usage/review 不变、未知/失败阶段、10,000 条上限、后台暂停、七天到期清除正文、清空历史停止回放 |
 
 主要测试使用真实 loopback server 和临时 SQLite；官方 SDK 对本地 fixture 发请求验证互操作，不使用真实 Jev 来提供确定性断言。开发期 Python 依赖锁版本，完全不进入 App bundle。
 

@@ -41,6 +41,8 @@ Future command names must be recorded from actual scripts and manifests when imp
 - Never forward local credentials upstream, or upstream credentials downstream.
 - Do not inspect unrelated Keychain items or alter machine ACLs/certificates.
 - Preserve Jev request and response semantics. Never invent reasoning or infer agent execution.
+- Keep input, question definitions, and results visible together in the primary review workspace.
+- Historical replay is local and read-only; never call Jev, invent per-question timing, or bypass expiry with the playback clock.
 - Do not implement result reuse unless the owner explicitly chooses it.
 - No automatic inference retry; each incoming call represents one observable attempt.
 - Keep seven-day retention and deletion consistent across details, search, and aggregates.
