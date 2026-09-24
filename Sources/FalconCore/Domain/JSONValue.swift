@@ -55,6 +55,6 @@ public enum JSONValue: Sendable, Codable, Equatable {
 
     public var displayText: String {
         if case .string(let text) = self { return text }
-        return (try? String(decoding: data(pretty: true), as: UTF8.self)) ?? ""
+        return (try? String(data: data(pretty: true), encoding: .utf8)) ?? ""
     }
 }
