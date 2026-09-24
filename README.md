@@ -6,7 +6,7 @@ Falcon 是规划中的 macOS 原生应用：向本机提供 TypeSafe / Jev HTTP 
 
 核心体验是从一条请求直接看清：**谁来决策、提供了什么上下文和选项、Jev 返回了什么、用了多少资源**。技术方向是 SwiftUI + Swift，保持小体积、单进程和原生交互。
 
-> 当前阶段：基础设计已通过独立 Codex 审阅；本次补充大空间回看与动画回放，增量待复审。仓库尚无可运行应用、构建配置或自动化测试；设计中的指标均是验收目标，不是已完成的性能或质量结论。
+> 当前阶段：基础设计与大空间回看、动画回放增量均已通过独立 Codex 审阅，待用户审阅方案。仓库尚无可运行应用、构建配置或自动化测试；设计中的指标均是验收目标，不是已完成的性能或质量结论。
 
 ## 📖 设计入口
 
@@ -19,7 +19,7 @@ Falcon 是规划中的 macOS 原生应用：向本机提供 TypeSafe / Jev HTTP 
 | [04 界面与动效](docs/04-interface.md) | 信息架构、视觉 token、交互与可访问性 |
 | [05 交付与验证](docs/05-delivery.md) | 分层实现、原子提交与质量验收 |
 | [06 调研证据](docs/06-research.md) | 官方文档、SDK 检查和参考项目 |
-| [07 独立审阅](docs/07-design-review.md) | 三轮审阅、6 项发现的闭环与最终 PASS |
+| [07 独立审阅](docs/07-design-review.md) | 基础与回放增量审阅、10 项发现闭环及精确 PASS 版本 |
 | [08 回看与回放](docs/08-review-playback.md) | 大空间详情、来源时间线、动画回放与真实收发时点 |
 
 Agent 项目约束见 [AGENTS.md](AGENTS.md)。事故与改进记录见 [Retrospective.md](Retrospective.md)。
