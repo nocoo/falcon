@@ -9,14 +9,14 @@
 | 层 | 交付内容 | 主要拟新增文件 | 退出条件 / 原子提交 |
 | --- | --- | --- | --- |
 | 0 当前 | 产品、架构、协议、视觉、验收、证据与独立审阅 | README、AGENTS、docs | 文档一致、来源可核实、review 无未解决阻断项；`docs: define falcon design` |
-| 1 可用闭环 | 真原生窗口、一个来源/上游的正常管理、HTTP → Jev fixture → SQLite → 列表与详情；不是只有空壳 UI | `Falcon.xcodeproj`、`Package.swift`、`Sources/Falcon/App/`、`Sources/FalconCore/{DecisionService,JevClient,DecisionStore}.swift`、`Tests/FalconCoreTests/` | 在同一垂直切片中证明真实 HTTP、持久化和 UI；随后正常配置真实服务可用；`feat: add native decision proxy` |
+| 1 可用闭环 | 真原生窗口、一个来源/上游的正常管理、HTTP → Jev fixture → SQLite → 列表与详情；并在隔离 fixture 中完成 MCP 架构验证 | `Falcon.xcodeproj`、`Package.swift`、`Sources/Falcon/App/`、`Sources/FalconCore/{DecisionService,JevClient,DecisionStore}.swift`、`Tests/FalconCoreTests/`、`Tests/FalconIntegrationTests/` | 真实 HTTP、持久化和 UI 闭环；标准 MCP 客户端跨 POST 的 initialize → initialized → list/call、同 id 并发隔离、disconnect 清理全部通过，缺一不得进入第 2 层；`feat: add native decision proxy` |
 | 2 完整接入 | 多来源/profile、轮换/撤销、官方 MCP SDK、官方 Python SDK互操作 | `Sources/FalconCore/{SourceStore,CredentialStore,ProxyServer,MCPAdapter}.swift`、`Tests/FalconIntegrationTests/` | 同 id 并发来源隔离、认证、MCP 初始化与三类结果通过；`feat: add source keys and mcp` |
 | 3 完整观察 | 七天清理、筛选、review、统计、JSON/CSV 导出 | `Sources/FalconCore/{RetentionPolicy,UsageQueries}.swift`、`Sources/Falcon/Features/{Decisions,Usage,Sources,Connections}/` | 端到端主旅程、时间/分页/容量边界通过；`feat: add decision review and usage` |
 | 4 完成度 | 统一 token、材质、动效、浅深色、无障碍、性能与正式打包 | `Sources/Falcon/Design/`、`Tests/FalconUITests/`、`scripts/`、`docs/evidence/` | 真实截图和交互审阅、资源预算实测、质量 gate 证据；按独立变更继续原子提交 |
 
 UI 主题与原生布局从第 1 层生效，第 4 层负责全状态精修；不能先交丑陋临时界面再整套替换。认证、前置审计写入、体积/并发上限、七天隐藏查询和测试隔离也必须在第一条生产请求之前生效；第 3 层扩展并验证其完整管理体验。
 
-首层先验证 Hummingbird + MCP + GRDB 的兼容构建和 Release 体积，MCP 适配可在测试中提前证明；若不满足预算，先用链接产物证据定位依赖，不立刻手写 HTTP/MCP 替代成熟实现。
+第 1 层必须验证 Hummingbird + MCP + GRDB 的兼容构建和 Release 体积，并在隔离测试 fixture 中通过上述完整标准 MCP 客户端序列；这是架构门槛，不是可选提前测试。第 2 层才将已验证的 MCP 适配接入正式应用和来源管理。若门槛失败先修订设计；体积不满足预算则先用链接产物证据定位依赖，不立刻手写 HTTP/MCP 替代成熟实现。
 
 ## 准确性优先的测试清单
 
