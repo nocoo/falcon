@@ -1,14 +1,14 @@
 # Falcon
 
-Falcon is a planned native macOS Jev proxy and seven-day decision observability app.
+Falcon is a native macOS Jev proxy and seven-day decision observability app under active implementation.
 Human overview: [README.md](README.md). Design index: [docs/README.md](docs/README.md).
 
 ## Scope and current state
 
 - This file applies throughout the repository. There are no nested instruction files.
-- The repository is documentation-only. No app, package manifest, tests, hooks, or CI exist yet.
-- The current authorized deliverable is Chinese design documentation and independent Codex review.
-- Do not begin application implementation until the owner approves that next phase.
+- The owner authorized implementation on main, atomic commits, and appropriate Herdr delegation on 2026-09-25.
+- The coordinator owns the native UI; workers may implement nonoverlapping logic modules.
+- Build an end-to-end usable app from the reviewed design; document incomplete gates honestly.
 - Design recommendations are not completed features or measured performance claims.
 - Keep this file as the only project handbook; do not create a CLAUDE.md copy or alias.
 - Detailed decisions belong in numbered docs; accident narratives belong in Retrospective.md.
@@ -25,8 +25,14 @@ git status --short
 ```
 
 Check local Markdown links and document status before committing.
-No build, lint, app launch, or test command is available yet. Do not invent one.
-Future command names must be recorded from actual scripts and manifests when implemented.
+The package is implemented using Swift 6 and macOS 15+. Select Xcode per command without changing machine settings:
+
+```sh
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift build
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
+```
+
+Record app packaging, lint, and gate commands once their scripts exist.
 
 ## Planned project boundaries
 
@@ -34,7 +40,7 @@ Future command names must be recorded from actual scripts and manifests when imp
 - Use one app process; UI and transports call the same decision service.
 - Separate observable view models, domain models, networking, and persistence.
 - Reuse mature HTTP/MCP/SQLite libraries instead of writing protocol parsers or an ORM.
-- The runtime SDK decision remains a design recommendation pending owner confirmation.
+- The implementation follows the recommended pure Swift runtime; the official Python SDK is a development interoperability reference.
 - Only bind the proxy to numeric loopback. Never expose it to LAN interfaces by default.
 - Authenticate every local API/MCP request with a source key; caller metadata is untrusted.
 - Upstream credentials belong only in Falcon-scoped Keychain items once implemented.
@@ -74,5 +80,5 @@ Tests must not use daily-development data, production data, or real upstream cre
 - Stage explicit paths and commit each complete logical change atomically.
 - Report what was actually inspected and tested, including unavailable evidence.
 - Review records identify the exact content revision and disposition of findings.
-- Independent review approval does not authorize implementation, publication, or release.
+- Implementation is authorized; publication and release remain outside this task.
 - Record actual incidents in [Retrospective.md](Retrospective.md); do not invent incidents.

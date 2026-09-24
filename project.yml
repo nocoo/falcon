@@ -1,0 +1,40 @@
+name: Falcon
+options:
+  deploymentTarget:
+    macOS: "15.0"
+  createIntermediateGroups: true
+packages:
+  FalconLocal:
+    path: .
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "15.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    GCC_TREAT_WARNINGS_AS_ERRORS: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+targets:
+  Falcon:
+    type: application
+    platform: macOS
+    sources:
+      - Sources/Falcon
+    dependencies:
+      - package: FalconLocal
+        product: FalconCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ai.hexly.falcon
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
+        INFOPLIST_KEY_CFBundleDisplayName: Falcon
+        INFOPLIST_KEY_NSHumanReadableCopyright: Copyright © 2026 Zheng Li
+        ENABLE_APP_SANDBOX: NO
+        CODE_SIGN_STYLE: Automatic
+        COMBINE_HIDPI_IMAGES: YES
+    scheme:
+      gatherCoverageData: true
