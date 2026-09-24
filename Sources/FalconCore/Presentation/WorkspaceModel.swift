@@ -167,8 +167,9 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
                 await select(first.id)
             } else if reset, let selectedID, !requests.contains(where: { $0.id == selectedID }) {
                 await select(requests.first?.id)
-            } else if let detail, let updated = fetched.first(where: { $0.id == detail.id }), updated != detail.summary,
-                !noteIsDirty
+            } else if let detail, !noteIsDirty,
+                !detail.summary.status.isTerminal
+                    || fetched.first(where: { $0.id == detail.id }).map({ $0 != detail.summary }) == true
             {
                 await loadDetail(detail.id)
             }
@@ -197,6 +198,14 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
         }
         await refresh(reset: true)
         await select(requests.first?.id)
+    }
+
+    public func selectAdjacent(forward: Bool) async {
+        guard let index = requests.firstIndex(where: { $0.id == selectedID }) else { return }
+        let next = index + (forward ? 1 : -1)
+        if next == requests.count, hasMore { await loadMore() }
+        guard requests.indices.contains(next) else { return }
+        await select(requests[next].id)
     }
 
     public func select(_ id: UUID?) async {

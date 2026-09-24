@@ -112,6 +112,51 @@ private struct WorkspaceFixture {
     try await fixture.finish()
 }
 
+@MainActor @Test func workspaceHoldsReviewDuringArrivalsAndRefreshesOlderInflight() async throws {
+    let fixture = try WorkspaceFixture()
+    var records = try Array(PreviewData.records().prefix(2))
+    let completed = records[1]
+    records[1].summary.status = .inFlight
+    records[1].summary.timing.responseReceivedMS = nil
+    records[1].summary.timing.terminalMS = nil
+    records[1].summary.timing.deliveryFinishedMS = nil
+    records[1].upstreamResponse = nil
+    try await fixture.insert(records)
+    let model = WorkspaceModel(store: fixture.store)
+    await model.refresh(reset: true)
+    await model.select(records[1].id)
+    model.editNote("Keep the current reading position")
+    let arrivals = (0..<101).map { index in
+        var record = records[0]
+        record.summary.id = UUID()
+        record.summary.receivedAt = Date().addingTimeInterval(-Double(index) / 10 - 1)
+        record.summary.expiresAt = record.summary.receivedAt.addingTimeInterval(FalconLimits.retention)
+        return record
+    }
+    try await fixture.insert(arrivals)
+    await model.refresh()
+    #expect(model.newArrivalCount == 100)
+    #expect(model.requests.map(\.id) == records.map(\.id))
+    #expect(model.selectedID == records[1].id && model.noteIsDirty)
+    await model.saveReview()
+    try await fixture.store.reserve(
+        requestID: completed.id, requestBytes: completed.effectiveRequest?.count ?? 0,
+        questionCount: completed.summary.questionCount)
+    try await fixture.store.update(completed)
+    try await fixture.store.release(requestID: completed.id)
+    await model.refresh()
+    #expect(model.detail?.summary.status == .succeeded)
+    #expect(model.note == "Keep the current reading position")
+    await model.showLatest()
+    #expect(model.newArrivalCount == 0)
+    #expect(model.selectedID == arrivals[0].id)
+    await model.selectAdjacent(forward: false)
+    #expect(model.selectedID == arrivals[0].id)
+    await model.selectAdjacent(forward: true)
+    #expect(model.selectedID == arrivals[1].id)
+    try await fixture.finish()
+}
+
 @MainActor @Test func workspaceReplayUsesStoredEvidenceAndWallClockExpiry() async throws {
     let fixture = try WorkspaceFixture()
     var records = try Array(PreviewData.records().prefix(2))
@@ -127,15 +172,23 @@ private struct WorkspaceFixture {
     await model.startReplay(range: false)
     #expect(model.timeline?.records.count == 1)
     #expect(!model.inputsVisible && !model.resultsVisible)
+    #expect(model.visibleStatus == "Receiving input")
+    #expect(!model.terminalVisible && !model.deliveryVisible)
     model.step(forward: true)
     #expect(model.inputsVisible && !model.resultsVisible)
+    #expect(model.visibleStatus == "Preparing request")
     model.step(forward: true)
+    #expect(model.visibleStatus == "Waiting for Jev")
     model.step(forward: true)
     #expect(model.resultsVisible)
+    #expect(model.visibleStatus == "Response received")
+    #expect(!model.terminalVisible && !model.deliveryVisible)
     model.step(forward: false)
     #expect(!model.resultsVisible)
     model.seek(1)
     #expect(model.replayProgress == 1)
+    #expect(model.visibleStatus == "Completed")
+    #expect(model.terminalVisible && model.deliveryVisible)
     model.play()
     #expect(model.replayProgress == 0)
     model.advance(seconds: 0.01)
