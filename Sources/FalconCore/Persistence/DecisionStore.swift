@@ -57,6 +57,8 @@ private enum StoreSetup {
                 CREATE INDEX IF NOT EXISTS requests_status_time ON requests(status, received_at DESC, id DESC);
                 CREATE INDEX IF NOT EXISTS requests_profile_time ON requests(profile_id, received_at DESC, id DESC);
                 CREATE INDEX IF NOT EXISTS requests_expiry ON requests(expires_at);
+                CREATE INDEX IF NOT EXISTS requests_starred ON requests(
+                    json_extract(CAST(summary_json AS TEXT), '$.starredAt'));
                 CREATE TABLE IF NOT EXISTS questions (
                     request_id TEXT NOT NULL, question_id TEXT NOT NULL, type TEXT NOT NULL,
                     fingerprint BLOB NOT NULL, result TEXT, confidence REAL, top_probability REAL,
@@ -106,11 +108,15 @@ private enum StoreSetup {
 }
 
 private enum DecisionSQLFilter {
+    static let starred = "json_extract(CAST(summary_json AS TEXT), '$.starredAt') IS NOT NULL"
+    static let retained = "(expires_at > ? OR \(starred))"
+
     static func predicate(_ filter: DecisionFilter, before: RequestCursor?, now: Date) throws -> (
         String, [any DatabaseValueConvertible]
     ) {
-        var clauses = ["expires_at > ?"]
+        var clauses = [retained]
         var values: [any DatabaseValueConvertible] = [now.timeIntervalSince1970]
+        if filter.starredOnly { clauses.append(starred) }
         appendMetadata(filter, clauses: &clauses, values: &values)
         appendCursorAndSearch(filter, before: before, clauses: &clauses, values: &values)
         try appendQuestionEvidence(filter, clauses: &clauses, values: &values)
@@ -407,7 +413,7 @@ public actor DecisionStore {
         try validate(detail)
         guard let reservation = reservations[detail.id], reservation.generation == generation,
             detail.summary.questionCount <= reservation.questionCount, !blockedIDs.contains(detail.id),
-            detail.summary.expiresAt > Date()
+            detail.summary.isRetained(at: Date())
         else { throw FalconError("request_not_reserved", "Request cannot be inserted.", status: 507) }
         try db.write { database in try Self.write(detail, database: database, insert: true) }
     }
@@ -420,7 +426,7 @@ public actor DecisionStore {
         try db.write { database in
             guard
                 let row = try Row.fetchOne(
-                    database, sql: "SELECT summary_json FROM requests WHERE id=? AND expires_at>?",
+                    database, sql: "SELECT summary_json FROM requests WHERE id=? AND \(DecisionSQLFilter.retained)",
                     arguments: [detail.id.uuidString, Date().timeIntervalSince1970])
             else { throw FalconError("request_missing", "Request no longer exists.") }
             let old = try JSONDecoder().decode(RequestSummary.self, from: row["summary_json"] as Data)
@@ -432,6 +438,7 @@ public actor DecisionStore {
             var merged = detail
             merged.summary.reviewState = old.reviewState
             merged.summary.reviewNote = old.reviewNote
+            merged.summary.starredAt = old.starredAt
             merged.summary.delivery = old.delivery
             merged.summary.timing.deliveryFinishedMS = old.timing.deliveryFinishedMS
             try Self.write(merged, database: database, insert: false)
@@ -445,7 +452,7 @@ public actor DecisionStore {
         try managedWrite(131_072) { database in
             guard
                 let row = try Row.fetchOne(
-                    database, sql: "SELECT summary_json FROM requests WHERE id=? AND expires_at>?",
+                    database, sql: "SELECT summary_json FROM requests WHERE id=? AND \(DecisionSQLFilter.retained)",
                     arguments: [id.uuidString, Date().timeIntervalSince1970])
             else { return }
             var summary = try JSONDecoder().decode(RequestSummary.self, from: row["summary_json"] as Data)
@@ -489,7 +496,7 @@ public actor DecisionStore {
         try db.read { database in
             guard
                 let row = try Row.fetchOne(
-                    database, sql: "SELECT * FROM requests WHERE id=? AND expires_at>?",
+                    database, sql: "SELECT * FROM requests WHERE id=? AND \(DecisionSQLFilter.retained)",
                     arguments: [id.uuidString, max(now, Date()).timeIntervalSince1970])
             else { return nil }
             return RequestDetail(
@@ -520,11 +527,12 @@ public actor DecisionStore {
                 sql: """
                     WITH selected AS (
                         SELECT id, status, expires_at,
+                            json_extract(CAST(summary_json AS TEXT), '$.starredAt') AS starred_at,
                             CASE WHEN json_valid(CAST(effective_request AS TEXT))
                                 THEN CAST(effective_request AS TEXT) END AS input
-                        FROM requests WHERE id IN (\(placeholders)) AND expires_at > ?
+                        FROM requests WHERE id IN (\(placeholders)) AND \(DecisionSQLFilter.retained)
                     )
-                    SELECT id, status, expires_at, substr(coalesce(\(contextSQL)), 1, 241) AS context,
+                    SELECT id, status, expires_at, starred_at, substr(coalesce(\(contextSQL)), 1, 241) AS context,
                         (SELECT json_object('id', substr(q.question_id, 1, 81), 'type', q.type,
                             'choice', substr(q.result, 1, 161), 'numeric', q.numeric_value)
                          FROM questions q WHERE q.request_id=selected.id AND selected.status='succeeded'
@@ -536,10 +544,12 @@ public actor DecisionStore {
                     guard let id = UUID(uuidString: row["id"]), let status = RequestStatus(rawValue: row["status"])
                     else { throw FalconError("invalid_record", "Invalid request preview identity.") }
                     let question: String? = row["question"]
+                    let starredAt: Double? = row["starred_at"]
                     return (
                         id,
                         RequestPreview(
                             status: status, expiresAt: Date(timeIntervalSince1970: row["expires_at"]),
+                            starredAt: starredAt.map(Date.init(timeIntervalSinceReferenceDate:)),
                             context: row["context"], question: try question.map { try JSONValue.decode(Data($0.utf8)) })
                     )
                 })
@@ -594,7 +604,7 @@ public actor DecisionStore {
         try managedWrite(262_144) { database in
             guard
                 let row = try Row.fetchOne(
-                    database, sql: "SELECT summary_json FROM requests WHERE id=? AND expires_at>?",
+                    database, sql: "SELECT summary_json FROM requests WHERE id=? AND \(DecisionSQLFilter.retained)",
                     arguments: [id.uuidString, max(now, Date()).timeIntervalSince1970])
             else { throw FalconError("request_missing", "Request no longer exists.") }
             var summary = try JSONDecoder().decode(RequestSummary.self, from: row["summary_json"] as Data)
@@ -610,10 +620,34 @@ public actor DecisionStore {
         }
     }
 
+    public func setStarred(id: UUID, starred: Bool) throws {
+        if starred && !hasCapacity(131_072) {
+            throw FalconError("storage_full", "Falcon storage is full.", status: 507)
+        }
+        try db.write { database in
+            guard
+                let row = try Row.fetchOne(
+                    database, sql: "SELECT summary_json FROM requests WHERE id=?", arguments: [id.uuidString])
+            else { throw FalconError("request_missing", "Request no longer exists.") }
+            var summary = try JSONDecoder().decode(RequestSummary.self, from: row["summary_json"] as Data)
+            let now = Date()
+            guard summary.isRetained(at: now) else { throw FalconError("request_missing", "Request no longer exists.") }
+            if !starred && summary.expiresAt <= now {
+                try database.execute(sql: "DELETE FROM requests WHERE id=?", arguments: [id.uuidString])
+            } else {
+                summary.starredAt = starred ? (summary.starredAt ?? now) : nil
+                try database.execute(
+                    sql: "UPDATE requests SET summary_json=? WHERE id=?",
+                    arguments: [try JSONEncoder().encode(summary), id.uuidString])
+            }
+        }
+    }
+
     public func cleanup(now: Date = Date()) throws {
         try db.write { database in
             try database.execute(
-                sql: "DELETE FROM requests WHERE expires_at<=?", arguments: [max(now, Date()).timeIntervalSince1970])
+                sql: "DELETE FROM requests WHERE expires_at<=? AND NOT (\(DecisionSQLFilter.starred))",
+                arguments: [max(now, Date()).timeIntervalSince1970])
         }
         try reclaimPages()
     }
@@ -622,8 +656,10 @@ public actor DecisionStore {
         try db.write { database in
             let rows = try Row.fetchAll(
                 database,
-                sql: "SELECT id, summary_json FROM requests WHERE expires_at>? AND status IN ('accepted', 'in_flight')",
-                arguments: [max(now, Date()).timeIntervalSince1970])
+                sql: """
+                    SELECT id, summary_json FROM requests WHERE \(DecisionSQLFilter.retained)
+                    AND status IN ('accepted', 'in_flight')
+                    """, arguments: [max(now, Date()).timeIntervalSince1970])
             for row in rows {
                 var summary = try JSONDecoder().decode(RequestSummary.self, from: row["summary_json"] as Data)
                 summary.status = .interrupted

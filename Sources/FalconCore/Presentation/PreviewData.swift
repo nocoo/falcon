@@ -94,6 +94,7 @@ public enum PreviewData {
             summary.questionCount = 3
             summary.metadata = ["project": "falcon", "agent": source.name, "run_id": "preview-\(index / 4)"]
             summary.reviewState = index % 7 == 3 ? .flagged : index % 3 == 1 ? .reviewed : .unreviewed
+            if [6, 14, 22].contains(index) { summary.starredAt = receivedAt.addingTimeInterval(10) }
             summary.httpStatus = summary.status == .succeeded ? 200 : 504
             summary.errorMessage =
                 summary.status == .succeeded

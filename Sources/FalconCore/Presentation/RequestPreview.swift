@@ -3,13 +3,16 @@ import Foundation
 public struct RequestPreview: Sendable {
     public let status: RequestStatus
     public let expiresAt: Date
+    public let starredAt: Date?
+    public func isRetained(at date: Date) -> Bool { starredAt != nil || expiresAt > date }
     public let context: String
     public let questionID: String?
     public let decision: String?
 
-    init(status: RequestStatus, expiresAt: Date, context: String?, question: JSONValue?) {
+    init(status: RequestStatus, expiresAt: Date, starredAt: Date?, context: String?, question: JSONValue?) {
         self.status = status
         self.expiresAt = expiresAt
+        self.starredAt = starredAt
         self.context = Self.compact(context ?? "", limit: 240)
         questionID = question?["id"]?.stringValue.map { Self.compact($0, limit: 80) }
         switch question?["type"]?.stringValue {

@@ -53,7 +53,7 @@ public struct ReplayTimeline: Sendable {
         guard records.count <= 10_000 else {
             throw FalconError("replay_limit", "Narrow the range to 10,000 decisions or fewer.", status: 422)
         }
-        self.records = records.filter { $0.expiresAt > now && $0.status.isTerminal }
+        self.records = records.filter { $0.isRetained(at: now) && $0.status.isTerminal }
         self.records = self.records.map { record in
             var light = record
             light.metadata = [:]
@@ -66,14 +66,20 @@ public struct ReplayTimeline: Sendable {
     }
 
     public mutating func removeExpired(now: Date) {
-        guard records.contains(where: { $0.expiresAt <= now }) else { return }
-        records.removeAll { $0.expiresAt <= now }
+        guard records.contains(where: { !$0.isRetained(at: now) }) else { return }
+        records.removeAll { !$0.isRetained(at: now) }
         events = Self.events(for: records)
         recordIDs = Set(records.map(\.id))
     }
 
+    mutating func updateStar(id: UUID, starredAt: Date?, now: Date = Date()) {
+        guard let index = records.firstIndex(where: { $0.id == id }) else { return }
+        records[index].starredAt = starredAt
+        removeExpired(now: now)
+    }
+
     public func reveals(_ stage: ReplayStage, record: RequestSummary, at cursor: Date, now: Date) -> Bool {
-        guard record.expiresAt > now, recordIDs.contains(record.id) else { return false }
+        guard record.isRetained(at: now), recordIDs.contains(record.id) else { return false }
         let offset: Double?
         switch stage {
         case .headers: offset = 0

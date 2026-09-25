@@ -80,3 +80,15 @@ import Testing
     #expect(!RequestStatus.inFlight.isTerminal)
     #expect(RequestStatus.interrupted.isFailure)
 }
+
+@Test func optionalStarAnnotationDefaultsToUnstarred() throws {
+    let summary = RequestSummary(
+        sourceID: UUID(), keyID: UUID(), sourceName: "Synthetic", profileID: UUID(), profileName: "Synthetic")
+    let encoded = try JSONEncoder().encode(summary)
+    let encodedText = try #require(String(bytes: encoded, encoding: .utf8))
+    #expect(!encodedText.contains("starredAt"))
+    let restored = try JSONDecoder().decode(RequestSummary.self, from: encoded)
+    #expect(!restored.isStarred && restored.starredAt == nil)
+    #expect(restored.isRetained(at: summary.expiresAt.addingTimeInterval(-1)))
+    #expect(!restored.isRetained(at: summary.expiresAt))
+}

@@ -195,6 +195,98 @@ private func addingState(_ state: JSONValue, to detail: RequestDetail) throws ->
     try await fixture.finish()
 }
 
+@Test func starredRetentionCoversReadsCompletionDeliveryAndCleanup() async throws {
+    let fixture = try StorageFixture()
+    let store = fixture.store
+    let old = Date().addingTimeInterval(-FalconLimits.retention - 60)
+    var pending = sampleDetail(receivedAt: old)
+    pending.summary.starredAt = old.addingTimeInterval(5)
+    try await store.reserve(requestID: pending.id, requestBytes: pending.receivedRequest!.count, questionCount: 1)
+    try await store.insert(pending)
+    try await store.saveReview(id: pending.id, state: .flagged, note: "Keep")
+    var completed = pending
+    completed.summary.status = .succeeded
+    completed.summary.timing.terminalMS = 10
+    completed.upstreamResponse = Data(#"{"answers":{"q":{"noul":0.7}}}"#.utf8)
+    try await store.update(completed)
+    try await store.updateDelivery(id: pending.id, state: .written, finishedMS: 12)
+    let stored = try #require(await store.detail(id: pending.id))
+    #expect(stored.summary.isStarred && stored.summary.reviewNote == "Keep")
+    #expect(stored.summary.delivery == .written)
+    #expect(try await store.requests(filter: DecisionFilter(starredOnly: true)).map(\.id) == [pending.id])
+    let preview = try #require(await store.requestPreviews(ids: [pending.id])[pending.id])
+    #expect(preview.isRetained(at: Date()))
+    #expect(preview.starredAt == pending.summary.starredAt)
+    #expect(try await store.replayCandidates(filter: DecisionFilter(starredOnly: true)).map(\.id) == [pending.id])
+    #expect(try await store.usage(filter: DecisionFilter(starredOnly: true)).requests == 1)
+    let timeline = try ReplayTimeline(records: [stored.summary])
+    #expect(timeline.records.map(\.id) == [pending.id])
+    try await store.cleanup()
+    #expect(try await store.detail(id: pending.id) != nil)
+    try await store.setStarred(id: pending.id, starred: false)
+    #expect(try await store.detail(id: pending.id) == nil)
+    #expect(try await store.requests(filter: DecisionFilter(starredOnly: true)).isEmpty)
+    #expect(try await store.usage().requests == 0)
+    try await store.release(requestID: pending.id)
+    try await fixture.finish()
+}
+
+@Test func starredRecoveryAndExplicitClearPreserveTheirContracts() async throws {
+    let fixture = try StorageFixture()
+    let store = fixture.store
+    let old = Date().addingTimeInterval(-FalconLimits.retention - 60)
+    var pending = sampleDetail(receivedAt: old)
+    pending.summary.starredAt = old.addingTimeInterval(5)
+    try await persist(pending, in: store)
+    try await store.recoverInterrupted()
+    #expect(try await store.detail(id: pending.id)?.summary.status == .interrupted)
+    #expect(try await store.detail(id: pending.id)?.summary.isStarred == true)
+    try await store.clearHistory()
+    #expect(try await store.detail(id: pending.id) == nil)
+    try await fixture.finish()
+}
+
+@Test func starSetDuringFlightSurvivesImmutableCompletion() async throws {
+    let fixture = try StorageFixture()
+    let store = fixture.store
+    let pending = sampleDetail()
+    try await store.reserve(requestID: pending.id, requestBytes: pending.receivedRequest!.count, questionCount: 1)
+    try await store.insert(pending)
+    try await store.setStarred(id: pending.id, starred: true)
+    let starredAt = try #require(await store.detail(id: pending.id)?.summary.starredAt)
+    var completed = pending
+    completed.summary.status = .succeeded
+    completed.summary.timing.terminalMS = 10
+    completed.upstreamResponse = Data(#"{"answers":{"q":{"noul":0.7}}}"#.utf8)
+    try await store.update(completed)
+    #expect(try await store.detail(id: pending.id)?.summary.starredAt == starredAt)
+    try await store.setStarred(id: pending.id, starred: true)
+    #expect(try await store.detail(id: pending.id)?.summary.starredAt == starredAt)
+    try await store.setStarred(id: pending.id, starred: false)
+    #expect(try await store.detail(id: pending.id)?.summary.starredAt == nil)
+    try await store.release(requestID: pending.id)
+    try await fixture.finish()
+}
+
+@Test func starredFilterCombinesWithSourceSearchStatusAndReview() async throws {
+    let fixture = try StorageFixture()
+    let sourceID = UUID()
+    var matching = sampleDetail(status: .succeeded, sourceID: sourceID)
+    matching.summary.metadata["search_key"] = "needle"
+    var other = sampleDetail(status: .rejected)
+    other.summary.metadata["search_key"] = "needle"
+    try await persist(matching, in: fixture.store)
+    try await persist(other, in: fixture.store)
+    try await fixture.store.setStarred(id: matching.id, starred: true)
+    try await fixture.store.setStarred(id: other.id, starred: true)
+    try await fixture.store.saveReview(id: other.id, state: .flagged, note: "Check")
+    let query = DecisionFilter(
+        sourceIDs: [sourceID], status: .succeeded, reviewState: .unreviewed, search: "needle", starredOnly: true)
+    #expect(try await fixture.store.requests(filter: query).map(\.id) == [matching.id])
+    #expect(try await fixture.store.usage(filter: query).requests == 1)
+    try await fixture.finish()
+}
+
 @Test func storagePaginationRecoveryAndStatistics() async throws {
     let fixture = try StorageFixture()
     let store = fixture.store

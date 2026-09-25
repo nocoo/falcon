@@ -192,10 +192,14 @@ public struct RequestSummary: Identifiable, Codable, Sendable, Equatable {
     public var metadata: [String: String]
     public var reviewState: ReviewState
     public var reviewNote: String
+    public var starredAt: Date?
+    public var isStarred: Bool { starredAt != nil }
+    public func isRetained(at date: Date) -> Bool { isStarred || expiresAt > date }
     public init(
         id: UUID = UUID(), sourceID: UUID, keyID: UUID, sourceName: String, profileID: UUID, profileName: String,
         profileRevision: Int = 1, baseURL: String = "https://api.typesafe.ai", transport: RequestTransport = .http,
-        receivedAt: Date = Date(), status: RequestStatus = .accepted, requestedModel: String = "jev-latest"
+        receivedAt: Date = Date(), status: RequestStatus = .accepted, requestedModel: String = "jev-latest",
+        starredAt: Date? = nil
     ) {
         self.id = id
         self.sourceID = sourceID
@@ -216,6 +220,7 @@ public struct RequestSummary: Identifiable, Codable, Sendable, Equatable {
         self.metadata = [:]
         self.reviewState = .unreviewed
         self.reviewNote = ""
+        self.starredAt = starredAt
     }
 }
 
@@ -246,10 +251,11 @@ public struct DecisionFilter: Sendable, Equatable {
     public var questionFingerprint: String?
     public var confidenceBand: Int?
     public var noulBand: Int?
+    public var starredOnly: Bool
     public init(
         since: Date? = nil, until: Date? = nil, sourceIDs: Set<UUID> = [], status: RequestStatus? = nil,
         reviewState: ReviewState? = nil, search: String = "", questionFingerprint: String? = nil,
-        confidenceBand: Int? = nil, noulBand: Int? = nil
+        confidenceBand: Int? = nil, noulBand: Int? = nil, starredOnly: Bool = false
     ) {
         self.since = since
         self.until = until
@@ -260,6 +266,7 @@ public struct DecisionFilter: Sendable, Equatable {
         self.questionFingerprint = questionFingerprint
         self.confidenceBand = confidenceBand
         self.noulBand = noulBand
+        self.starredOnly = starredOnly
     }
 }
 
