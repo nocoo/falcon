@@ -19,7 +19,7 @@ open build/Build/Products/Release/Falcon.app
 
 脚本默认构建本机架构，产物位于 `build/Build/Products/Release/Falcon.app`。当前是本地开发构建，尚未签名公证或发布。
 
-1. 在 **Connections** 保存 Jev key、HTTPS API root 和默认模型。官方 root 是 `https://api.typesafe.ai`。
+1. 首次真实启动自动进入 **Connections**，保存 Jev key、HTTPS API root 和默认模型。官方 root 是 `https://api.typesafe.ai`。
 2. 在 **Sources** 创建来源并选择 connection，复制仅显示一次的本地 key。
 3. 将 Agent 的 API root 指向 `http://127.0.0.1:19823`，Bearer token 使用该来源的本地 key。
 4. 发起决策后，在 **Decisions** 回看；**Focus review** 可收起导航与列表，**Usage** 可点击图表钻取。
@@ -32,7 +32,7 @@ open build/Build/Products/Release/Falcon.app
 open build/Build/Products/Release/Falcon.app --args --preview --dark
 ```
 
-Preview 使用独立临时数据库，不监听端口、不访问 Keychain、不调用上游。退出后校验测试 marker 并清理。
+Preview 使用独立临时数据库，不监听端口、不读取真实凭据文件、不调用上游。退出后校验测试 marker 并清理。正常启动不加 `--preview`，只显示真实历史；没有请求时列表为空。
 
 ## 接入
 
@@ -58,7 +58,7 @@ MCP 使用 Streamable HTTP、JSON response 和 `jev_decide` 工具；客户端�
 }
 ```
 
-上游 key 存在 Falcon 专属 Keychain 项中；本地 key 只持久化摘要。请求和响应在本机保留 168 小时，默认明文存储于当前用户的 Application Support/Falcon，导出文件由用户管理。回放不会再次请求 Jev，也不表示 Agent 已执行了决策。
+上游 key 明文保存在 `~/.config/falcon/credentials.json`，文件由 Connections 自动维护，目录权限 `0700`、文件权限 `0600`，采用原子写入。应用不使用 Keychain。本地来源 key 只持久化摘要。请求和响应在本机保留 168 小时，默认明文存储于当前用户的 Application Support/Falcon，导出文件由用户管理。回放不会再次请求 Jev，也不表示 Agent 已执行了决策。
 
 ## 开发验证
 
@@ -71,9 +71,9 @@ xcrun swift-format lint --strict --recursive Sources Tests
 git diff --check
 ```
 
-测试使用临时 SQLite、内存凭据与真实 loopback fixture。SDK 检查通过 `uv` 运行锁定的官方 `typesafe-sdk==0.7.1`，只在开发期使用。默认 Swift 测试不执行该 opt-in Python 用例。
+测试使用临时 SQLite、内存或隔离文件凭据与真实 loopback fixture。SDK 检查通过 `uv` 运行锁定的官方 `typesafe-sdk==0.7.1`，只在开发期使用。默认 Swift 测试不执行该 opt-in Python 用例。
 
-完整四项覆盖率与自动提交门禁尚未达标；真实 Keychain 拒绝访问、生产 Jev、完整无障碍矩阵和大数据性能仍有验证边界。已执行证据与预算见 [交付与验证](docs/05-delivery.md)。
+完整四项覆盖率与自动提交门禁尚未达标；生产 Jev、完整无障碍矩阵和大数据性能仍有验证边界。已执行证据与预算见 [交付与验证](docs/05-delivery.md)。
 
 ## 文档
 

@@ -13,7 +13,7 @@ flowchart LR
     Auth --> Service[DecisionService]
     UI[SwiftUI + ViewModel] --> Store[SQLite / GRDB]
     UI --> Settings[配置与来源管理]
-    Settings --> Vault[Falcon Keychain]
+    Settings --> Vault[Falcon credentials.json]
     Service --> Vault
     Service --> Store
     Service --> Client[URLSession / JevClient]
@@ -34,7 +34,7 @@ HTTP 和 MCP 只负责协议映射；业务管线不依赖 SwiftUI。UI 直接�
 | HTTP server | Hummingbird 2.27.0 | 已检查文档与类型入口，复用成熟 HTTP framing、请求体限制和生命周期；不手写 Network.framework HTTP 解析器 |
 | MCP | 官方 Swift SDK 0.12.1 的 `StatelessHTTPServerTransport` | 已核实 tag 中存在；JSON 请求响应即可满足 Jev，不需要 SSE 推送和 session 存储 |
 | 持久化 | GRDB 7.11.1 + 系统 SQLite，WAL | 事务与查询降低手写 C API 管理成本；不打包第二份数据库引擎，不提供旧 schema 迁移 |
-| 凭据 | Security.framework / Keychain；CryptoKit 摘要 | 上游密钥只在 Falcon 自有 namespace；内部 key 数据库仅保存 SHA-256 摘要 |
+| 凭据 | Foundation JSON 文件；CryptoKit 摘要；系统安全随机数 | 上游密钥位于 `~/.config/falcon/credentials.json`；内部 key 数据库仅保存 SHA-256 摘要 |
 | 并发 | Swift concurrency、actor、结构化任务 | ViewModel 在 MainActor；网络、数据库、正文解析均不阻塞主线程 |
 | 构建 | Xcode app target + 本地 Swift package | 正常签名与资源打包；SPM pin 依赖，Release 开启优化与 dead stripping |
 
@@ -42,7 +42,7 @@ HTTP 和 MCP 只负责协议映射；业务管线不依赖 SwiftUI。UI 直接�
 
 ## 运行生命周期
 
-- 第一次启动先配置上游与来源；未配置时服务状态为 `Needs setup`，不宣称 ready。
+- 第一次真实启动自动打开 Connections 配置上游与来源；未配置时服务状态为 `Needs setup`，不宣称 ready。合成历史只在显式 `--preview` 时写入隔离测试库。
 - 服务默认绑定 `127.0.0.1:19823`，端口可在设置修改；bind 冲突显示实际错误并支持重试，不静默换端口。首版只支持 IPv4 数字地址，接入配置不使用可能解析到 IPv6 的 localhost。
 - 窗口关闭后主进程和 MenuBarExtra 保持运行；Dock / 菜单栏可重新打开同一主窗口。Quit 明确停止服务。登录启动可选、默认关闭。
 - Pause 停止接收新的推理请求，返回 503；已有任务在原截止时间内完成。Quit 最多等待 5 秒，再取消本地任务并记为 interrupted / unknown；取消不保证上游未计费。
@@ -78,7 +78,7 @@ body_received_ms 随 received/effective request 的 accepted 事务落盘，后�
 
 | 表 / 实体 | 关键字段与规则 |
 | --- | --- |
-| `upstream_profiles` | UUID、名称、base URL、default model、keychain reference、revision、enabled；不保存明文 key |
+| `upstream_profiles` | UUID、名称、base URL、default model、credential reference、revision、enabled；不保存明文 key |
 | `sources` | UUID、名称、profile ID、enabled、archived、created_at；source ID 永不复用 |
 | `source_keys` | UUID、source ID、token digest、display suffix、created_at、revoked_at；同一来源只有一把 active key |
 | `requests` | UUID、source/key ID、来源名称快照、profile ID/revision/base URL 快照、transport、caller metadata、received_at、expires_at、status、delivery、requested/resolved model、五个 nullable 阶段 offset、HTTP 状态、错误分类、token nullable、`received_request` / `effective_request` / `upstream_response` 三个独立 BLOB |
@@ -89,9 +89,11 @@ body_received_ms 随 received/effective request 的 accepted 事务落盘，后�
 
 索引以 `(received_at, id)`、`(source_id, received_at, id)`、`(status, received_at, id)`、`(profile_id, received_at, id)` 与 question 类型/置信度为起点，根据 query plan 添加必要索引。列表使用游标分页，每页 100；正文按需读，不把全库解码到内存。首版全文关键词搜索在时间和元数据筛选后执行有界、可取消的扫描；不许仅扫描当前页而显示为全库结果。
 
-上游 profile 被归档后禁止新调用，来源必须重新绑定或禁用。修改 profile 不改写历史快照；显示当前名称时保留历史名称入口。不持久化 key 明文或能还原密钥的历史快照。
+上游 profile 被归档后禁止新调用，来源必须重新绑定或禁用。修改 profile 不改写历史快照；显示当前名称时保留历史名称入口。profile 和历史记录不保存 key 明文或能还原密钥的历史快照。
 
-**配置启用事务**：编辑先写新的、版本独立的 Falcon Keychain item，再由同一个配置 actor 提交完整 profile 新版本并原子切换 active revision；任一步失败保留旧配置，清理未引用的新 item。接收请求的 actor 在允许配置切换前取得整体执行快照（含对应 secret 的内存引用），因此不会把旧 URL 与新 key 配对。旧 Keychain item 及已捕获 secret 的引用保留到使用旧版本的在途任务释放，随后仅删除 Falcon 自有旧 item；重启清理未引用 item 时也只按自身 namespace 和记录检查。版本回收不是旧 key 的调用宽限期，新请求只用 active revision。
+**配置启用事务**：编辑先向凭据 JSON 文件写入新的、版本独立的 credential ID 与 key，再由同一个配置 actor 提交完整 profile 新版本并原子切换 active revision；任一步失败保留旧配置，清理未引用的新条目。接收请求的 actor 在允许配置切换前取得整体执行快照（含对应 secret 的内存引用），因此不会把旧 URL 与新 key 配对。旧凭据条目及已捕获 secret 的引用保留到使用旧版本的在途任务释放，随后仅删除 Falcon 文件中的旧条目；重启按数据库引用清理文件中的孤立 UUID 条目。版本回收不是旧 key 的调用宽限期，新请求只用 active revision。
+
+`~/.config/falcon/credentials.json` 是 credential ID 到上游 key 的明文 JSON 对象，由 Connections 自动维护。目录权限 `0700`、文件权限 `0600`，串行读改写并原子替换文件；每次读取都使用当前文件内容。文件损坏、不可读取或写入失败时报告凭据不可用，不静默清空或覆盖损坏内容。不访问 Keychain，也不保留旧凭据后端或迁移路径。
 
 ## 七天留存与容量
 

@@ -46,8 +46,8 @@ HTTP 请求的 `model` 必填；官方 SDK会带默认 model。MCP 可省略 mod
 - 内部 key 使用 256 bit 安全随机值，格式 `falcon_` 加 base64url；创建或轮换时仅显示一次。数据库保存 SHA-256 摘要、后四位和 key ID，验证采用时序安全比较。
 - 一个 source 一把 active key；轮换事务立即撤销旧 key，不保留宽限兼容路径。用户重新配置 agent；历史聚合仍按同一 source ID。
 - 来源 key 仅允许推理与基本健康查询，不能列举其他来源、读历史、导出、改配置或读取上游 key。
-- 上游 key 存 Falcon 专属 Keychain service，profile 只持引用。编辑只能替换，普通界面不提供历史明文查看；不记录到日志、crash metadata、导出或剪贴板配置模板。
-- Keychain 拒绝访问时显示具体操作入口，不弹循环授权、不扫描其他条目。设计阶段不执行任何 Keychain 操作。
+- 上游 key 明文存于 `~/.config/falcon/credentials.json`，目录 `0700`、文件 `0600`，profile 只持 credential ID 引用。编辑只能替换，普通界面不提供历史明文查看；不记录到日志、crash metadata、导出或剪贴板配置模板。
+- 凭据文件无法读取、损坏或无法写入时显示错误并保留已有配置；不把故障当作空凭据继续保存。应用不访问 Keychain。
 
 任何已授权本机进程持有 key 都能冒用该来源；这不是进程身份认证系统。正文可能本来含敏感信息，不能靠自动脱敏承诺“安全原文”；设置页明确完整留存含义，复制/导出由用户显式触发。
 
@@ -99,7 +99,7 @@ Falcon 不自动重试，包括 429/529。官方 SDK 默认可能重试，因此
 
 ## 官方 Python SDK接入示例
 
-以下为未来服务的使用方式；当前仓库无可运行服务。实际 key 由用户安全地注入环境，不能提交到文件。
+以下示例连接正在运行的 Falcon 服务。实际来源 key 由用户注入环境，不能提交到仓库。
 
 ```python
 import os
@@ -124,6 +124,6 @@ with TypeSafeClient(
     print(result.choices["execution"].choice)
 ```
 
-`typesafe-sdk==0.7.1` 的离线探针及后续真实 loopback 集成已验证 base URL、内部 key、三类响应和扩展字段；官方 MCP 客户端也已运行完整初始化与调用序列。生产 Jev 与真实 Keychain 仍未调用，见 [05](05-delivery.md)。
+`typesafe-sdk==0.7.1` 的离线探针及后续真实 loopback 集成已验证 base URL、内部 key、三类响应和扩展字段；官方 MCP 客户端也已运行完整初始化与调用序列。生产 Jev 接入仍需用户填写真实凭据后验证，见 [05](05-delivery.md)。
 
 [下一篇：界面与动效](04-interface.md) · [目录](README.md)

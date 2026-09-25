@@ -10,7 +10,7 @@
 | --- | --- | --- | --- |
 | 0 设计 | 产品、架构、协议、视觉、回放与独立审阅 | `docs/01` 至 `docs/08` | 两次独立设计审阅 PASS，精确版本见 [07](07-design-review.md) |
 | 1 可用闭环 | 原生窗口、HTTP/MCP → 合成 Jev → SQLite → 列表/详情 | `Sources/Falcon/App/`、`Sources/FalconCore/Proxy/`、`Persistence/DecisionStore.swift` | 已实现；真实 loopback 集成测试覆盖正式 MCP 初始化与调用序列 |
-| 2 完整接入 | 多来源与多上游、来源 key 轮换/撤销、配置快照、官方 SDK 互操作 | `Sources/FalconCore/Configuration/`、`Tests/FalconIntegrationTests/ProxyIntegrationTests.swift`、`scripts/check-sdk.sh` | 已实现；真实 Keychain 与生产 API 仍需独立验证 |
+| 2 完整接入 | 多来源与多上游、来源 key 轮换/撤销、文件凭据、配置快照、官方 SDK 互操作 | `Sources/FalconCore/Configuration/`、`Tests/FalconIntegrationTests/ProxyIntegrationTests.swift`、`scripts/check-sdk.sh` | 已实现；生产 API 仍需独立验证 |
 | 3 完整观察 | 七天清理、宽幅详情、Focus review、统计、review、回放与导出 | `Sources/FalconCore/Presentation/`、`Sources/Falcon/Features/` | 已实现；大数据性能与完整人工旅程仍待验收 |
 | 4 原生完成度 | 统一颜色/字体、细纹理、浅深色、加载、动效与本地打包 | `Sources/Falcon/Design/FalconTheme.swift`、`scripts/build-app.sh`、`project.yml` | 已有合成数据截图与本地 Release 构建；完整 VoiceOver/性能矩阵及签名公证未完成 |
 
@@ -41,14 +41,14 @@ UI 主题、大空间 overview 与输入/问题/结果同时可见从第 1 层�
 | 维度 | 目标 | 当前状态 |
 | --- | --- | --- |
 | L1 | UT statements/branches/functions/lines 各 ≥95%；严格类型检查、check-only lint/format 零错误零警告；index snapshot pre-commit 阻断 | 测试与严格 lint/format 已有执行入口。四项覆盖率未达标；LLVM branch 为 0/0，不作为测量，region 不冒充 statement。没有安装提交 hook，详细审计保存在 nmem |
-| L2 | 100% 所拥有 endpoint/method 真实本地 HTTP，MCP 互操作与 SQLite 集成 | 已有真实 loopback tests、官方 MCP 客户端及 opt-in Python SDK 检查；外部磁盘耗尽/WAL 写入故障、跨进程锁与真实 Keychain 拒绝访问未注入 |
+| L2 | 100% 所拥有 endpoint/method 真实本地 HTTP，MCP 互操作与 SQLite 集成 | 已有真实 loopback tests、官方 MCP 客户端及 opt-in Python SDK 检查；外部磁盘耗尽/WAL 写入故障与跨进程锁未注入 |
 | L3 | 原生关键旅程、截图矩阵、键盘/无障碍验证 | 已检查浅/深色、Focus、小窗口、空状态、回放和 Usage 合成截图；尚无自动化 UI journey suite、完整 VoiceOver 与真实休眠矩阵 |
 | G2 | gitleaks + 支持 Package.resolved 的依赖漏洞扫描，工具缺失阻断 | Package.resolved 已锁定依赖；没有自动扫描/推送 gate 的通过证据 |
-| D1 | 每次运行独立目录/端口/凭据 namespace，fixture/reset/cleanup 前核验 marker | 存储及传输测试采用每次独立目录、系统分配端口、内存凭据；数据库写入和清理使用 run UUID marker；Preview 同样隔离 |
+| D1 | 每次运行独立目录/端口/凭据 namespace，fixture/reset/cleanup 前核验 marker | 存储及传输测试采用每次独立目录、系统分配端口、内存或隔离文件凭据；数据库写入和清理使用 run UUID marker；Preview 同样隔离 |
 
 目标 pre-commit <30 秒，pre-push <3 分钟；这些是预算，不构成跳过检查的理由。UI 纯视图可交 L3，但 ViewModel、认证、统计和保留策略在 UT 范围内。不能为四项 95% 移除难测业务、隐藏告警或排除错误路径。
 
-测试使用系统分配的 loopback 临时端口、独立数据库目录，设置 `_test_marker(run_id=...)`，cleanup 检查目录归属与 marker。CredentialStore 使用测试内存实现；确需验证 Keychain 时只使用测试 namespace，并单独授权真实系统交互。测试不能读取日常 Falcon 配置或调用上游。
+测试使用系统分配的 loopback 临时端口、独立数据库目录，设置 `_test_marker(run_id=...)`，cleanup 检查目录归属与 marker。CredentialVault 使用测试内存实现或每次独立的临时凭据文件；文件测试覆盖权限、并发更新、损坏拒绝、写入失败与轮换后的重启读取。测试不能读取日常 Falcon 配置或调用上游。
 
 当前检查命令：
 
@@ -79,6 +79,12 @@ git diff --check
 上述 53 项实际通过的测试不等于完整 L1 达标。全量 Swift 套件对 FalconCore 的行覆盖率为 92.12%（3672/3986），函数覆盖率为 88.30%（619/701）；statement 无测量值，branch 输出 0/0 不可用。这是 Core 与 Integration 共同执行的结果，不是单独 UT 四项达标证明。完整审计保存在 nmem `6dq-audit-github.com-nocoo-falcon-l1`。
 
 Release 已核验无 LLVM coverage sections、无打包进入 App 的 lint 配置；SwiftPM 测试继续显式采集覆盖率。体积仅指当前本机 arm64 开发构建，不包含 dSYM，也不是 universal 或已公证的分发包。
+
+### 2026-09-25 文件凭据变更验证
+
+上游凭据改为 `~/.config/falcon/credentials.json` 后，完整 Swift 回归通过 Core 40 项、Integration 18 项，默认跳过 1 项 opt-in Python SDK 用例。新增文件测试覆盖保存与重开、`0700` / `0600` 权限、32 个并发更新、4 类损坏内容、符号链接拒绝、目录不可写时保留原 profile，以及轮换后重启和孤立凭据回收。测试均使用独立临时目录与合成 key，没有访问真实凭据。
+
+Release 构建、SwiftLint strict、swift-format strict、Markdown 本地链接与 Git whitespace 检查通过。此变更直接移除 Keychain 后端；首次真实启动进入 Connections，真实 Jev 调用由用户填写配置后发起。以上回归结果不改变完整 L1 尚未达标的状态。
 
 ## 小体积与性能验收预算
 

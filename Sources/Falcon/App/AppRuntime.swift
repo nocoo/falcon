@@ -52,12 +52,13 @@ import Observation
             }.value
             try await store.recoverInterrupted()
             try await store.cleanup()
-            let configuration = ConfigurationManager(store: store, vault: .keychain())
+            let configuration = ConfigurationManager(store: store, vault: try .file())
             try await configuration.reconcileCredentials()
             let service = DecisionService(store: store, configuration: configuration)
             self.service = service
             workspace = WorkspaceModel(store: store, configuration: configuration)
             await workspace?.refresh(reset: true)
+            if workspace?.profiles.isEmpty == true { workspace?.page = .connections }
             do { try await startServer(configuration: configuration) } catch {
                 startupError = "The local service could not start: \(error.localizedDescription)"
             }

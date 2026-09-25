@@ -44,7 +44,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift-format lint
 
 The app is at `build/Build/Products/Release/Falcon.app`; the script defaults to the host architecture.
 Preview with `open build/Build/Products/Release/Falcon.app --args --preview` uses synthetic data,
-a marked temporary database, and no listener, Keychain access, or upstream calls.
+a marked temporary database, and no listener, production credential access, or upstream calls.
 Only the coordinator runs SwiftPM in this checkout during parallel work.
 Preserve full-suite coverage before the opt-in SDK run replaces SwiftPM's coverage output.
 SwiftLint needs the Xcode `DEVELOPER_DIR` above; do not change global xcode-select.
@@ -67,9 +67,10 @@ SwiftLint needs the Xcode `DEVELOPER_DIR` above; do not change global xcode-sele
 - The implementation follows the recommended pure Swift runtime; the official Python SDK is a development interoperability reference.
 - Only bind the proxy to numeric loopback. Never expose it to LAN interfaces by default.
 - Authenticate every local API/MCP request with a source key; caller metadata is untrusted.
-- Upstream credentials belong only in Falcon-scoped Keychain items.
+- Upstream credentials live in `~/.config/falcon/credentials.json`; use directory mode 0700, file mode 0600 and atomic writes.
+- Local source keys are displayed once; persist only their SHA-256 digests, suffixes and identifiers.
 - Never forward local credentials upstream, or upstream credentials downstream.
-- Do not inspect unrelated Keychain items or alter machine ACLs/certificates.
+- Do not access Keychain, inspect unrelated credentials, or alter machine ACLs/certificates.
 - Preserve Jev request and response semantics. Never invent reasoning or infer agent execution.
 - Keep input, question definitions, and results visible together in the primary review workspace.
 - Historical replay is local and read-only; never call Jev, invent per-question timing, or bypass expiry with the playback clock.
@@ -86,10 +87,10 @@ manual means explicitly performed; N/A requires a concrete reason.
 | Dimension | Required contract | Current status |
 | --- | --- | --- |
 | L1 | Unit statements/branches/functions/lines each ≥95%; strict types and check-only lint/format, zero errors/warnings; pre-commit failure blocking | Incomplete. Meaningful tests and strict static checks exist; functions/lines remain below 95%, statements/branches are unavailable, and no commit hook is installed. |
-| L2 | Real local HTTP for every endpoint/method, MCP interoperability, SQLite lifecycle and retention integration | Implemented local HTTP, official MCP client, retention/configuration integration and separate official Python SDK checks. External disk exhaustion and real Keychain faults remain unverified. |
+| L2 | Real local HTTP for every endpoint/method, MCP interoperability, SQLite lifecycle and retention integration | Implemented local HTTP, official MCP client, retention/configuration integration and separate official Python SDK checks. External disk exhaustion remains unverified. |
 | L3 | Isolated native critical journeys, appearance and accessibility checks | Manual synthetic app captures cover both appearances, focus, compact, empty, replay and usage. Automated UI journeys and full accessibility/performance matrices remain unverified. |
 | G2 | Dependency and secret scanning; missing required tools fail | Dependencies are pinned in Package.resolved. No enforced dependency/secret-scanning gate is present. |
-| D1 | Separate per-run test storage, ports and key namespace; guards before cleanup | Test fixtures use per-run temporary directories, ephemeral ports, in-memory credentials and verified SQLite run markers. Production credentials are not used. |
+| D1 | Separate per-run test storage, ports and key namespace; guards before cleanup | Test fixtures use per-run temporary directories, ephemeral ports, memory or isolated file credentials and verified SQLite run markers. Production credentials are not used. |
 
 Pre-commit target: L1 against the index snapshot, under 30 seconds.
 Pre-push target: L2 and G2 against stdin push refs, under three minutes.

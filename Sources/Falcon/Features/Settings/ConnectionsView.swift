@@ -77,7 +77,7 @@ struct ConnectionsView: View {
                     }
                 }
                 Label(
-                    "Upstream keys stay in your Mac’s Keychain. Agents only receive their own Falcon source keys.",
+                    "Upstream keys are saved in ~/.config/falcon/credentials.json, accessible only to your macOS user.",
                     systemImage: "lock.shield"
                 ).font(FalconTheme.detail).foregroundStyle(FalconTheme.secondary)
             }.padding(FalconTheme.Space.page).frame(maxWidth: FalconTheme.Layout.managementWidth, alignment: .leading)
@@ -129,7 +129,7 @@ private struct ConnectionEditor: View {
             ).foregroundStyle(FalconTheme.secondary).textSelection(.enabled)
             Text(
                 profile == nil
-                    ? "The API key is stored only in Falcon’s Keychain namespace."
+                    ? "The API key is saved locally in ~/.config/falcon/credentials.json."
                     : "Leave the key empty to keep it. A new target requires its own key. "
                         + "Changes apply to new requests."
             ).font(FalconTheme.detail).foregroundStyle(FalconTheme.secondary).lineSpacing(FalconTheme.Space.small)
