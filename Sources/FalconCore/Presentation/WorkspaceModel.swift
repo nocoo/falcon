@@ -29,6 +29,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
     public var noulFilter: Int?
     public var statusFilter: RequestStatus?
     public var reviewFilter: ReviewState?
+    public var starredOnly = false
     public var hours = 168
     public var usageShowsTokens = false
     public var usageShowsReturn = false
@@ -51,6 +52,9 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
     public var note = ""
     public var reviewState: ReviewState = .unreviewed
     public private(set) var noteIsDirty = false
+    public private(set) var isUpdatingStar = false
+    public private(set) var isTriaging = false
+    public private(set) var triageMessage: String?
     public private(set) var timeline: ReplayTimeline?
     public private(set) var playbackDate = Date()
     public private(set) var isPlaying = false
@@ -75,26 +79,10 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
 
     public var filter: DecisionFilter {
         DecisionFilter(
-            since: timeRange?.start ?? filterAnchor.addingTimeInterval(-Double(hours) * 3600),
-            until: timeRange?.end ?? filterAnchor, sourceIDs: sourceFilters, status: statusFilter,
+            since: starredOnly ? nil : timeRange?.start ?? filterAnchor.addingTimeInterval(-Double(hours) * 3600),
+            until: starredOnly ? nil : timeRange?.end ?? filterAnchor, sourceIDs: sourceFilters, status: statusFilter,
             reviewState: reviewFilter, search: search, questionFingerprint: fingerprintFilter,
-            confidenceBand: confidenceFilter, noulBand: noulFilter)
-    }
-
-    public var hasEvidenceFilter: Bool {
-        timeRange != nil || fingerprintFilter != nil || confidenceFilter != nil || noulFilter != nil
-    }
-
-    public func clearEvidenceFilters() {
-        timeRange = nil
-        fingerprintFilter = nil
-        confidenceFilter = nil
-        noulFilter = nil
-    }
-
-    public func inspectBucket(_ bucket: UsageBucket) {
-        timeRange = DateInterval(start: bucket.date, duration: usage.bucketSeconds)
-        page = .decisions
+            confidenceBand: confidenceFilter, noulBand: noulFilter, starredOnly: starredOnly)
     }
 
     public var replayProgress: Double {
@@ -140,7 +128,9 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
             let query = filter
             let fetched = try await store.requests(filter: query)
             let updatedPreviews = try await store.requestPreviews(
-                ids: fetched.filter { previews[$0.id]?.status != $0.status }.map(\.id))
+                ids: fetched.filter {
+                    previews[$0.id]?.status != $0.status || previews[$0.id]?.starredAt != $0.starredAt
+                }.map(\.id))
             let currentProfiles = try await store.profiles()
             let currentSources = try await store.sources()
             let currentKeys = try await store.sourceKeys()
@@ -159,17 +149,22 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
             previews.merge(updatedPreviews) { _, new in new }
             let visibleIDs = Set(requests.map(\.id))
             previews = previews.filter { visibleIDs.contains($0.key) }
-            if selectedID == nil, let first = requests.first {
-                await select(first.id)
-            } else if reset, let selectedID, !requests.contains(where: { $0.id == selectedID }) {
-                await select(requests.first?.id)
-            } else if let detail, !isSelecting,
-                !detail.summary.status.isTerminal
-                    || fetched.first(where: { $0.id == detail.id }).map({ $0 != detail.summary }) == true
-            {
-                await loadDetail(detail.id)
-            }
+            await refreshSelection(fetched: fetched, reset: reset)
         } catch { if revision == refreshRevision { errorMessage = error.localizedDescription } }
+    }
+
+    private func refreshSelection(fetched: [RequestSummary], reset: Bool) async {
+        guard !isTriaging, !isUpdatingStar else { return }
+        if selectedID == nil, let first = requests.first {
+            await select(first.id)
+        } else if reset, let selectedID, !requests.contains(where: { $0.id == selectedID }) {
+            await select(requests.first?.id)
+        } else if let detail, !isSelecting,
+            !detail.summary.status.isTerminal || (detail.summary.isStarred && detail.summary.expiresAt <= Date())
+                || fetched.first(where: { $0.id == detail.id }).map({ $0 != detail.summary }) == true
+        {
+            await loadDetail(detail.id)
+        }
     }
 
     private func mergeRequests(_ fetched: [RequestSummary], query: DecisionFilter, reset: Bool) {
@@ -191,7 +186,8 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
             requests =
                 fetched
                 + requests.filter {
-                    !newIDs.contains($0.id) && $0.expiresAt > Date() && $0.receivedAt >= (query.since ?? .distantPast)
+                    !newIDs.contains($0.id) && $0.isRetained(at: Date()) && (!query.starredOnly || $0.isStarred)
+                        && $0.receivedAt >= (query.since ?? .distantPast)
                 }
         }
     }
@@ -217,6 +213,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
     }
 
     public func showLatest() async {
+        guard !isTriaging else { return }
         if noteIsDirty {
             await saveReview()
             if noteIsDirty { return }
@@ -226,6 +223,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
     }
 
     public func selectAdjacent(forward: Bool) async {
+        guard !isTriaging else { return }
         guard let index = requests.firstIndex(where: { $0.id == selectedID }) else { return }
         let next = index + (forward ? 1 : -1)
         if next == requests.count, hasMore { await loadMore() }
@@ -234,6 +232,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
     }
 
     public func select(_ id: UUID?) async {
+        guard !isTriaging else { return }
         if noteIsDirty {
             await saveReview()
             if noteIsDirty { return }
@@ -245,6 +244,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
     }
 
     func beginSelection(_ id: UUID?) {
+        if id != selectedID { triageMessage = nil }
         selectedID = id
         selectionRevision += 1
         if id == nil {
@@ -257,21 +257,31 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
     }
 
     private func loadDetail(_ id: UUID) async {
+        guard !((isTriaging || isUpdatingStar) && detail?.id == id) else { return }
         let revision = selectionRevision
         do {
             let loaded = try await store.detail(id: id)
-            guard revision == selectionRevision, selectedID == id, isActive else { return }
+            guard revision == selectionRevision, selectedID == id, isActive,
+                !((isTriaging || isUpdatingStar) && detail?.id == id)
+            else { return }
             guard let loaded else {
-                selectedID = detail?.id
-                validateExpiry()
+                if detail?.id == id {
+                    beginSelection(nil)
+                    pauseReplay()
+                } else {
+                    selectedID = detail?.id
+                    validateExpiry()
+                }
                 errorMessage = "This decision is no longer available."
                 return
             }
             let parsed = await Task.detached { DecisionPresentation(detail: loaded) }.value
             let preview =
-                previews[id]?.status == loaded.summary.status
+                previews[id]?.status == loaded.summary.status && previews[id]?.starredAt == loaded.summary.starredAt
                 ? previews[id] : try await store.requestPreviews(ids: [id])[id]
-            guard revision == selectionRevision, selectedID == id, isActive else { return }
+            guard revision == selectionRevision, selectedID == id, isActive,
+                !((isTriaging || isUpdatingStar) && detail?.id == id)
+            else { return }
             if !noteIsDirty || detail?.id != id {
                 note = loaded.summary.reviewNote
                 reviewState = loaded.summary.reviewState
@@ -287,7 +297,8 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
             }
             validateExpiry()
         } catch {
-            guard revision == selectionRevision, selectedID == id else { return }
+            guard revision == selectionRevision, selectedID == id, !((isTriaging || isUpdatingStar) && detail?.id == id)
+            else { return }
             selectedID = detail?.id
             errorMessage = error.localizedDescription
             pauseReplay()
@@ -305,7 +316,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
         noteIsDirty = true
     }
     public func saveReview() async {
-        guard let id = detail?.id, isActive, !isSelecting else { return }
+        guard let id = detail?.id, isActive, !isSelecting, !isTriaging else { return }
         do {
             let savedNote = note
             let savedState = reviewState
@@ -314,6 +325,102 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
             noteIsDirty = false
             await loadDetail(id)
         } catch { errorMessage = error.localizedDescription }
+    }
+
+    public func toggleStar(id: UUID) async {
+        guard isActive, !isSelecting, !isUpdatingStar, !isTriaging else { return }
+        isUpdatingStar = true
+        defer {
+            isUpdatingStar = false
+            validateExpiry()
+        }
+        do {
+            guard let current = try await store.detail(id: id) else { return }
+            if current.summary.isStarred && current.summary.expiresAt <= Date() && detail?.id == id && noteIsDirty {
+                await saveReview()
+                guard !noteIsDirty else { return }
+            }
+            try await store.setStarred(id: id, starred: !current.summary.isStarred)
+            let updated = try await store.detail(id: id)
+            try await applyStarUpdate(id: id, updated: updated)
+        } catch { errorMessage = error.localizedDescription }
+    }
+
+    private func applyStarUpdate(id: UUID, updated: RequestDetail?) async throws {
+        timeline?.updateStar(id: id, starredAt: updated?.summary.starredAt)
+        if timeline?.records.isEmpty == true { stopReplay() }
+        guard let updated else {
+            requests.removeAll { $0.id == id }
+            previews[id] = nil
+            if selectedID == id { beginSelection(nil) }
+            return
+        }
+        if let index = requests.firstIndex(where: { $0.id == id }) { requests[index] = updated.summary }
+        if detail?.id == id { detail?.summary = updated.summary }
+        previews.merge(try await store.requestPreviews(ids: [id])) { _, new in new }
+        if starredOnly && !updated.summary.isStarred {
+            requests.removeAll { $0.id == id }
+            if selectedID == id && !noteIsDirty { await select(requests.first?.id) }
+        }
+    }
+
+    public func triage() async {
+        guard isActive, !isSelecting, !isTriaging, !isUpdatingStar, let current = detail, selectedID == current.id
+        else { return }
+        isTriaging = true
+        defer { isTriaging = false }
+        let id = current.id
+        let revision = selectionRevision
+        let savedNote = note
+        let previousState = reviewState
+        triageMessage = nil
+        do {
+            try await store.saveReview(id: id, state: .reviewed, note: savedNote)
+            guard selectionRevision == revision, selectedID == id, note == savedNote, reviewState == previousState
+            else { return }
+            applyTriageReview(id: id, note: savedNote)
+            var query = filter
+            guard query.reviewState == nil || query.reviewState == .unreviewed else {
+                triageMessage = "No unreviewed decisions match the current filters."
+                return
+            }
+            query.reviewState = .unreviewed
+            let selectedHours = hours
+            let selectedRange = timeRange
+            let cursor = RequestCursor(receivedAt: current.summary.receivedAt, id: id)
+            let next = try await store.requests(filter: query, before: cursor, limit: 1).first
+            var currentFilter = filter
+            currentFilter.reviewState = .unreviewed
+            currentFilter.since = query.since
+            currentFilter.until = query.until
+            guard selectionRevision == revision, selectedID == id, !noteIsDirty, isActive, query == currentFilter,
+                hours == selectedHours, timeRange == selectedRange
+            else { return }
+            guard let next else {
+                triageMessage = "No older unreviewed decisions match the current filters."
+                return
+            }
+            if !requests.contains(where: { $0.id == next.id }) {
+                requests.append(next)
+                requests.sort {
+                    $0.receivedAt == $1.receivedAt ? $0.id.uuidString > $1.id.uuidString : $0.receivedAt > $1.receivedAt
+                }
+            }
+            if reviewFilter == .unreviewed { requests.removeAll { $0.id == id } }
+            isTriaging = false
+            await select(next.id)
+        } catch { errorMessage = error.localizedDescription }
+    }
+
+    private func applyTriageReview(id: UUID, note: String) {
+        noteIsDirty = false
+        reviewState = .reviewed
+        detail?.summary.reviewState = .reviewed
+        detail?.summary.reviewNote = note
+        if let index = requests.firstIndex(where: { $0.id == id }) {
+            requests[index].reviewState = .reviewed
+            requests[index].reviewNote = note
+        }
     }
 
     public func setActive(_ active: Bool) async {
@@ -328,10 +435,11 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
     }
 
     public func validateExpiry(now: Date = Date()) {
-        requests.removeAll { $0.expiresAt <= now }
-        previews = previews.filter { $0.value.expiresAt > now }
+        guard !isUpdatingStar else { return }
+        requests.removeAll { !$0.isRetained(at: now) }
+        previews = previews.filter { $0.value.isRetained(at: now) }
         timeline?.removeExpired(now: now)
-        if let detail, detail.summary.expiresAt <= now {
+        if let detail, !detail.summary.isRetained(at: now) {
             beginSelection(nil)
             pauseReplay()
             errorMessage = "This decision reached the end of its seven-day retention period."
@@ -349,54 +457,16 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
         usage = UsageSnapshot()
     }
 
-    public func testConnection(profileID: UUID, service: DecisionService) async {
-        guard !isPreview, let configuration else { return }
-        do {
-            guard let profile = try await store.profiles().first(where: { $0.id == profileID }) else {
-                throw FalconError("profile_missing", "The connection is no longer available.")
-            }
-            let issued = try await configuration.createSource(name: "Falcon connection check", profileID: profileID)
-            let question: JSONValue = .object([
-                "type": .string("choice"), "instructions": .string("Classify this fixed input."),
-                "criteria": .object([
-                    "synthetic": .string("An explicitly synthetic check."), "real": .string("A real task."),
-                ]),
-            ])
-            let input = try JSONValue.object([
-                "model": .string(profile.defaultModel),
-                "state": .object(["purpose": .string("Synthetic connection check"), "synthetic": .bool(true)]),
-                "questions": .object(["input_kind": question]),
-            ]).data()
-            let reply = await service.submit(
-                token: issued.token, body: input, transport: .app, metadata: ["intent": "connection_check"])
-            try await configuration.revokeKey(sourceID: issued.source.id)
-            var archived = issued.source
-            archived.archived = true
-            try await configuration.saveSource(archived)
-            clearEvidenceFilters()
-            sourceFilters = []
-            statusFilter = nil
-            reviewFilter = nil
-            search = ""
-            hours = 168
-            page = .decisions
-            await refresh(reset: true)
-            if let id = reply.requestID { await select(id) }
-            if reply.status != 200 {
-                errorMessage =
-                    reply.error?.message ?? "The upstream returned HTTP \(reply.status). Inspect the recorded response."
-            }
-        } catch { errorMessage = error.localizedDescription }
-    }
-
     public func startReplay(range: Bool) async {
         guard !isSelecting else { return }
         do {
             let rows: [RequestSummary]
             if range {
                 rows = try await store.replayCandidates(filter: filter)
+            } else if let detail, let current = try await store.detail(id: detail.id) {
+                rows = [current.summary]
             } else {
-                rows = detail.map { [$0.summary] } ?? []
+                rows = []
             }
             let newTimeline = try ReplayTimeline(records: rows)
             guard !newTimeline.records.isEmpty else { return }
@@ -469,53 +539,8 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
         }
     }
 
-    public func exportJSON() async throws -> Data {
-        guard let id = selectedID, isActive, !isSelecting else {
-            throw FalconError("no_selection", "Wait for the selected decision to finish loading.")
-        }
-        guard timeline == nil else {
-            throw FalconError("replay_export", "Show the final result before exporting the complete record.")
-        }
-        let record = try await store.detail(id: id)
-        guard let record, record.summary.expiresAt > Date() else {
-            throw FalconError("expired", "The decision is no longer available.")
-        }
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        let summary = try JSONValue.decode(encoder.encode(record.summary))
-        func evidence(_ bytes: Data?) -> JSONValue {
-            guard let bytes else { return .null }
-            return .object([
-                "json": (try? JSONValue.decode(bytes)) ?? .null,
-                "original_base64": .string(bytes.base64EncodedString()),
-            ])
-        }
-        return try JSONValue.object([
-            "summary": summary, "received_request": evidence(record.receivedRequest),
-            "effective_request": evidence(record.effectiveRequest),
-            "upstream_response": evidence(record.upstreamResponse),
-        ]).data(pretty: true)
-    }
-
-    public func exportCSV() async throws -> String {
-        guard isActive else { throw FalconError("inactive", "Return to Falcon before exporting.") }
-        var records: [RequestSummary] = []
-        var cursor: RequestCursor?
-        let query = filter
-        repeat {
-            let page = try await store.requests(filter: query, before: cursor)
-            records += page
-            guard records.count <= 10_000 else {
-                throw FalconError("export_limit", "Narrow the range to 10,000 decisions or fewer.")
-            }
-            if page.count < 100 { break }
-            cursor = page.last.map { RequestCursor(receivedAt: $0.receivedAt, id: $0.id) }
-        } while cursor != nil
-        return DecisionFormat.csv(records.filter { $0.expiresAt > Date() })
-    }
-
     private func reveals(_ stage: ReplayStage) -> Bool {
-        guard isActive, let detail, detail.summary.expiresAt > Date() else { return false }
+        guard isActive, let detail, detail.summary.isRetained(at: Date()) else { return false }
         guard let timeline else { return true }
         return timeline.reveals(stage, record: detail.summary, at: playbackDate, now: Date())
     }

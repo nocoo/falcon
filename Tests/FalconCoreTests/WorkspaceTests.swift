@@ -112,6 +112,126 @@ private struct WorkspaceFixture {
     try await fixture.finish()
 }
 
+@MainActor @Test func workspaceStarredHistoryExportsAndSurvivesViewExpiry() async throws {
+    let fixture = try WorkspaceFixture()
+    var old = try #require(PreviewData.records().first)
+    old.summary.receivedAt = Date().addingTimeInterval(-FalconLimits.retention - 60)
+    old.summary.expiresAt = old.summary.receivedAt.addingTimeInterval(FalconLimits.retention)
+    old.summary.starredAt = old.summary.receivedAt.addingTimeInterval(10)
+    try await fixture.insert([old])
+    let model = WorkspaceModel(store: fixture.store)
+    model.starredOnly = true
+    #expect(model.filter.since == nil && model.filter.until == nil)
+    await model.refresh(reset: true)
+    #expect(model.requests.map(\.id) == [old.id])
+    #expect(model.detail?.summary.isStarred == true)
+    model.validateExpiry(now: Date())
+    #expect(model.detail?.id == old.id && model.inputsVisible)
+    let exported = try JSONValue.decode(await model.exportJSON())
+    #expect(exported["summary"]?["starredAt"] != nil)
+    #expect(try await model.exportCSV().contains(old.id.uuidString))
+    await model.startReplay(range: true)
+    #expect(model.timeline?.records.map(\.id) == [old.id])
+    await model.toggleStar(id: old.id)
+    #expect(!model.isUpdatingStar && model.detail == nil && model.requests.isEmpty && model.timeline == nil)
+    #expect(try await fixture.store.detail(id: old.id) == nil)
+    try await fixture.finish()
+}
+
+@MainActor @Test func workspaceReplayTracksStarsChangedWhilePlaying() async throws {
+    let fixture = try WorkspaceFixture()
+    var records = try Array(PreviewData.records().prefix(2))
+    let receivedAt = Date().addingTimeInterval(-FalconLimits.retention + 30)
+    for index in records.indices {
+        records[index].summary.receivedAt = receivedAt.addingTimeInterval(Double(index))
+        records[index].summary.expiresAt = records[index].summary.receivedAt.addingTimeInterval(FalconLimits.retention)
+    }
+    records[1].summary.starredAt = receivedAt.addingTimeInterval(2)
+    try await fixture.insert(records)
+    let model = WorkspaceModel(store: fixture.store)
+    await model.refresh(reset: true)
+    await model.startReplay(range: true)
+    #expect(model.timeline?.records.count == 2)
+    model.play()
+    #expect(model.isPlaying)
+    await model.toggleStar(id: records[0].id)
+    await model.toggleStar(id: records[1].id)
+    #expect(model.timeline?.records.first { $0.id == records[0].id }?.isStarred == true)
+    #expect(model.timeline?.records.first { $0.id == records[1].id }?.isStarred == false)
+    model.validateExpiry(now: records[1].summary.expiresAt.addingTimeInterval(1))
+    #expect(model.timeline?.records.map(\.id) == [records[0].id])
+    model.pauseReplay()
+    try await fixture.finish()
+}
+
+@MainActor @Test func workspaceTriageSavesThenFindsUnreadPastFirstPage() async throws {
+    let fixture = try WorkspaceFixture()
+    let template = try #require(PreviewData.records().first)
+    let base = Date().addingTimeInterval(-30)
+    let records = (0..<102).map { index in
+        var record = template
+        record.summary.id = UUID()
+        record.summary.receivedAt = base.addingTimeInterval(-Double(index * 30))
+        record.summary.expiresAt = record.summary.receivedAt.addingTimeInterval(FalconLimits.retention)
+        record.summary.reviewState = index == 0 || index == 101 ? .unreviewed : .reviewed
+        return record
+    }
+    try await fixture.insert(records)
+    let model = WorkspaceModel(store: fixture.store)
+    await model.refresh(reset: true)
+    #expect(model.requests.count == 100 && model.hasMore)
+    #expect(model.selectedID == records[0].id)
+    model.editNote(String(repeating: "x", count: 4_097))
+    await model.triage()
+    #expect(model.selectedID == records[0].id && model.noteIsDirty)
+    #expect(!model.isTriaging)
+    #expect(try await fixture.store.detail(id: records[0].id)?.summary.reviewState == .unreviewed)
+    model.editNote("Reviewed and saved")
+    await model.triage()
+    #expect(model.selectedID == records[101].id && model.detail?.id == records[101].id)
+    #expect(!model.noteIsDirty && !model.isTriaging)
+    #expect(try await fixture.store.detail(id: records[0].id)?.summary.reviewNote == "Reviewed and saved")
+    #expect(try await fixture.store.detail(id: records[0].id)?.summary.reviewState == .reviewed)
+    await model.loadMore()
+    #expect(Set(model.requests.map(\.id)) == Set(records.map(\.id)))
+    await model.triage()
+    #expect(model.selectedID == records[101].id)
+    #expect(model.triageMessage != nil)
+    model.beginSelection(records[100].id)
+    await model.triage()
+    #expect(model.isSelecting && model.selectedID == records[100].id)
+    try await fixture.finish()
+}
+
+@MainActor @Test func workspaceTriageAdvancesWhileObservingStoreChanges() async throws {
+    let fixture = try WorkspaceFixture()
+    let template = try #require(PreviewData.records().first)
+    let records = (0..<12).map { index in
+        var record = template
+        record.summary.id = UUID()
+        record.summary.receivedAt = Date().addingTimeInterval(-Double(index * 30 + 30))
+        record.summary.expiresAt = record.summary.receivedAt.addingTimeInterval(FalconLimits.retention)
+        record.summary.reviewState = .unreviewed
+        return record
+    }
+    try await fixture.insert(records)
+    let model = WorkspaceModel(store: fixture.store)
+    model.reviewFilter = .unreviewed
+    let observation = Task { await model.observeChanges() }
+    defer { observation.cancel() }
+    try await waitForWorkspace { model.requests.count == records.count && model.detail?.id == records[0].id }
+    for index in 0..<(records.count - 1) {
+        model.editNote("triage-\(index)")
+        await model.triage()
+        #expect(model.selectedID == records[index + 1].id)
+        #expect(model.detail?.id == records[index + 1].id)
+        #expect(try await fixture.store.detail(id: records[index].id)?.summary.reviewState == .reviewed)
+    }
+    observation.cancel()
+    await observation.value
+    try await fixture.finish()
+}
+
 @MainActor @Test func workspaceSelectionKeepsEvidenceUntilReplacementIsReady() async throws {
     let fixture = try WorkspaceFixture()
     let records = try Array(PreviewData.records().prefix(3))
