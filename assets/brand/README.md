@@ -24,7 +24,7 @@ The native app uses the same approved identity in its sidebar, empty state,
 Settings footer, menu bar and Dock. `Sources/Falcon/Resources/FalconMark.png`
 and its 2x variant retain the entire transparent canvas and original colors.
 Small in-app marks have no background tile or extra mask. The menu bar uses
-the same alpha silhouette as a macOS template image.
+the same alpha silhouette in a separate 18-point native macOS template image.
 
 `Sources/Falcon/Resources/Falcon.icns` contains the ten standard macOS icon
 representations. Each places the approved rounded presentation at 824/1024

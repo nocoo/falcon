@@ -9,4 +9,12 @@ enum FalconAssets {
 
     // Xcode combines PNG scale variants into TIFF; AppKit resolves both bundle formats.
     static var mark: NSImage? { bundle.image(forResource: "FalconMark") }
+
+    static var menuBarMark: NSImage? {
+        guard let image = mark?.copy() as? NSImage else { return nil }
+        // MenuBarExtra reads native image properties rather than SwiftUI sizing modifiers.
+        image.size = NSSize(width: FalconTheme.Layout.menuMark, height: FalconTheme.Layout.menuMark)
+        image.isTemplate = true
+        return image
+    }
 }

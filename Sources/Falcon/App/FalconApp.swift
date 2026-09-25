@@ -70,11 +70,7 @@ import SwiftUI
             Divider()
             Button("Quit Falcon") { NSApp.terminate(nil) }.keyboardShortcut("q")
         } label: {
-            if let image = FalconAssets.mark {
-                Image(nsImage: image).resizable().renderingMode(.template).scaledToFit().frame(
-                    width: FalconTheme.Layout.menuMark, height: FalconTheme.Layout.menuMark
-                ).accessibilityLabel("Falcon")
-            }
+            if let image = FalconAssets.menuBarMark { Image(nsImage: image).accessibilityLabel("Falcon") }
         }
     }
 }
