@@ -4,6 +4,12 @@
 
 稳定项目约束维护在 [AGENTS.md](AGENTS.md)，架构与设计维护在 [docs](docs/README.md)。
 
+## 2026-09-25: Database restart failed during journal setup
+
+- Restarting Falcon failed with `cannot change into wal mode from within a transaction`. The original setup ran journal PRAGMAs inside `DatabaseQueue.write`. SQLite left a new database in rollback-journal mode and rejected the same WAL switch when that populated database reopened. Fresh-store tests had missed the reopen path.
+- Configure WAL through GRDB's connection configuration, and prepare secure deletion and initial incremental vacuum before schema transactions. Reopening keeps the existing tables, profiles and audit records intact.
+- The regression covers both a fresh store and an existing marked rollback-journal file, writes history and a review, releases the store, then reopens it and checks the content and journal mode. Startup checks must exercise a second launch against persistent data.
+
 ## 2026-09-25: Connection checks hid subsequent sources
 
 - The owner reported that live agent decisions were absent from the interface after connection setup. Read-only inspection confirmed successful requests in the active app's history. A regression reproduced a visibility defect: the connection check left the workspace filtered to its archived temporary source, so later agent requests remained hidden.

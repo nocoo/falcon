@@ -10,11 +10,17 @@ public struct StorageCapacity: Sendable {
 }
 
 private enum StoreSetup {
-    static func configure(_ database: Database, existed: Bool, testRunID: UUID?) throws {
-        try database.execute(sql: "PRAGMA foreign_keys = ON")
-        try database.execute(sql: "PRAGMA secure_delete = ON")
-        if !existed { try database.execute(sql: "PRAGMA auto_vacuum = INCREMENTAL") }
-        try database.execute(sql: "PRAGMA journal_mode = WAL")
+    static func configuration(existed: Bool) -> Configuration {
+        var configuration = Configuration()
+        configuration.journalMode = .wal
+        configuration.prepareDatabase { database in
+            try database.execute(sql: "PRAGMA secure_delete = ON")
+            if !existed { try database.execute(sql: "PRAGMA auto_vacuum = INCREMENTAL") }
+        }
+        return configuration
+    }
+
+    static func createSchema(_ database: Database, existed: Bool, testRunID: UUID?) throws {
         try database.execute(
             sql: """
                 CREATE TABLE IF NOT EXISTS _test_marker (run_id TEXT PRIMARY KEY);
@@ -222,8 +228,8 @@ public actor DecisionStore {
         let existed = FileManager.default.fileExists(atPath: path)
         self.path = path
         self.budgetBytes = budgetBytes
-        db = try DatabaseQueue(path: path)
-        try db.write { database in try StoreSetup.configure(database, existed: existed, testRunID: testRunID) }
+        db = try DatabaseQueue(path: path, configuration: StoreSetup.configuration(existed: existed))
+        try db.write { database in try StoreSetup.createSchema(database, existed: existed, testRunID: testRunID) }
         try StoreSetup.restrictFiles(at: path)
         initialized = true
     }
