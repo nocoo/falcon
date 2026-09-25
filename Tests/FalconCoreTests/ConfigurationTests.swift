@@ -1,14 +1,17 @@
 import Foundation
 import Testing
+
 @testable import FalconCore
 
 @Test func configurationRotatesKeysAndKeepsInflightProfileVersion() async throws {
-    let directory = FileManager.default.temporaryDirectory.appendingPathComponent("FalconConfigurationTests-\(UUID().uuidString)")
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "FalconConfigurationTests-\(UUID().uuidString)")
     let marker = UUID()
     let store = try DecisionStore(path: directory.appendingPathComponent("store.sqlite").path, testRunID: marker)
     let vault = CredentialVault.memory()
     let manager = ConfigurationManager(store: store, vault: vault)
-    let profile = try await manager.saveProfile(UpstreamProfile(name: "Primary", baseURL: "https://api.example.test/base/"), apiKey: "synthetic-one")
+    let profile = try await manager.saveProfile(
+        UpstreamProfile(name: "Primary", baseURL: "https://api.example.test/base/"), apiKey: "synthetic-one")
     #expect(profile.baseURL == "https://api.example.test/base")
     let issued = try await manager.createSource(name: "IDE", profileID: profile.id)
     #expect(issued.token.hasPrefix("falcon_"))
@@ -41,17 +44,25 @@ import Testing
     try await manager.revokeKey(sourceID: issued.source.id)
     await #expect(throws: (any Error).self) { try await manager.authenticate(token: rotated.token) }
     #expect(try await store.testMarkerMatches(marker))
-    guard try await store.testMarkerMatches(marker) else { throw FalconError("test_marker_mismatch", "Test cleanup refused.") }
+    guard try await store.testMarkerMatches(marker) else {
+        throw FalconError("test_marker_mismatch", "Test cleanup refused.")
+    }
     try FileManager.default.removeItem(at: directory)
 }
 
 @Test func configurationRejectsInvalidTargetsAndDisabledSources() async throws {
-    let directory = FileManager.default.temporaryDirectory.appendingPathComponent("FalconConfigurationTests-\(UUID().uuidString)")
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "FalconConfigurationTests-\(UUID().uuidString)")
     let marker = UUID()
     let store = try DecisionStore(path: directory.appendingPathComponent("store.sqlite").path, testRunID: marker)
     let manager = ConfigurationManager(store: store, vault: .memory())
-    for target in ["http://api.example.test", "https://user:pass@api.example.test", "https://api.example.test/v1/systemone", "https://127.0.0.1:19823"] {
-        await #expect(throws: (any Error).self) { try await manager.saveProfile(UpstreamProfile(name: "Bad", baseURL: target), apiKey: "synthetic") }
+    for target in [
+        "http://api.example.test", "https://user:pass@api.example.test", "https://api.example.test/v1/systemone",
+        "https://127.0.0.1:19823",
+    ] {
+        await #expect(throws: (any Error).self) {
+            try await manager.saveProfile(UpstreamProfile(name: "Bad", baseURL: target), apiKey: "synthetic")
+        }
     }
     let profile = try await manager.saveProfile(UpstreamProfile(name: "Valid"), apiKey: "synthetic")
     let issued = try await manager.createSource(name: "Agent", profileID: profile.id)
@@ -78,12 +89,15 @@ import Testing
     await #expect(throws: (any Error).self) { try await manager.saveSource(source) }
     source.profileID = UUID()
     await #expect(throws: (any Error).self) { try await manager.saveSource(source) }
-    guard try await store.testMarkerMatches(marker) else { throw FalconError("test_marker_mismatch", "Test cleanup refused.") }
+    guard try await store.testMarkerMatches(marker) else {
+        throw FalconError("test_marker_mismatch", "Test cleanup refused.")
+    }
     try FileManager.default.removeItem(at: directory)
 }
 
 @Test func configurationReconcilesOnlyUnreferencedOwnCredentials() async throws {
-    let directory = FileManager.default.temporaryDirectory.appendingPathComponent("FalconConfigurationTests-\(UUID().uuidString)")
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "FalconConfigurationTests-\(UUID().uuidString)")
     let marker = UUID()
     let store = try DecisionStore(path: directory.appendingPathComponent("store.sqlite").path, testRunID: marker)
     let vault = CredentialVault.memory()
@@ -95,6 +109,8 @@ import Testing
     try await restarted.reconcileCredentials()
     #expect(try vault.read(id: orphan) == nil)
     #expect(try vault.read(id: profile.credentialID) == "synthetic-current")
-    guard try await store.testMarkerMatches(marker) else { throw FalconError("test_marker_mismatch", "Test cleanup refused.") }
+    guard try await store.testMarkerMatches(marker) else {
+        throw FalconError("test_marker_mismatch", "Test cleanup refused.")
+    }
     try FileManager.default.removeItem(at: directory)
 }

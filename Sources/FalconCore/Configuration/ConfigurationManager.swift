@@ -39,7 +39,9 @@ public actor ConfigurationManager {
         defer { leave() }
         try? await reconcileCredentialsLocked()
         let (identity, profile) = try await resolve(token: token)
-        guard profile.enabled else { throw FalconError("profile_disabled", "Upstream profile is disabled.", status: 503) }
+        guard profile.enabled else {
+            throw FalconError("profile_disabled", "Upstream profile is disabled.", status: 503)
+        }
         guard let secret = try vault.read(id: profile.credentialID) else {
             throw FalconError("credential_unavailable", "Falcon credential is unavailable.", status: 503)
         }
@@ -52,8 +54,11 @@ public actor ConfigurationManager {
         await enter()
         defer { leave() }
         let id = snapshot.profile.credentialID
-        if let count = activeReferences[id], count > 1 { activeReferences[id] = count - 1 }
-        else { activeReferences.removeValue(forKey: id) }
+        if let count = activeReferences[id], count > 1 {
+            activeReferences[id] = count - 1
+        } else {
+            activeReferences.removeValue(forKey: id)
+        }
         try? await collectRetired()
     }
 
@@ -62,25 +67,23 @@ public actor ConfigurationManager {
         defer { leave() }
         try? await reconcileCredentialsLocked()
         let baseURL = try Self.normalizedURL(profile.baseURL)
-        guard !profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              profile.name.count <= 120, !profile.defaultModel.isEmpty,
-              profile.defaultModel.utf8.count <= 200 else {
-            throw FalconError("invalid_profile", "Profile name or model is invalid.")
-        }
+        guard !profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, profile.name.count <= 120,
+            !profile.defaultModel.isEmpty, profile.defaultModel.utf8.count <= 200
+        else { throw FalconError("invalid_profile", "Profile name or model is invalid.") }
         let current = try await store.profiles().first { $0.id == profile.id }
         let targetChanged = current.map { $0.baseURL != baseURL } ?? true
         if targetChanged && (apiKey?.isEmpty ?? true) {
             throw FalconError("credential_required", "A key is required for a new upstream target.")
         }
         let newID = apiKey == nil ? current?.credentialID : UUID().uuidString
-        guard let newID, !newID.isEmpty else { throw FalconError("credential_required", "An upstream key is required.") }
-        let newVersion = UpstreamProfile(id: profile.id, name: profile.name, baseURL: baseURL,
-                                         defaultModel: profile.defaultModel, revision: (current?.revision ?? 0) + 1,
-                                         credentialID: newID, enabled: profile.enabled)
+        guard let newID, !newID.isEmpty else {
+            throw FalconError("credential_required", "An upstream key is required.")
+        }
+        let newVersion = UpstreamProfile(
+            id: profile.id, name: profile.name, baseURL: baseURL, defaultModel: profile.defaultModel,
+            revision: (current?.revision ?? 0) + 1, credentialID: newID, enabled: profile.enabled)
         if let apiKey { try vault.write(id: newID, value: apiKey) }
-        do {
-            try await store.saveProfile(newVersion)
-        } catch {
+        do { try await store.saveProfile(newVersion) } catch {
             if apiKey != nil { try? vault.remove(id: newID) }
             throw error
         }
@@ -106,10 +109,9 @@ public actor ConfigurationManager {
     public func rotateKey(sourceID: UUID) async throws -> IssuedSourceKey {
         await enter()
         defer { leave() }
-        guard let source = try await store.sources().first(where: { $0.id == sourceID }),
-              source.enabled, !source.archived else {
-            throw FalconError("source_missing", "Active source is required.")
-        }
+        guard let source = try await store.sources().first(where: { $0.id == sourceID }), source.enabled,
+            !source.archived
+        else { throw FalconError("source_missing", "Active source is required.") }
         let issued = try Self.generateKey(for: source)
         try await store.replaceKey(issued.key)
         return issued
@@ -159,10 +161,13 @@ public actor ConfigurationManager {
             SecRandomCopyBytes(kSecRandomDefault, 32, buffer.baseAddress!)
         }
         guard status == errSecSuccess else { throw FalconError("random_unavailable", "Unable to generate source key.") }
-        let token = "falcon_" + bytes.base64EncodedString().replacingOccurrences(of: "+", with: "-")
-            .replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
-        let key = SourceKey(sourceID: source.id, digest: Data(SHA256.hash(data: Data(token.utf8))),
-                            suffix: String(token.suffix(4)))
+        let token =
+            "falcon_"
+            + bytes.base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(
+                of: "/", with: "_"
+            ).replacingOccurrences(of: "=", with: "")
+        let key = SourceKey(
+            sourceID: source.id, digest: Data(SHA256.hash(data: Data(token.utf8))), suffix: String(token.suffix(4)))
         return IssuedSourceKey(source: source, key: key, token: token)
     }
 
@@ -177,19 +182,18 @@ public actor ConfigurationManager {
     private func reconcileCredentialsLocked() async throws {
         guard !reconciled else { return }
         let current = Set(try await store.profiles().map(\.credentialID))
-        for id in try vault.ownedIDs() where UUID(uuidString: id) != nil && !current.contains(id) && activeReferences[id] == nil {
+        for id in try vault.ownedIDs()
+        where UUID(uuidString: id) != nil && !current.contains(id) && activeReferences[id] == nil {
             try vault.remove(id: id)
         }
         reconciled = true
     }
 
     private static func normalizedURL(_ raw: String) throws -> String {
-        guard var parts = URLComponents(string: raw), parts.scheme?.lowercased() == "https",
-              let host = parts.host, !host.isEmpty, parts.user == nil, parts.password == nil,
-              parts.query == nil, parts.fragment == nil,
-              !["localhost", "127.0.0.1", "0.0.0.0"].contains(host.lowercased()) else {
-            throw FalconError("invalid_upstream_url", "A valid HTTPS upstream root is required.")
-        }
+        guard var parts = URLComponents(string: raw), parts.scheme?.lowercased() == "https", let host = parts.host,
+            !host.isEmpty, parts.user == nil, parts.password == nil, parts.query == nil, parts.fragment == nil,
+            !["localhost", "127.0.0.1", "0.0.0.0"].contains(host.lowercased())
+        else { throw FalconError("invalid_upstream_url", "A valid HTTPS upstream root is required.") }
         var path = parts.percentEncodedPath
         while path.hasSuffix("/") { path.removeLast() }
         guard !path.lowercased().hasSuffix("/v1/systemone") else {
@@ -197,17 +201,13 @@ public actor ConfigurationManager {
         }
         parts.percentEncodedPath = path
         let value = parts.string ?? ""
-        guard !value.isEmpty else { throw FalconError("invalid_upstream_url", "A valid HTTPS upstream root is required.") }
+        guard !value.isEmpty else {
+            throw FalconError("invalid_upstream_url", "A valid HTTPS upstream root is required.")
+        }
         return value
     }
 
-    private func enter() async {
-        if busy { await withCheckedContinuation { waiters.append($0) } }
-        else { busy = true }
-    }
+    private func enter() async { if busy { await withCheckedContinuation { waiters.append($0) } } else { busy = true } }
 
-    private func leave() {
-        if waiters.isEmpty { busy = false }
-        else { waiters.removeFirst().resume() }
-    }
+    private func leave() { if waiters.isEmpty { busy = false } else { waiters.removeFirst().resume() } }
 }

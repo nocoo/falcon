@@ -2,7 +2,10 @@ import Foundation
 import Security
 
 public final class CredentialVault: @unchecked Sendable {
-    private enum Backend { case keychain(String), memory }
+    private enum Backend {
+        case keychain(String)
+        case memory
+    }
     private let backend: Backend
     private let lock = NSLock()
     private var values: [String: String] = [:]
@@ -29,10 +32,10 @@ public final class CredentialVault: @unchecked Sendable {
             defer { lock.unlock() }
             return Set(values.keys)
         case .keychain(let service):
-            let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
-                                        kSecAttrService as String: service,
-                                        kSecReturnAttributes as String: true,
-                                        kSecMatchLimit as String: kSecMatchLimitAll]
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
+                kSecReturnAttributes as String: true, kSecMatchLimit as String: kSecMatchLimitAll,
+            ]
             var items: CFTypeRef?
             let status = SecItemCopyMatching(query as CFDictionary, &items)
             if status == errSecItemNotFound { return [] }
@@ -51,17 +54,16 @@ public final class CredentialVault: @unchecked Sendable {
             defer { lock.unlock() }
             return values[id]
         case .keychain(let service):
-            let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
-                                        kSecAttrService as String: service,
-                                        kSecAttrAccount as String: id,
-                                        kSecReturnData as String: true,
-                                        kSecMatchLimit as String: kSecMatchLimitOne]
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
+                kSecAttrAccount as String: id, kSecReturnData as String: true,
+                kSecMatchLimit as String: kSecMatchLimitOne,
+            ]
             var item: CFTypeRef?
             let status = SecItemCopyMatching(query as CFDictionary, &item)
             if status == errSecItemNotFound { return nil }
-            guard status == errSecSuccess, let data = item as? Data, let value = String(data: data, encoding: .utf8) else {
-                throw FalconError("credential_unavailable", "Unable to read Falcon credential.", status: 503)
-            }
+            guard status == errSecSuccess, let data = item as? Data, let value = String(data: data, encoding: .utf8)
+            else { throw FalconError("credential_unavailable", "Unable to read Falcon credential.", status: 503) }
             return value
         }
     }
@@ -74,11 +76,11 @@ public final class CredentialVault: @unchecked Sendable {
             values[id] = value
             lock.unlock()
         case .keychain(let service):
-            let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
-                                        kSecAttrService as String: service,
-                                        kSecAttrAccount as String: id,
-                                        kSecValueData as String: Data(value.utf8),
-                                        kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly]
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
+                kSecAttrAccount as String: id, kSecValueData as String: Data(value.utf8),
+                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+            ]
             guard SecItemAdd(query as CFDictionary, nil) == errSecSuccess else {
                 throw FalconError("credential_unavailable", "Unable to save Falcon credential.", status: 503)
             }
@@ -96,9 +98,10 @@ public final class CredentialVault: @unchecked Sendable {
             }
             values.removeValue(forKey: id)
         case .keychain(let service):
-            let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
-                                        kSecAttrService as String: service,
-                                        kSecAttrAccount as String: id]
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
+                kSecAttrAccount as String: id,
+            ]
             let status = SecItemDelete(query as CFDictionary)
             guard status == errSecSuccess || status == errSecItemNotFound else {
                 throw FalconError("credential_unavailable", "Unable to remove Falcon credential.", status: 503)

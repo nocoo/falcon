@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import FalconCore
 
 private struct StorageFixture {
@@ -8,24 +9,31 @@ private struct StorageFixture {
     let store: DecisionStore
 
     init(budgetBytes: Int64 = FalconLimits.storageBytes) throws {
-        directory = FileManager.default.temporaryDirectory.appendingPathComponent("FalconStorageTests-\(UUID().uuidString)")
-        guard !FileManager.default.fileExists(atPath: directory.path) else { throw FalconError("test_path_exists", "Test path already exists.") }
-        store = try DecisionStore(path: directory.appendingPathComponent("store.sqlite").path,
-                                  testRunID: runID, budgetBytes: budgetBytes)
+        directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "FalconStorageTests-\(UUID().uuidString)")
+        guard !FileManager.default.fileExists(atPath: directory.path) else {
+            throw FalconError("test_path_exists", "Test path already exists.")
+        }
+        store = try DecisionStore(
+            path: directory.appendingPathComponent("store.sqlite").path, testRunID: runID, budgetBytes: budgetBytes)
     }
 
     func finish() async throws {
         #expect(try await store.testMarkerMatches(runID))
-        guard try await store.testMarkerMatches(runID) else { throw FalconError("test_marker_mismatch", "Test cleanup refused.") }
+        guard try await store.testMarkerMatches(runID) else {
+            throw FalconError("test_marker_mismatch", "Test cleanup refused.")
+        }
         try FileManager.default.removeItem(at: directory)
     }
 }
 
-private func sampleDetail(id: UUID = UUID(), receivedAt: Date = Date(), status: RequestStatus = .accepted,
-                          sourceID: UUID = UUID(), questionCount: Int = 1) -> RequestDetail {
-    var summary = RequestSummary(id: id, sourceID: sourceID, keyID: UUID(), sourceName: "Agent",
-                                 profileID: UUID(), profileName: "Upstream", receivedAt: receivedAt,
-                                 status: status)
+private func sampleDetail(
+    id: UUID = UUID(), receivedAt: Date = Date(), status: RequestStatus = .accepted, sourceID: UUID = UUID(),
+    questionCount: Int = 1
+) -> RequestDetail {
+    var summary = RequestSummary(
+        id: id, sourceID: sourceID, keyID: UUID(), sourceName: "Agent", profileID: UUID(), profileName: "Upstream",
+        receivedAt: receivedAt, status: status)
     summary.questionCount = questionCount
     summary.preview = "fixture"
     summary.timing.bodyReceivedMS = 1
@@ -38,17 +46,18 @@ private func sampleDetail(id: UUID = UUID(), receivedAt: Date = Date(), status: 
     }
     let request = Data(#"{"questions":{"q":{"type":"noul","instructions":"synthetic"}}}"#.utf8)
     let response = status == .succeeded ? Data(#"{"answers":{"q":{"noul":0.7}}}"#.utf8) : nil
-    return RequestDetail(summary: summary, receivedRequest: request, effectiveRequest: request, upstreamResponse: response)
+    return RequestDetail(
+        summary: summary, receivedRequest: request, effectiveRequest: request, upstreamResponse: response)
 }
 
-private func projectedDetail(at time: Date, status: RequestStatus = .succeeded,
-                             questions: [String: JSONValue], answers: [String: JSONValue],
-                             requestedModel: String = "requested", resolvedModel: String? = nil,
-                             inputTokens: Int? = nil, outputTokens: Int? = nil,
-                             terminalMS: Double? = 10) throws -> RequestDetail {
-    var summary = RequestSummary(sourceID: UUID(), keyID: UUID(), sourceName: "Synthetic",
-                                 profileID: UUID(), profileName: "Synthetic", receivedAt: time,
-                                 status: status, requestedModel: requestedModel)
+private func projectedDetail(
+    at time: Date, status: RequestStatus = .succeeded, questions: [String: JSONValue], answers: [String: JSONValue],
+    requestedModel: String = "requested", resolvedModel: String? = nil, inputTokens: Int? = nil,
+    outputTokens: Int? = nil, terminalMS: Double? = 10
+) throws -> RequestDetail {
+    var summary = RequestSummary(
+        sourceID: UUID(), keyID: UUID(), sourceName: "Synthetic", profileID: UUID(), profileName: "Synthetic",
+        receivedAt: time, status: status, requestedModel: requestedModel)
     summary.questionCount = questions.count
     summary.resolvedModel = resolvedModel
     summary.inputTokens = inputTokens
@@ -57,13 +66,13 @@ private func projectedDetail(at time: Date, status: RequestStatus = .succeeded,
     if status == .succeeded { summary.timing.upstreamStartedMS = 1 }
     let request = try JSONValue.object(["questions": .object(questions)]).data()
     let response = status == .succeeded ? try JSONValue.object(["answers": .object(answers)]).data() : nil
-    return RequestDetail(summary: summary, receivedRequest: request, effectiveRequest: request,
-                         upstreamResponse: response)
+    return RequestDetail(
+        summary: summary, receivedRequest: request, effectiveRequest: request, upstreamResponse: response)
 }
 
 private func persist(_ detail: RequestDetail, in store: DecisionStore) async throws {
-    try await store.reserve(requestID: detail.id, requestBytes: detail.receivedRequest!.count,
-                            questionCount: detail.summary.questionCount)
+    try await store.reserve(
+        requestID: detail.id, requestBytes: detail.receivedRequest!.count, questionCount: detail.summary.questionCount)
     try await store.insert(detail)
     try await store.release(requestID: detail.id)
 }
@@ -91,7 +100,9 @@ private func persist(_ detail: RequestDetail, in store: DecisionStore) async thr
     try await store.cleanup(now: expiry)
     #expect(try await store.detail(id: detail.id, now: expiry.addingTimeInterval(-1)) == nil)
     await #expect(throws: (any Error).self) { try await store.update(detail) }
-    await #expect(throws: (any Error).self) { try await store.saveReview(id: detail.id, state: .reviewed, note: "late") }
+    await #expect(throws: (any Error).self) {
+        try await store.saveReview(id: detail.id, state: .reviewed, note: "late")
+    }
     try await store.release(requestID: detail.id)
 
     let late = sampleDetail()
@@ -111,9 +122,11 @@ private func persist(_ detail: RequestDetail, in store: DecisionStore) async thr
     let time = Date().addingTimeInterval(-5)
     let source = UUID()
     let ids = (0..<3).map { _ in UUID() }
-    var details = [sampleDetail(id: ids[0], receivedAt: time, status: .succeeded, sourceID: source),
-                   sampleDetail(id: ids[1], receivedAt: time, status: .rejected, sourceID: source),
-                   sampleDetail(id: ids[2], receivedAt: time, status: .accepted, sourceID: source)]
+    var details = [
+        sampleDetail(id: ids[0], receivedAt: time, status: .succeeded, sourceID: source),
+        sampleDetail(id: ids[1], receivedAt: time, status: .rejected, sourceID: source),
+        sampleDetail(id: ids[2], receivedAt: time, status: .accepted, sourceID: source),
+    ]
     details[1].summary.timing.terminalMS = 20
     for detail in details {
         try await store.reserve(requestID: detail.id, requestBytes: detail.receivedRequest!.count, questionCount: 1)
@@ -151,20 +164,23 @@ private func persist(_ detail: RequestDetail, in store: DecisionStore) async thr
     let accepted = await withTaskGroup(of: Bool.self) { group in
         for id in ids {
             group.addTask {
-                do { try await store.reserve(requestID: id, requestBytes: 100, questionCount: 1); return true }
-                catch { return false }
+                do {
+                    try await store.reserve(requestID: id, requestBytes: 100, questionCount: 1)
+                    return true
+                } catch { return false }
             }
         }
         var count = 0
-        for await value in group { if value { count += 1 } }
+        for await value in group where value { count += 1 }
         return count
     }
     #expect(accepted == 1)
     for id in ids { try await store.release(requestID: id) }
     #expect(try await store.storageBytes() > 0)
     #expect(throws: (any Error).self) {
-        _ = try DecisionStore(path: fixture.directory.appendingPathComponent("store.sqlite").path,
-                              testRunID: UUID(), budgetBytes: 25_000_000)
+        _ = try DecisionStore(
+            path: fixture.directory.appendingPathComponent("store.sqlite").path, testRunID: UUID(),
+            budgetBytes: 25_000_000)
     }
     try await fixture.finish()
 }
@@ -175,8 +191,14 @@ private func persist(_ detail: RequestDetail, in store: DecisionStore) async thr
     let requestPrefix = #"{"questions":{"q":{"type":"noul","instructions":"synthetic"}},"padding":""#
     let responsePrefix = #"{"answers":{"q":{"noul":0.7}},"padding":""#
     let suffix = #""}"#
-    let request = Data((requestPrefix + String(repeating: "x", count: FalconLimits.requestBytes - requestPrefix.utf8.count - suffix.utf8.count) + suffix).utf8)
-    let response = Data((responsePrefix + String(repeating: "y", count: FalconLimits.responseBytes - responsePrefix.utf8.count - suffix.utf8.count) + suffix).utf8)
+    let request = Data(
+        (requestPrefix
+            + String(repeating: "x", count: FalconLimits.requestBytes - requestPrefix.utf8.count - suffix.utf8.count)
+            + suffix).utf8)
+    let response = Data(
+        (responsePrefix
+            + String(repeating: "y", count: FalconLimits.responseBytes - responsePrefix.utf8.count - suffix.utf8.count)
+            + suffix).utf8)
     #expect(request.count == FalconLimits.requestBytes)
     #expect(response.count == FalconLimits.responseBytes)
     var detail = sampleDetail()
@@ -226,8 +248,9 @@ private func persist(_ detail: RequestDetail, in store: DecisionStore) async thr
         try await store.release(requestID: detail.id)
     }
     let first = try await store.requests(filter: DecisionFilter(search: "needle"), limit: 100)
-    let second = try await store.requests(filter: DecisionFilter(search: "needle"),
-                                          before: RequestCursor(receivedAt: first.last!.receivedAt, id: first.last!.id), limit: 100)
+    let second = try await store.requests(
+        filter: DecisionFilter(search: "needle"),
+        before: RequestCursor(receivedAt: first.last!.receivedAt, id: first.last!.id), limit: 100)
     #expect(first.count == 100)
     #expect(second.count == 30)
     #expect(Set(first.map(\.id) + second.map(\.id)).count == 130)
@@ -242,14 +265,22 @@ private func persist(_ detail: RequestDetail, in store: DecisionStore) async thr
     let requestPrefix = #"{"questions":{"q":{"type":"noul","instructions":"synthetic"}},"padding":""#
     let responsePrefix = #"{"answers":{"q":{"noul":0.7}},"padding":""#
     let suffix = #""}"#
-    let request = Data((requestPrefix + String(repeating: "x", count: FalconLimits.requestBytes - requestPrefix.utf8.count - suffix.utf8.count) + suffix).utf8)
-    let response = Data((responsePrefix + String(repeating: "y", count: FalconLimits.responseBytes - responsePrefix.utf8.count - suffix.utf8.count) + suffix).utf8)
+    let request = Data(
+        (requestPrefix
+            + String(repeating: "x", count: FalconLimits.requestBytes - requestPrefix.utf8.count - suffix.utf8.count)
+            + suffix).utf8)
+    let response = Data(
+        (responsePrefix
+            + String(repeating: "y", count: FalconLimits.responseBytes - responsePrefix.utf8.count - suffix.utf8.count)
+            + suffix).utf8)
     let ids = (0..<8).map { _ in UUID() }
     let admitted = await withTaskGroup(of: Bool.self) { group in
         for id in ids {
             group.addTask {
-                do { try await store.reserve(requestID: id, requestBytes: request.count, questionCount: 1); return true }
-                catch { return false }
+                do {
+                    try await store.reserve(requestID: id, requestBytes: request.count, questionCount: 1)
+                    return true
+                } catch { return false }
             }
         }
         var results: [Bool] = []
@@ -285,28 +316,37 @@ private func persist(_ detail: RequestDetail, in store: DecisionStore) async thr
     let hour = floor(Date().timeIntervalSince1970 / 3_600) * 3_600 - 3_600
     let since = Date(timeIntervalSince1970: hour)
     let until = since.addingTimeInterval(3_600)
-    let choice = JSONValue.object(["type": .string("choice"), "instructions": .string("Pick one"),
-                                   "criteria": .object(["a": .string("Alpha"), "b": .string("Beta")])])
-    let choiceWithExtension = JSONValue.object(["type": .string("choice"), "instructions": .string("Pick one"),
-                                                "criteria": .object(["a": .string("Alpha"), "b": .string("Beta")]),
-                                                "unrelated": .string("ignored")])
-    let score = JSONValue.object(["type": .string("score"), "instructions": .string("Rate it"),
-                                  "criteria": .array([.string("Poor"), .string("Good")])])
+    let choice = JSONValue.object([
+        "type": .string("choice"), "instructions": .string("Pick one"),
+        "criteria": .object(["a": .string("Alpha"), "b": .string("Beta")]),
+    ])
+    let choiceWithExtension = JSONValue.object([
+        "type": .string("choice"), "instructions": .string("Pick one"),
+        "criteria": .object(["a": .string("Alpha"), "b": .string("Beta")]), "unrelated": .string("ignored"),
+    ])
+    let score = JSONValue.object([
+        "type": .string("score"), "instructions": .string("Rate it"),
+        "criteria": .array([.string("Poor"), .string("Good")]),
+    ])
     let noul = JSONValue.object(["type": .string("noul"), "instructions": .string("Is it ready?")])
-    let first = try projectedDetail(at: since.addingTimeInterval(60),
+    let first = try projectedDetail(
+        at: since.addingTimeInterval(60),
         questions: ["choice-a": choiceWithExtension, "score-a": score, "noul-a": noul],
-        answers: ["choice-a": .object(["choice": .string("a"), "confidence": .number(0.1)]),
-                  "score-a": .object(["score": .number(0.5), "confidence": .number(1)]),
-                  "noul-a": .object(["noul": .number(1)])],
-        requestedModel: "requested-a", resolvedModel: "resolved-a", inputTokens: 10, outputTokens: 4)
-    let second = try projectedDetail(at: since.addingTimeInterval(660),
-        questions: ["choice-b": choice, "score-b": score, "noul-b": noul],
-        answers: ["choice-b": .object(["choice": .string("b"), "confidence": .number(0.9)]),
-                  "score-b": .object(["score": .number(1.5), "confidence": .number(0.1)]),
-                  "noul-b": .object(["noul": .number(0)])],
-        requestedModel: "requested-b", outputTokens: 6, terminalMS: 20)
-    let failed = try projectedDetail(at: since.addingTimeInterval(1_260), status: .rejected,
-        questions: ["choice-c": choice], answers: [:], terminalMS: nil)
+        answers: [
+            "choice-a": .object(["choice": .string("a"), "confidence": .number(0.1)]),
+            "score-a": .object(["score": .number(0.5), "confidence": .number(1)]),
+            "noul-a": .object(["noul": .number(1)]),
+        ], requestedModel: "requested-a", resolvedModel: "resolved-a", inputTokens: 10, outputTokens: 4)
+    let second = try projectedDetail(
+        at: since.addingTimeInterval(660), questions: ["choice-b": choice, "score-b": score, "noul-b": noul],
+        answers: [
+            "choice-b": .object(["choice": .string("b"), "confidence": .number(0.9)]),
+            "score-b": .object(["score": .number(1.5), "confidence": .number(0.1)]),
+            "noul-b": .object(["noul": .number(0)]),
+        ], requestedModel: "requested-b", outputTokens: 6, terminalMS: 20)
+    let failed = try projectedDetail(
+        at: since.addingTimeInterval(1_260), status: .rejected, questions: ["choice-c": choice], answers: [:],
+        terminalMS: nil)
     for detail in [first, second, failed] { try await persist(detail, in: store) }
     try await store.updateDelivery(id: first.id, state: .written, finishedMS: 120)
     try await store.updateDelivery(id: failed.id, state: .failed, finishedMS: 70)
@@ -323,8 +363,10 @@ private func persist(_ detail: RequestDetail, in store: DecisionStore) async thr
     #expect(usage.returnLatencies.reduce(0) { $0 + $1.count } == 1)
     #expect(usage.models.map(\.name) == ["requested", "requested-b", "resolved-a"])
     #expect(usage.sources.first { $0.id == first.summary.sourceID }?.lastReceivedAt == first.summary.receivedAt)
-    #expect(Dictionary(uniqueKeysWithValues: usage.questionTypes.map { ($0.name, $0.count) }) ==
-            ["choice": 3, "score": 2, "noul": 2])
+    #expect(
+        Dictionary(uniqueKeysWithValues: usage.questionTypes.map { ($0.name, $0.count) }) == [
+            "choice": 3, "score": 2, "noul": 2,
+        ])
     #expect(usage.confidence.map(\.count) == [0, 2, 0, 0, 0, 0, 0, 0, 0, 2])
     #expect(usage.noul.map(\.count) == [1, 0, 0, 0, 0, 0, 0, 0, 0, 1])
     #expect(usage.missingConfidence == 0 && usage.missingNoul == 0)
@@ -350,16 +392,24 @@ private func persist(_ detail: RequestDetail, in store: DecisionStore) async thr
     let noulGroup = try #require(usage.decisionGroups.first { $0.type == "noul" })
     #expect(noulGroup.samples == 2 && noulGroup.mean == 0.5 && noulGroup.minimum == 0 && noulGroup.maximum == 1)
 
-    let evidence = DecisionFilter(since: since, until: until,
-                                  questionFingerprint: choiceGroup.fingerprint.lowercased(), confidenceBand: 1)
+    let evidence = DecisionFilter(
+        since: since, until: until, questionFingerprint: choiceGroup.fingerprint.lowercased(), confidenceBand: 1)
     #expect(try await store.requests(filter: evidence).map(\.id) == [first.id])
     #expect(try await store.usage(filter: evidence).requests == 1)
     #expect(try await store.replayCandidates(filter: evidence).map(\.id) == [first.id])
-    #expect(try await store.requests(filter: DecisionFilter(since: since, until: until, noulBand: 9)).map(\.id) == [first.id])
-    #expect(try await store.requests(filter: DecisionFilter(since: since, until: until,
-        questionFingerprint: scoreGroup.fingerprint, confidenceBand: 9)).map(\.id) == [first.id])
+    #expect(
+        try await store.requests(filter: DecisionFilter(since: since, until: until, noulBand: 9)).map(\.id) == [
+            first.id
+        ])
+    #expect(
+        try await store.requests(
+            filter: DecisionFilter(
+                since: since, until: until, questionFingerprint: scoreGroup.fingerprint, confidenceBand: 9)
+        ).map(\.id) == [first.id])
     await #expect(throws: (any Error).self) { try await store.requests(filter: DecisionFilter(confidenceBand: 10)) }
-    await #expect(throws: (any Error).self) { try await store.usage(filter: DecisionFilter(questionFingerprint: "not-hex")) }
+    await #expect(throws: (any Error).self) {
+        try await store.usage(filter: DecisionFilter(questionFingerprint: "not-hex"))
+    }
     try await fixture.finish()
 }
 
@@ -367,18 +417,26 @@ private func persist(_ detail: RequestDetail, in store: DecisionStore) async thr
     let fixture = try StorageFixture()
     let store = fixture.store
     let time = Date().addingTimeInterval(-30)
-    let score = JSONValue.object(["type": .string("score"), "instructions": .string("Rate"),
-                                  "criteria": .array([.string("Low"), .string("High")])])
-    let reversed = JSONValue.object(["type": .string("score"), "instructions": .string("Rate"),
-                                     "criteria": .array([.string("High"), .string("Low")])])
-    var questions: [String: JSONValue] = ["score-a": score, "score-b": reversed,
-                                          "missing-choice": .object(["type": .string("choice"),
-                                            "instructions": .string("Unknown"), "criteria": .object(["a": .string("A"), "b": .string("B")])]),
-                                          "missing-noul": .object(["type": .string("noul"), "instructions": .string("Unknown")])]
-    var answers: [String: JSONValue] = ["score-a": .object(["score": .number(0), "confidence": .number(0)]),
-                                         "score-b": .object(["score": .number(1), "confidence": .number(1)]),
-                                         "missing-choice": .object(["choice": .string("a")]),
-                                         "missing-noul": .object([:])]
+    let score = JSONValue.object([
+        "type": .string("score"), "instructions": .string("Rate"),
+        "criteria": .array([.string("Low"), .string("High")]),
+    ])
+    let reversed = JSONValue.object([
+        "type": .string("score"), "instructions": .string("Rate"),
+        "criteria": .array([.string("High"), .string("Low")]),
+    ])
+    var questions: [String: JSONValue] = [
+        "score-a": score, "score-b": reversed,
+        "missing-choice": .object([
+            "type": .string("choice"), "instructions": .string("Unknown"),
+            "criteria": .object(["a": .string("A"), "b": .string("B")]),
+        ]), "missing-noul": .object(["type": .string("noul"), "instructions": .string("Unknown")]),
+    ]
+    var answers: [String: JSONValue] = [
+        "score-a": .object(["score": .number(0), "confidence": .number(0)]),
+        "score-b": .object(["score": .number(1), "confidence": .number(1)]),
+        "missing-choice": .object(["choice": .string("a")]), "missing-noul": .object([:]),
+    ]
     for index in 0..<101 {
         let id = "noul-\(index)"
         questions[id] = .object(["type": .string("noul"), "instructions": .string("Distinct \(index)")])
