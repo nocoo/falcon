@@ -7,6 +7,7 @@ struct WorkspaceView: View {
     @Bindable var runtime: AppRuntime
     @AppStorage("appearance") private var appearance = "system"
     @State private var hoveredPage: WorkspacePage?
+    @State private var showDetailProgress = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
 
@@ -86,13 +87,26 @@ struct WorkspaceView: View {
                         "Review paused", systemImage: "pause.circle",
                         description: Text("Return to Falcon to continue reviewing."))
                 } else if let detail = model.detail, let presentation = model.presentation {
-                    DecisionDetailView(model: model, detail: detail, presentation: presentation)
-                } else if model.isLoading {
+                    DecisionDetailView(model: model, detail: detail, presentation: presentation).disabled(
+                        model.isSelecting
+                    ).overlay(alignment: .topTrailing) {
+                        if showDetailProgress {
+                            ProgressView().controlSize(.small).padding(FalconTheme.Space.regular).background(
+                                FalconTheme.surface, in: Capsule()
+                            ).padding(FalconTheme.Space.regular).accessibilityLabel("Loading decision")
+                        }
+                    }
+                } else if model.isLoading || model.isSelecting {
                     ProgressView("Loading decisions…").frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     emptyWorkspace
                 }
-            }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            }.frame(maxWidth: .infinity, maxHeight: .infinity).task(id: model.isSelecting) {
+                showDetailProgress = false
+                guard model.isSelecting else { return }
+                do { try await Task.sleep(for: .milliseconds(200)) } catch { return }
+                showDetailProgress = true
+            }
         }
     }
 

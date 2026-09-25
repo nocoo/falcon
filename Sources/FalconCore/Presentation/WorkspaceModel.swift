@@ -103,6 +103,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
     public var resultsVisible: Bool { reveals(.response) }
     public var terminalVisible: Bool { reveals(.terminal) }
     public var deliveryVisible: Bool { reveals(.delivery) }
+    public var isSelecting: Bool { selectedID != nil && selectedID != detail?.id }
     public var visibleStatus: String {
         guard let detail else { return "No selection" }
         if timeline == nil || terminalVisible { return detail.summary.status.title }
@@ -146,7 +147,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
                 await select(first.id)
             } else if reset, let selectedID, !requests.contains(where: { $0.id == selectedID }) {
                 await select(requests.first?.id)
-            } else if let detail, !noteIsDirty,
+            } else if let detail, !noteIsDirty, !isSelecting,
                 !detail.summary.status.isTerminal
                     || fetched.first(where: { $0.id == detail.id }).map({ $0 != detail.summary }) == true
             {
@@ -218,11 +219,20 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
         }
         pauseReplay()
         followArrivals = false
-        selectedID = id
-        detail = nil
-        presentation = nil
-        selectionRevision += 1
+        beginSelection(id)
         if let id { await loadDetail(id) }
+    }
+
+    func beginSelection(_ id: UUID?) {
+        selectedID = id
+        selectionRevision += 1
+        if id == nil {
+            detail = nil
+            presentation = nil
+            note = ""
+            reviewState = .unreviewed
+            noteIsDirty = false
+        }
     }
 
     private func loadDetail(_ id: UUID) async {
@@ -230,30 +240,42 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
         do {
             let loaded = try await store.detail(id: id)
             guard revision == selectionRevision, selectedID == id, isActive else { return }
-            let parsed = await Task.detached { loaded.map(DecisionPresentation.init(detail:)) }.value
+            guard let loaded else {
+                selectedID = detail?.id
+                validateExpiry()
+                errorMessage = "This decision is no longer available."
+                return
+            }
+            let parsed = await Task.detached { DecisionPresentation(detail: loaded) }.value
             guard revision == selectionRevision, selectedID == id, isActive else { return }
+            if !noteIsDirty || detail?.id != id {
+                note = loaded.summary.reviewNote
+                reviewState = loaded.summary.reviewState
+                noteIsDirty = false
+            }
             detail = loaded
             presentation = parsed
-            note = loaded?.summary.reviewNote ?? ""
-            reviewState = loaded?.summary.reviewState ?? .unreviewed
-            noteIsDirty = false
             validateExpiry()
         } catch {
+            guard revision == selectionRevision, selectedID == id else { return }
+            selectedID = detail?.id
             errorMessage = error.localizedDescription
             pauseReplay()
         }
     }
 
     public func editNote(_ value: String) {
+        guard !isSelecting else { return }
         note = value
         noteIsDirty = true
     }
     public func editReview(_ value: ReviewState) {
+        guard !isSelecting else { return }
         reviewState = value
         noteIsDirty = true
     }
     public func saveReview() async {
-        guard let id = detail?.id, isActive else { return }
+        guard let id = detail?.id, isActive, !isSelecting else { return }
         do {
             let savedNote = note
             let savedState = reviewState
@@ -279,11 +301,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
         requests.removeAll { $0.expiresAt <= now }
         timeline?.removeExpired(now: now)
         if let detail, detail.summary.expiresAt <= now {
-            self.detail = nil
-            presentation = nil
-            note = ""
-            noteIsDirty = false
-            selectedID = nil
+            beginSelection(nil)
             pauseReplay()
             errorMessage = "This decision reached the end of its seven-day retention period."
         }
@@ -291,15 +309,10 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
     }
 
     public func resetHistoryView() {
-        selectionRevision += 1
         stopReplay()
-        detail = nil
-        presentation = nil
+        beginSelection(nil)
         requests = []
         newArrivalCount = 0
-        selectedID = nil
-        note = ""
-        noteIsDirty = false
         usage = UsageSnapshot()
     }
 
@@ -344,6 +357,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
     }
 
     public func startReplay(range: Bool) async {
+        guard !isSelecting else { return }
         do {
             let rows: [RequestSummary]
             if range {
@@ -417,16 +431,15 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
             let arrival = timeline.events.last(where: { $0.stage == .headers && $0.date <= playbackDate }),
             arrival.requestID != selectedID
         {
-            selectedID = arrival.requestID
-            selectionRevision += 1
-            detail = nil
-            presentation = nil
+            beginSelection(arrival.requestID)
             Task { await loadDetail(arrival.requestID) }
         }
     }
 
     public func exportJSON() async throws -> Data {
-        guard let id = selectedID, isActive else { throw FalconError("no_selection", "Select a decision first.") }
+        guard let id = selectedID, isActive, !isSelecting else {
+            throw FalconError("no_selection", "Wait for the selected decision to finish loading.")
+        }
         guard timeline == nil else {
             throw FalconError("replay_export", "Show the final result before exporting the complete record.")
         }

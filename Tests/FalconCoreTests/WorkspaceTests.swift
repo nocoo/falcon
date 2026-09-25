@@ -112,6 +112,37 @@ private struct WorkspaceFixture {
     try await fixture.finish()
 }
 
+@MainActor @Test func workspaceSelectionKeepsEvidenceUntilReplacementIsReady() async throws {
+    let fixture = try WorkspaceFixture()
+    let records = try Array(PreviewData.records().prefix(3))
+    try await fixture.insert(records)
+    let model = WorkspaceModel(store: fixture.store)
+    await model.refresh(reset: true)
+    let initial = try #require(model.detail)
+    model.beginSelection(records[1].id)
+    #expect(model.isSelecting)
+    #expect(model.detail == initial && model.presentation != nil)
+    model.editNote("Must not apply to a different selection")
+    model.editReview(.flagged)
+    #expect(!model.noteIsDirty && model.reviewState == initial.summary.reviewState)
+    await #expect(throws: FalconError.self) { try await model.exportJSON() }
+    await model.saveReview()
+    #expect(try await fixture.store.detail(id: initial.id)?.summary.reviewNote == initial.summary.reviewNote)
+    async let earlier: Void = model.select(records[1].id)
+    await model.select(records[2].id)
+    await earlier
+    #expect(!model.isSelecting)
+    #expect(model.selectedID == model.detail?.id)
+    #expect(model.presentation?.state != nil)
+    await model.select(UUID())
+    #expect(!model.isSelecting && model.detail != nil)
+    #expect(model.selectedID == model.detail?.id && model.errorMessage != nil)
+    await model.select(nil)
+    #expect(model.selectedID == nil && model.detail == nil && model.presentation == nil)
+    #expect(!model.isSelecting && model.note.isEmpty)
+    try await fixture.finish()
+}
+
 @MainActor @Test func workspaceHoldsReviewDuringArrivalsAndRefreshesOlderInflight() async throws {
     let fixture = try WorkspaceFixture()
     var records = try Array(PreviewData.records().prefix(2))

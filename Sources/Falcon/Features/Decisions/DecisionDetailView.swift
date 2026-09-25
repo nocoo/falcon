@@ -201,7 +201,7 @@ struct DecisionDetailView: View {
 
     private func copyRaw() {
         model.validateExpiry()
-        guard model.detail?.id == detail.id, model.isActive,
+        guard model.detail?.id == detail.id, model.selectedID == detail.id, model.isActive,
             rawSelection == 2 ? model.resultsVisible : model.inputsVisible
         else { return }
         NSPasteboard.general.clearContents()
