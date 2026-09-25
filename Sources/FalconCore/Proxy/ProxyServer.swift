@@ -32,8 +32,7 @@ public actor ProxyServer {
         if task == nil {
             let responder = CallbackResponder<BasicRequestContext> { request, _ in await self.respond(request) }
             let app = Application(
-                responder: responder,
-                configuration: .init(address: .hostname("127.0.0.1", port: port), reuseAddress: false),
+                responder: responder, configuration: .init(address: .hostname("127.0.0.1", port: port)),
                 onServerRunning: { channel in await self.didBind(channel.localAddress?.port) })
             task = Task {
                 do {

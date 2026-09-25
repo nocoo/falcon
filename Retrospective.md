@@ -4,6 +4,12 @@
 
 稳定项目约束维护在 [AGENTS.md](AGENTS.md)，架构与设计维护在 [docs](docs/README.md)。
 
+## 2026-09-25: Immediate restart could leave the proxy offline
+
+- Native restart verification found Falcon running without a listener. An isolated HTTP fixture reproduced `Address already in use` when rebinding immediately after a completed request; restarting after the TCP wait interval had hidden this failure.
+- ProxyServer explicitly disabled Hummingbird's default address reuse. It now uses the library default, with regressions for immediate same-port restart and rejection of a second live listener. Fixture teardown drains the service and closes SQLite before deleting its marked directory.
+- Validate service readiness immediately after restart. A successful process launch and preserved database alone do not establish a working proxy.
+
 ## 2026-09-25: Preview teardown deleted an open database
 
 - The owner saw `SQLite error 10: disk I/O error` at `PRAGMA query_only = 1` while the source-icon preview was closing. System logs tied the exact error to that preview process: its marked temporary database, WAL and SHM had been unlinked while SQLite still used them. The production database passed a read-only integrity check and continued accepting requests.

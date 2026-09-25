@@ -153,8 +153,10 @@ func withFixture(
     var workError: Error?
     do { try await work(fixture) } catch { workError = error }
     await server.shutdown()
+    await service.shutdown()
     guard try await store.testMarkerMatches(runID), directory.lastPathComponent == "falcon-proxy-\(runID.uuidString)"
     else { throw FalconError("test_marker_mismatch", "Refusing fixture cleanup") }
+    try await store.close()
     try FileManager.default.removeItem(at: directory)
     if let workError { throw workError }
 }
