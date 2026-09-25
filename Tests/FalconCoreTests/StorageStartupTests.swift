@@ -4,6 +4,45 @@ import Testing
 
 @testable import FalconCore
 
+@MainActor @Test func previewShutdownStopsReadsBeforeRemovingFiles() async throws {
+    let marker = UUID()
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent("FalconShutdownTests-\(marker)")
+    let store = try DecisionStore(path: directory.appendingPathComponent("history.sqlite").path, testRunID: marker)
+    try await store.saveProfile(UpstreamProfile(name: "Synthetic"))
+    let model = WorkspaceModel(store: store)
+    let observation = Task { await model.observeChanges() }
+    await model.refresh(reset: true)
+    model.stop()
+    observation.cancel()
+    await observation.value
+    guard try await store.testMarkerMatches(marker) else { throw FalconError("test_marker", "Invalid fixture.") }
+    try await store.close()
+    try FileManager.default.removeItem(at: directory)
+    await model.setActive(true)
+    await model.refresh(reset: true)
+    await model.observeChanges()
+    #expect(model.errorMessage == nil && !model.isActive && !model.isLoading)
+}
+
+@Test func storageCloseReleasesItsLockAndPreservesHistory() async throws {
+    let marker = UUID()
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent("FalconCloseTests-\(marker)")
+    let path = directory.appendingPathComponent("history.sqlite").path
+    let record = try #require(PreviewData.records().first)
+    try await writeStartupHistory(record, path: path, marker: marker)
+    let original = try DecisionStore(path: path, testRunID: marker)
+    try await original.close()
+    let reopened = try DecisionStore(path: path, testRunID: marker)
+    try await original.close()
+    #expect(throws: FalconError.self) { try DecisionStore(path: path, testRunID: marker) }
+    let restored = try #require(await reopened.detail(id: record.id))
+    #expect(restored.summary.reviewNote == "Survives a restart")
+    #expect(restored.receivedRequest == record.receivedRequest && restored.upstreamResponse == record.upstreamResponse)
+    guard try await reopened.testMarkerMatches(marker) else { throw FalconError("test_marker", "Invalid fixture.") }
+    try await reopened.close()
+    try FileManager.default.removeItem(at: directory)
+}
+
 @Test(arguments: [false, true]) func storageReopensHistoryWithWAL(existingRollbackFile: Bool) async throws {
     let marker = UUID()
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent("FalconStartupTests-\(marker)")
@@ -39,6 +78,7 @@ import Testing
     guard try await reopened.testMarkerMatches(marker) else {
         throw FalconError("test_marker", "Refuse to clean an unmarked fixture.")
     }
+    try await reopened.close()
     try FileManager.default.removeItem(at: directory)
 }
 
@@ -91,5 +131,6 @@ private func writeStartupHistory(_ record: RequestDetail, path: String, marker: 
     guard try await reopened.testMarkerMatches(marker) else {
         throw FalconError("test_marker", "Refuse to clean an unmarked fixture.")
     }
+    try await reopened.close()
     try FileManager.default.removeItem(at: directory)
 }

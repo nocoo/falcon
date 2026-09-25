@@ -70,6 +70,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
     @ObservationIgnored private var filterAnchor = Date()
     @ObservationIgnored private var refreshRevision = 0
     @ObservationIgnored private var paginationCursor: RequestCursor?
+    @ObservationIgnored private var isStopped = false
 
     public init(store: DecisionStore, configuration: ConfigurationManager? = nil, preview: Bool = false) {
         self.store = store
@@ -85,32 +86,14 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
             confidenceBand: confidenceFilter, noulBand: noulFilter, starredOnly: starredOnly)
     }
 
-    public var replayProgress: Double {
-        guard let timeline else { return 0 }
-        return min(1, max(0, playbackDate.timeIntervalSince(timeline.start) / timeline.duration))
-    }
-    public var inputsVisible: Bool { reveals(.body) }
-    public var resultsVisible: Bool { reveals(.response) }
-    public var terminalVisible: Bool { reveals(.terminal) }
-    public var deliveryVisible: Bool { reveals(.delivery) }
-    public var isSelecting: Bool { selectedID != nil && selectedID != detail?.id }
-    public var visibleStatus: String {
-        guard let detail else { return "No selection" }
-        if timeline == nil || terminalVisible { return detail.summary.status.title }
-        if resultsVisible { return "Response received" }
-        if reveals(.upstream) { return "Waiting for Jev" }
-        if inputsVisible { return "Preparing request" }
-        return reveals(.headers) ? "Receiving input" : "Not yet received"
-    }
-    public var selectedEvents: [ReplayEvent] { timeline?.events.filter { $0.requestID == selectedID } ?? [] }
-
     public func observeChanges() async {
+        guard !isStopped else { return }
         do {
             for try await _ in await store.changes() {
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled, !isStopped else { return }
                 await refresh()
             }
-        } catch { if !Task.isCancelled { errorMessage = error.localizedDescription } }
+        } catch { if !Task.isCancelled, !isStopped { errorMessage = error.localizedDescription } }
     }
 
     public func refresh(reset: Bool = false) async {
@@ -424,6 +407,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
     }
 
     public func setActive(_ active: Bool) async {
+        guard !isStopped else { return }
         isActive = false
         pauseReplay()
         if active {
@@ -432,6 +416,15 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
             await refresh()
             if let selectedID, !noteIsDirty { await loadDetail(selectedID) }
         }
+    }
+
+    public func stop() {
+        isStopped = true
+        isActive = false
+        isLoading = false
+        refreshRevision += 1
+        selectionRevision += 1
+        pauseReplay()
     }
 
     public func validateExpiry(now: Date = Date()) {
@@ -537,12 +530,6 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
             beginSelection(arrival.requestID)
             Task { await loadDetail(arrival.requestID) }
         }
-    }
-
-    private func reveals(_ stage: ReplayStage) -> Bool {
-        guard isActive, let detail, detail.summary.isRetained(at: Date()) else { return false }
-        guard let timeline else { return true }
-        return timeline.reveals(stage, record: detail.summary, at: playbackDate, now: Date())
     }
 
 }

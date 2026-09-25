@@ -18,6 +18,7 @@ import Observation
     private(set) var service: DecisionService?
     private var server: ProxyServer?
     private var maintenance: Task<Void, Never>?
+    private var observation: Task<Void, Never>?
     private var lockDescriptor: Int32 = -1
     private var started = false
     private var pausedBeforeSleep = false
@@ -32,6 +33,7 @@ import Observation
     func start() async {
         guard !started else { return }
         started = true
+        defer { if let workspace { observation = Task { await workspace.observeChanges() } } }
         do {
             if preview {
                 try await startPreview()
@@ -212,16 +214,34 @@ import Observation
     }
 
     func shutdown() async {
+        let workspace = workspace
+        self.workspace = nil
+        workspace?.stop()
         maintenance?.cancel()
-        workspace?.pauseReplay()
+        observation?.cancel()
+        await maintenance?.value
+        await observation?.value
+        maintenance = nil
+        observation = nil
         await service?.shutdown()
         await server?.shutdown()
-        if let previewDirectory, let previewRunID, let workspace {
+        if let workspace {
             do {
-                guard try await workspace.store.testMarkerMatches(previewRunID) else { return }
-                try FileManager.default.removeItem(at: previewDirectory)
+                var cleanupDirectory: URL?
+                if let previewDirectory, let previewRunID {
+                    guard try await workspace.store.testMarkerMatches(previewRunID) else {
+                        throw FalconError("test_marker", "Refuse to clean an unmarked preview database.")
+                    }
+                    cleanupDirectory = previewDirectory
+                }
+                try await workspace.store.close()
+                if let cleanupDirectory { try FileManager.default.removeItem(at: cleanupDirectory) }
+                previewDirectory = nil
+                previewRunID = nil
             } catch { startupError = error.localizedDescription }
         }
+        service = nil
+        server = nil
         if lockDescriptor >= 0 {
             flock(lockDescriptor, LOCK_UN)
             Darwin.close(lockDescriptor)

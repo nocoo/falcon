@@ -4,6 +4,12 @@
 
 稳定项目约束维护在 [AGENTS.md](AGENTS.md)，架构与设计维护在 [docs](docs/README.md)。
 
+## 2026-09-25: Preview teardown deleted an open database
+
+- The owner saw `SQLite error 10: disk I/O error` at `PRAGMA query_only = 1` while the source-icon preview was closing. System logs tied the exact error to that preview process: its marked temporary database, WAL and SHM had been unlinked while SQLite still used them. The production database passed a read-only integrity check and continued accepting requests.
+- A GRDB fixture reproduced the same error after deleting an open store and refreshing its workspace. AppRuntime now owns the observation task, stops the workspace, cancels and awaits observation and maintenance, drains the service, closes GRDB and its lock, and only then removes the verified preview directory. Late activation cannot restart a stopped workspace.
+- Regressions verify teardown with active observation, late refresh and activation, idempotent close, lock ownership after reopening, and preserved request evidence. Native preview verification must check system SQLite diagnostics after exit as well as the captured image; a successful screenshot cannot establish safe cleanup.
+
 ## 2026-09-25: Incoming decisions were withheld from the list
 
 - The owner reported delayed arrivals. The workspace polled once a second, treated every inactive window as suspended, and kept new request rows out of the list while an older decision was selected. Successful API persistence alone did not establish live visibility.

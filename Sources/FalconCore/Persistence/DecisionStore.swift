@@ -204,7 +204,7 @@ public actor DecisionStore {
     private let db: DatabaseQueue
     private let path: String
     private let budgetBytes: Int64
-    private let lockFD: Int32
+    private var lockFD: Int32
     private var reservations: [UUID: (bytes: Int64, generation: Int, questionCount: Int)] = [:]
     private var blockedIDs: Set<UUID> = []
     private var generation = 0
@@ -224,14 +224,14 @@ public actor DecisionStore {
             throw FalconError("storage_unavailable", "Unable to open Falcon database lock.", status: 507)
         }
         guard flock(fd, LOCK_EX | LOCK_NB) == 0 else {
-            close(fd)
+            Darwin.close(fd)
             throw FalconError("storage_in_use", "Falcon database is already open.", status: 503)
         }
         var initialized = false
         defer {
             if !initialized {
                 flock(fd, LOCK_UN)
-                close(fd)
+                Darwin.close(fd)
             }
         }
         lockFD = fd
@@ -245,8 +245,19 @@ public actor DecisionStore {
     }
 
     deinit {
-        flock(lockFD, LOCK_UN)
-        close(lockFD)
+        if lockFD >= 0 {
+            flock(lockFD, LOCK_UN)
+            Darwin.close(lockFD)
+        }
+    }
+
+    public func close() throws {
+        try db.close()
+        if lockFD >= 0 {
+            flock(lockFD, LOCK_UN)
+            Darwin.close(lockFD)
+            lockFD = -1
+        }
     }
 
     public func changes() -> AsyncValueObservation<Void> {
