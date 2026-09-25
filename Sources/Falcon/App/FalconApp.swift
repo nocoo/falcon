@@ -36,6 +36,11 @@ import SwiftUI
                     openWindow(id: "main")
                 }
             }.commands {
+                CommandGroup(replacing: .appInfo) {
+                    Button("About Falcon") {
+                        NSApp.orderFrontStandardAboutPanel(options: [.applicationVersion: runtime.versionLabel])
+                    }
+                }
                 CommandGroup(replacing: .newItem) {
                     Button("Open Falcon") {
                         openWindow(id: "main")

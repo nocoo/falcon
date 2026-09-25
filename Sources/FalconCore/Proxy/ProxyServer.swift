@@ -11,14 +11,18 @@ public struct ProxyServerStatus: Sendable {
 public actor ProxyServer {
     private let service: DecisionService
     private let configuration: ConfigurationManager
+    private let appVersion: String
     private let port: Int
     private var boundPort: Int?
     private var task: Task<Void, Error>?
     private var bindWaiters: [CheckedContinuation<Int, Error>] = []
 
-    public init(service: DecisionService, configuration: ConfigurationManager, port: Int = FalconLimits.port) {
+    public init(
+        service: DecisionService, configuration: ConfigurationManager, version: String, port: Int = FalconLimits.port
+    ) {
         self.service = service
         self.configuration = configuration
+        self.appVersion = version
         self.port = port
     }
 
@@ -99,8 +103,10 @@ public actor ProxyServer {
             guard request.method == .get else { return Self.methodNotAllowed("GET") }
             let status = await service.status()
             let body =
-                (try? JSONValue.object(["status": .string(status.state.rawValue), "api_version": .string("1")]).data())
-                ?? Data()
+                (try? JSONValue.object([
+                    "status": .string(status.state.rawValue), "version": .string(appVersion),
+                    "api_version": .string("1"),
+                ]).data()) ?? Data()
             return Self.response(status.state == .ready ? 200 : 503, body: body)
         }
         guard path == "/v1/systemone" || path == "/mcp" else { return Self.failure(404, "not_found") }
@@ -140,7 +146,8 @@ public actor ProxyServer {
         let version = request.headers[versionName] ?? "2025-03-26"
         guard Version.supported.contains(version) else { return Self.failure(400, "unsupported_mcp_version") }
         let transport = StatelessHTTPServerTransport()
-        let server = Server(name: "Falcon", version: "1", capabilities: .init(tools: .init()), configuration: .default)
+        let server = Server(
+            name: "Falcon", version: appVersion, capabilities: .init(tools: .init()), configuration: .default)
         let delivery = MCPDelivery()
         let envelope = try? MCPEnvelope(body)
         await server.withMethodHandler(ListTools.self) { _ in try ListTools.Result(tools: [JevMCPTool.tool()]) }

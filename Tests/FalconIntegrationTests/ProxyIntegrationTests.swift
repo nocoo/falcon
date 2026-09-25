@@ -145,7 +145,7 @@ func withFixture(
         upstreamStatus: upstreamStatus, calls: calls)
     let client = JevClient { request in try await upstream.reply(request) }
     let service = DecisionService(store: store, configuration: configuration, client: client, deadline: deadline)
-    let server = ProxyServer(service: service, configuration: configuration, port: 0)
+    let server = ProxyServer(service: service, configuration: configuration, version: "9.8.7", port: 0)
     let port = try await server.start()
     let fixture = ProxyFixture(
         store: store, configuration: configuration, service: service, server: server, token: issued.token,
@@ -202,6 +202,9 @@ private func waitForFlight(_ service: DecisionService) async throws {
         let loopbackReply1 = try await send(fixture, path: "health", method: "GET", token: fixture.token)
         let healthStatus = loopbackReply1.status
         #expect(healthStatus == 200)
+        let health = try JSONValue.decode(loopbackReply1.body)
+        #expect(health["version"]?.stringValue == "9.8.7")
+        #expect(health["api_version"]?.stringValue == "1")
         let loopbackReply2 = try await send(fixture, path: "health", method: "GET", token: nil)
         let unauthorized = loopbackReply2.status
         #expect(unauthorized == 401)
@@ -481,7 +484,8 @@ private func waitForFlight(_ service: DecisionService) async throws {
                 return request
             })
         let client = Client(name: "FalconFixture", version: "1")
-        _ = try await client.connect(transport: transport)
+        let initialization = try await client.connect(transport: transport)
+        #expect(initialization.serverInfo.version == "9.8.7")
         try await client.ping()
         let listed = try await client.listTools()
         #expect(listed.tools.map(\.name) == ["jev_decide"])

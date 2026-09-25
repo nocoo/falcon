@@ -24,6 +24,8 @@ import Observation
     private var previewDirectory: URL?
     private var previewRunID: UUID?
     let preview: Bool
+    let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "development"
+    var versionLabel: String { version == "development" ? "Dev" : "v\(version)" }
 
     init(preview: Bool) { self.preview = preview }
 
@@ -113,7 +115,7 @@ import Observation
 
     private func startServer(configuration: ConfigurationManager) async throws {
         guard let service else { return }
-        let server = ProxyServer(service: service, configuration: configuration, port: port)
+        let server = ProxyServer(service: service, configuration: configuration, version: version, port: port)
         self.server = server
         _ = try await server.start()
         await refreshStatus()

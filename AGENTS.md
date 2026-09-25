@@ -49,6 +49,14 @@ Only the coordinator runs SwiftPM in this checkout during parallel work.
 Preserve full-suite coverage before the opt-in SDK run replaces SwiftPM's coverage output.
 SwiftLint needs the Xcode `DEVELOPER_DIR` above; do not change global xcode-select.
 
+## Versioning
+
+- `project.yml` → `MARKETING_VERSION` is the single authoritative X.Y.Z product version. XcodeGen synchronizes the generated Xcode project and the app's `CFBundleShortVersionString`.
+- AppRuntime reads the bundle version. The sidebar, Settings and native About panel display vX.Y.Z; authenticated `/health` and MCP `serverInfo.version` report X.Y.Z.
+- `CURRENT_PROJECT_VERSION` is the native build number. HTTP `api_version` and MCP protocol versions are independent contracts.
+- Unbundled SwiftPM executables identify themselves as development builds instead of claiming a release version.
+- Maintain root [CHANGELOG.md](CHANGELOG.md), rebuild with `scripts/build-app.sh`, and verify the actual bundle and runtime metadata when changing the product version.
+
 ## Implemented modules
 
 - `FalconCore/Domain`: bounded JSON values, source/request models and usage snapshots.

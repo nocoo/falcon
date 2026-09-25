@@ -116,7 +116,7 @@ struct SettingsView: View {
                 }
                 HStack(spacing: FalconTheme.Space.regular) {
                     FalconMark()
-                    Text("Falcon 0.1.0").font(FalconTheme.label)
+                    Text("Falcon \(runtime.versionLabel)").font(FalconTheme.label)
                     Text("Native decision observability").font(FalconTheme.detail).foregroundStyle(FalconTheme.tertiary)
                 }
             }.padding(FalconTheme.Space.page).frame(maxWidth: FalconTheme.Layout.settingsWidth, alignment: .leading)

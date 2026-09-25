@@ -107,13 +107,18 @@ struct WorkspaceView: View {
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: FalconTheme.Space.regular) {
+            HStack(spacing: FalconTheme.Space.compact) {
                 FalconMark(size: FalconTheme.Layout.brandMark)
                 VStack(alignment: .leading, spacing: FalconTheme.Space.micro) {
-                    Text("Falcon").font(FalconTheme.brand).tracking(FalconTheme.titleTracking)
+                    HStack(spacing: FalconTheme.Space.small) {
+                        Text("Falcon").font(FalconTheme.brand).tracking(FalconTheme.titleTracking)
+                        Text(runtime.versionLabel).font(FalconTheme.monoSmall).foregroundStyle(FalconTheme.secondary)
+                            .padding(.horizontal, FalconTheme.Space.small).padding(.vertical, FalconTheme.Space.micro)
+                            .background(FalconTheme.inset, in: Capsule()).fixedSize()
+                    }
                     Text("Local decisions").font(FalconTheme.caption).foregroundStyle(FalconTheme.secondary)
                 }
-            }.padding(.horizontal, FalconTheme.Space.large).frame(height: FalconTheme.Layout.brandHeight)
+            }.padding(.horizontal, FalconTheme.Space.regular).frame(height: FalconTheme.Layout.brandHeight)
             Eyebrow(title: "Workspace").padding(.horizontal, FalconTheme.Space.large).padding(
                 .bottom, FalconTheme.Space.compact)
             ForEach([WorkspacePage.decisions, .usage], id: \.self) { navigation($0) }

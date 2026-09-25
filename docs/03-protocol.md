@@ -28,7 +28,7 @@
 
 | Endpoint | 行为 |
 | --- | --- |
-| `GET /health` | 已认证后返回服务状态、API 版本；不返回来源列表、凭据、历史正文；ready 200，否则 503 |
+| `GET /health` | 已认证后返回服务状态、产品版本 `version` 和协议版本 `api_version`；不返回来源列表、凭据、历史正文；ready 200，否则 503 |
 | `POST /v1/systemone` | 接受官方请求体；成功保留上游响应 JSON，不注入额外根字段；`X-Falcon-Request-ID` 关联观察记录 |
 | `POST /mcp` | MCP Streamable HTTP，见后文 |
 | `GET /mcp`、`DELETE /mcp` | 已认证后 405，`Allow: POST`；首版无 SSE 与 session 删除 |
@@ -62,6 +62,8 @@ HTTP 请求的 `model` 必填；官方 SDK会带默认 model。MCP 可省略 mod
 ## MCP 契约
 
 使用官方 Swift SDK 0.12.1 与 2025-11-25 Streamable HTTP 语义。支持 `initialize`、`notifications/initialized`、`ping`、`tools/list`、`tools/call`；声明 tools capability，不声明 resources、prompts、subscriptions 或后台 tasks。
+
+初始化返回的 `serverInfo.version` 与 HTTP `/health` 的 `version` 均为当前 App 的 `X.Y.Z` 产品版本，来自构建时写入 bundle 的 `MARKETING_VERSION`。它们独立于 HTTP API 的 `api_version` 和协商的 MCP `protocolVersion`。
 
 只有一个工具 `jev_decide`：参数以 `{state, questions, model?}` 为已知字段，三类 question 使用 JSON Schema `oneOf`，以 `type` 的 const 区分；根与题级允许附加 JSON 字段，已知必需字段仍严格验证。工具的 arguments 映射为有效上游 JSON，附加字段全部保留；JSON-RPC 的 id/method 等外层协议字段不转发。工具说明强调模型输出不等于执行许可。
 

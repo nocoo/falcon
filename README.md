@@ -19,6 +19,8 @@ open build/Build/Products/Release/Falcon.app
 
 脚本默认构建本机架构，产物位于 `build/Build/Products/Release/Falcon.app`。当前是本地开发构建，尚未签名公证或发布。
 
+版本只在 [project.yml](project.yml) 的 `MARKETING_VERSION` 中维护；侧栏、设置、关于面板和服务元信息读取同一构建版本。界面使用 `vX.Y.Z`，HTTP `/health` 与 MCP `serverInfo.version` 返回 `X.Y.Z`。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+
 1. 首次真实启动自动进入 **Connections**，保存 Jev key、HTTPS API root 和默认模型。官方 root 是 `https://api.typesafe.ai`。
 2. 在 **Sources** 创建来源并选择 connection，复制仅显示一次的本地 key。
 3. 将 Agent 的 API root 指向 `http://127.0.0.1:19823`，Bearer token 使用该来源的本地 key。
