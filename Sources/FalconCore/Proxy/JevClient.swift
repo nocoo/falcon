@@ -37,15 +37,13 @@ public struct JevClient: Sendable {
         guard !(300...399).contains(response.statusCode) else {
             throw FalconError("upstream_redirect", "Upstream redirect refused", status: 502, outcomeUnknown: true)
         }
-        return JevHTTPResult(status: response.statusCode, body: data,
-                             contentType: response.value(forHTTPHeaderField: "Content-Type"),
-                             retryAfter: response.value(forHTTPHeaderField: "Retry-After"))
+        return JevHTTPResult(
+            status: response.statusCode, body: data, contentType: response.value(forHTTPHeaderField: "Content-Type"),
+            retryAfter: response.value(forHTTPHeaderField: "Retry-After"))
     }
 }
 
-struct JevResponseLimitError: Error, Sendable {
-    let prefix: Data
-}
+struct JevResponseLimitError: Error, Sendable { let prefix: Data }
 
 private final class BoundedSessionDelegate: NSObject, URLSessionDataDelegate, @unchecked Sendable {
     private let lock = NSLock()
@@ -89,13 +87,15 @@ private final class BoundedSessionDelegate: NSObject, URLSessionDataDelegate, @u
         task?.cancel()
     }
 
-    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
-                    newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
-        completionHandler(nil)
-    }
+    func urlSession(
+        _ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void
+    ) { completionHandler(nil) }
 
-    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse,
-                    completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+    func urlSession(
+        _ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse,
+        completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
+    ) {
         lock.lock()
         self.response = response as? HTTPURLResponse
         let tooLarge = response.expectedContentLength > Int64(FalconLimits.responseBytes)
@@ -125,15 +125,22 @@ private final class BoundedSessionDelegate: NSObject, URLSessionDataDelegate, @u
         let body = self.body
         lock.unlock()
         guard let continuation else { return }
-        if oversized { continuation.resume(throwing: JevResponseLimitError(prefix: Data(body.prefix(4_096)))) }
-        else if let error { continuation.resume(throwing: error) }
-        else if let response { continuation.resume(returning: (body, response)) }
-        else { continuation.resume(throwing: FalconError("upstream_transport", "Invalid upstream transport response", status: 502, outcomeUnknown: true)) }
+        if oversized {
+            continuation.resume(throwing: JevResponseLimitError(prefix: Data(body.prefix(4_096))))
+        } else if let error {
+            continuation.resume(throwing: error)
+        } else if let response {
+            continuation.resume(returning: (body, response))
+        } else {
+            continuation.resume(
+                throwing: FalconError(
+                    "upstream_transport", "Invalid upstream transport response", status: 502, outcomeUnknown: true))
+        }
     }
 }
 
-private extension URLSessionConfiguration {
-    static var falconEphemeral: URLSessionConfiguration {
+extension URLSessionConfiguration {
+    fileprivate static var falconEphemeral: URLSessionConfiguration {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.httpShouldSetCookies = false
         configuration.httpCookieAcceptPolicy = .never
