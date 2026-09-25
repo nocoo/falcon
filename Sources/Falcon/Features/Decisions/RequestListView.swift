@@ -10,9 +10,9 @@ struct RequestListView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 13) {
+            VStack(alignment: .leading, spacing: FalconTheme.Space.regular) {
                 HStack {
-                    Text("Activity").font(.system(size: 16, weight: .semibold)).tracking(-0.3)
+                    Text("Activity").font(FalconTheme.sectionTitle).tracking(FalconTheme.titleTracking)
                     Spacer()
                     Menu {
                         Button("Replay this range") { Task { await model.startReplay(range: true) } }
@@ -21,9 +21,9 @@ struct RequestListView: View {
                         Image(systemName: "ellipsis").frame(width: 20, height: 20)
                     }.menuStyle(.borderlessButton).fixedSize()
                 }
-                HStack(spacing: 7) {
+                HStack(spacing: FalconTheme.Space.compact) {
                     Image(systemName: "magnifyingglass").foregroundStyle(FalconTheme.tertiary)
-                    TextField("Search decisions", text: $model.search).textFieldStyle(.plain).font(.system(size: 12))
+                    TextField("Search decisions", text: $model.search).textFieldStyle(.plain).font(FalconTheme.detail)
                         .focused($searchFocused)
                     if !model.search.isEmpty {
                         Button {
@@ -32,8 +32,9 @@ struct RequestListView: View {
                             Image(systemName: "xmark.circle.fill")
                         }.buttonStyle(.plain).accessibilityLabel("Clear search")
                     }
-                }.padding(8).background(FalconTheme.inset, in: RoundedRectangle(cornerRadius: 7))
-                HStack(spacing: 10) {
+                }.padding(FalconTheme.Space.compact).background(
+                    FalconTheme.inset, in: RoundedRectangle(cornerRadius: FalconTheme.Radius.control))
+                HStack(spacing: FalconTheme.Space.regular) {
                     Menu {
                         Picker("Time range", selection: $model.hours) {
                             Text("Past hour").tag(1)
@@ -72,9 +73,8 @@ struct RequestListView: View {
                                 && model.reviewFilter == nil
                                 ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
                     }.accessibilityLabel("Filter sources, status and review")
-                }.font(.system(size: 11, weight: .medium)).foregroundStyle(FalconTheme.secondary).menuStyle(
-                    .borderlessButton)
-            }.padding(18)
+                }.font(FalconTheme.caption).foregroundStyle(FalconTheme.secondary).menuStyle(.borderlessButton)
+            }.padding(FalconTheme.Space.large)
             Divider().overlay(FalconTheme.line)
             if model.newArrivalCount > 0 {
                 Button {
@@ -84,7 +84,7 @@ struct RequestListView: View {
                         "\(model.newArrivalCount)\(model.newArrivalCount == 100 ? "+" : "") new decisions",
                         systemImage: "arrow.up"
                     ).frame(maxWidth: .infinity)
-                }.buttonStyle(FalconButtonStyle(compact: true)).padding(8)
+                }.buttonStyle(FalconButtonStyle(compact: true)).padding(FalconTheme.Space.compact)
             }
             if !model.sourceFilters.isEmpty || model.hasEvidenceFilter {
                 HStack {
@@ -99,11 +99,11 @@ struct RequestListView: View {
                     } label: {
                         Image(systemName: "xmark")
                     }.buttonStyle(.plain).accessibilityLabel("Clear evidence filters")
-                }.padding(.horizontal, 18).padding(.vertical, 8)
+                }.padding(.horizontal, FalconTheme.Space.large).padding(.vertical, FalconTheme.Space.compact)
             }
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(spacing: 3) {
+                    LazyVStack(spacing: FalconTheme.Space.small) {
                         ForEach(model.requests) { request in
                             Button {
                                 Task { await model.select(request.id) }
@@ -114,9 +114,9 @@ struct RequestListView: View {
                         if model.hasMore {
                             Button("Load earlier decisions") { Task { await model.loadMore() } }.buttonStyle(
                                 FalconButtonStyle()
-                            ).padding(14).disabled(model.isLoading)
+                            ).padding(FalconTheme.Space.medium).disabled(model.isLoading)
                         }
-                    }.padding(.horizontal, 8).padding(.vertical, 9)
+                    }.padding(.horizontal, FalconTheme.Space.compact).padding(.vertical, FalconTheme.Space.compact)
                 }.onChange(of: model.selectedID) { _, id in
                     if model.followArrivals, let id { proxy.scrollTo(id, anchor: .center) }
                 }
@@ -129,13 +129,14 @@ struct RequestListView: View {
                 } else {
                     Label("Local", systemImage: "internaldrive")
                 }
-            }.font(.system(size: 11)).foregroundStyle(FalconTheme.tertiary).padding(.horizontal, 18).padding(
-                .vertical, 12)
+            }.font(FalconTheme.footnote).foregroundStyle(FalconTheme.tertiary).padding(
+                .horizontal, FalconTheme.Space.large
+            ).padding(.vertical, FalconTheme.Space.regular)
         }.background(FalconTheme.surface).background {
             Button("Search") { searchFocused = true }.keyboardShortcut("f").hidden()
         }.sheet(isPresented: $showRange) {
-            VStack(alignment: .leading, spacing: 20) {
-                Text("Review a time range").font(.title2)
+            VStack(alignment: .leading, spacing: FalconTheme.Space.large) {
+                Text("Review a time range").font(FalconTheme.title)
                 DatePicker("From", selection: $rangeStart, displayedComponents: [.date, .hourAndMinute])
                 DatePicker("Until", selection: $rangeEnd, displayedComponents: [.date, .hourAndMinute])
                 HStack {
@@ -147,7 +148,7 @@ struct RequestListView: View {
                         Task { await model.refresh(reset: true) }
                     }.keyboardShortcut(.defaultAction).disabled(rangeStart >= rangeEnd)
                 }
-            }.padding(28).frame(width: 420)
+            }.padding(FalconTheme.Space.sheet).frame(width: 420)
         }
     }
 }
@@ -177,43 +178,43 @@ private struct RequestRow: View {
     let selected: Bool
     @State private var hovered = false
     var body: some View {
-        HStack(alignment: .top, spacing: 9) {
-            SourceAvatar(name: record.sourceName, size: 27).padding(.top, 2)
-            VStack(alignment: .leading, spacing: 6) {
+        HStack(alignment: .top, spacing: FalconTheme.Space.compact) {
+            SourceAvatar(name: record.sourceName).padding(.top, FalconTheme.Space.micro)
+            VStack(alignment: .leading, spacing: FalconTheme.Space.tight) {
                 HStack {
-                    Text(record.sourceName).font(.system(size: 12, weight: .semibold)).lineLimit(1)
-                    Spacer(minLength: 2)
-                    Text(record.receivedAt, format: .dateTime.hour().minute().second()).font(
-                        .system(size: 11, design: .monospaced)
-                    ).foregroundStyle(FalconTheme.secondary)
+                    Text(record.sourceName).font(FalconTheme.label).lineLimit(1)
+                    Spacer(minLength: FalconTheme.Space.micro)
+                    Text(record.receivedAt, format: .dateTime.hour().minute().second()).font(FalconTheme.monoSmall)
+                        .foregroundStyle(FalconTheme.secondary)
                 }
-                HStack(spacing: 5) {
+                HStack(spacing: FalconTheme.Space.tight) {
                     Image(
                         systemName: record.status == .succeeded
                             ? "arrow.turn.down.right"
                             : record.status.isFailure ? "exclamationmark.circle" : "circle.dotted"
-                    ).font(.system(size: 11)).foregroundStyle(
+                    ).font(FalconTheme.footnote).foregroundStyle(
                         record.status.isFailure ? FalconTheme.warning : FalconTheme.accent)
-                    Text(record.preview.isEmpty ? record.status.title : record.preview).font(.system(size: 12))
+                    Text(record.preview.isEmpty ? record.status.title : record.preview).font(FalconTheme.detail)
                         .lineLimit(1)
                     Spacer(minLength: 0)
                     if record.reviewState == .flagged {
-                        Image(systemName: "flag.fill").font(.system(size: 11)).foregroundStyle(FalconTheme.warning)
+                        Image(systemName: "flag.fill").font(FalconTheme.footnote).foregroundStyle(FalconTheme.warning)
                     }
                 }
-                HStack(spacing: 5) {
+                HStack(spacing: FalconTheme.Space.tight) {
                     Text("\(record.questionCount) questions · preview")
                     Spacer(minLength: 0)
                     Text(DecisionFormat.duration(record.timing.terminalMS)).monospacedDigit()
-                }.font(.system(size: 11)).foregroundStyle(FalconTheme.tertiary)
+                }.font(FalconTheme.footnote).foregroundStyle(FalconTheme.tertiary)
             }
-        }.padding(.horizontal, 10).padding(.vertical, 11).background(
+        }.padding(.horizontal, FalconTheme.Space.regular).padding(.vertical, FalconTheme.Space.regular).background(
             selected ? FalconTheme.accentWash : hovered ? FalconTheme.inset : .clear,
-            in: RoundedRectangle(cornerRadius: 8)
+            in: RoundedRectangle(cornerRadius: FalconTheme.Radius.control)
         ).overlay(alignment: .leading) {
             if selected {
-                RoundedRectangle(cornerRadius: 2).fill(FalconTheme.accent).frame(width: 2, height: 32).padding(
-                    .leading, 1)
+                RoundedRectangle(cornerRadius: FalconTheme.Radius.small).fill(FalconTheme.accent).frame(
+                    width: 2, height: 32
+                ).padding(.leading, 1)
             }
         }.contentShape(Rectangle()).onHover { hovered = $0 }.accessibilityElement(children: .combine)
             .accessibilityAddTraits(selected ? .isSelected : [])

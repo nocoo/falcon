@@ -21,12 +21,15 @@ import SwiftUI
                         Text(error)
                     } actions: {
                         Button("Retry") { Task { await runtime.retryServer() } }
-                    }.frame(minWidth: 1120, minHeight: 720)
+                    }.frame(minWidth: FalconTheme.Layout.minimumWidth, minHeight: FalconTheme.Layout.minimumHeight)
                 } else {
-                    ProgressView("Opening your workspace…").frame(minWidth: 1120, minHeight: 720)
+                    ProgressView("Opening your workspace…").frame(
+                        minWidth: FalconTheme.Layout.minimumWidth, minHeight: FalconTheme.Layout.minimumHeight)
                 }
             }
-        }.defaultSize(width: 1600, height: 1000).defaultLaunchBehavior(.presented).windowResizability(.contentMinSize)
+        }.defaultSize(width: FalconTheme.Layout.defaultWidth, height: FalconTheme.Layout.defaultHeight).windowStyle(
+            .hiddenTitleBar
+        ).windowToolbarStyle(.unifiedCompact).defaultLaunchBehavior(.presented).windowResizability(.contentMinSize)
             .onChange(of: runtime.statusTitle, initial: true) {
                 if needsLaunchWindow {
                     needsLaunchWindow = false
@@ -68,8 +71,9 @@ import SwiftUI
             Button("Quit Falcon") { NSApp.terminate(nil) }.keyboardShortcut("q")
         } label: {
             if let image = FalconAssets.mark {
-                Image(nsImage: image).resizable().renderingMode(.template).scaledToFit().frame(width: 18, height: 18)
-                    .accessibilityLabel("Falcon")
+                Image(nsImage: image).resizable().renderingMode(.template).scaledToFit().frame(
+                    width: FalconTheme.Layout.menuMark, height: FalconTheme.Layout.menuMark
+                ).accessibilityLabel("Falcon")
             }
         }
     }
@@ -127,20 +131,26 @@ import SwiftUI
         else { return }
         didCapture = true
         if CommandLine.arguments.contains("--focus") { runtime.workspace?.focusReview = true }
-        if CommandLine.arguments.contains("--usage") {
-            runtime.workspace?.page = .usage
+        if let page = WorkspacePage.allCases.first(where: {
+            CommandLine.arguments.contains("--" + $0.rawValue.lowercased())
+        }) {
+            runtime.workspace?.page = page
             await runtime.workspace?.refresh(reset: true)
         }
         do { try await Task.sleep(for: .seconds(2)) } catch { return }
         do {
-            guard let window = NSApp.windows.first(where: { $0.canBecomeMain }), let content = window.contentView else {
+            guard let window = NSApp.windows.first(where: { $0.canBecomeMain }),
+                let content = window.contentView?.superview
+            else {
                 throw FalconError(
                     "capture_window", "Falcon's preview window is unavailable: \(NSApp.windows.map(\.title)).")
             }
             if CommandLine.arguments.contains("--compact") {
-                window.setContentSize(NSSize(width: 1120, height: 720))
+                window.setContentSize(
+                    NSSize(width: FalconTheme.Layout.minimumWidth, height: FalconTheme.Layout.compactHeight))
             } else {
-                window.setContentSize(NSSize(width: 1600, height: 1000))
+                window.setContentSize(
+                    NSSize(width: FalconTheme.Layout.defaultWidth, height: FalconTheme.Layout.defaultHeight))
             }
             if CommandLine.arguments.contains("--replay") {
                 await runtime.workspace?.startReplay(range: false)

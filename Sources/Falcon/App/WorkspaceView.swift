@@ -6,24 +6,26 @@ struct WorkspaceView: View {
     @Bindable var model: WorkspaceModel
     @Bindable var runtime: AppRuntime
     @AppStorage("appearance") private var appearance = "system"
+    @State private var hoveredPage: WorkspacePage?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         VStack(spacing: 0) {
             if let error = runtime.startupError {
-                HStack(spacing: 12) {
+                HStack(spacing: FalconTheme.Space.regular) {
                     Image(systemName: "exclamationmark.triangle").foregroundStyle(FalconTheme.warning)
-                    Text(error).font(.system(size: 12)).textSelection(.enabled)
+                    Text(error).font(FalconTheme.detail).textSelection(.enabled)
                     Spacer()
                     Button("Settings") { model.page = .settings }
                     Button("Retry") { Task { await runtime.retryServer() } }
-                }.buttonStyle(FalconButtonStyle(compact: true)).padding(12).background(FalconTheme.surface)
+                }.buttonStyle(FalconButtonStyle(compact: true)).padding(FalconTheme.Space.regular).background(
+                    FalconTheme.surface)
                 Divider()
             }
             HStack(spacing: 0) {
                 if !model.focusReview || model.page != .decisions {
-                    sidebar.frame(width: 176)
+                    sidebar.frame(width: FalconTheme.Layout.sidebarWidth)
                     Divider().overlay(FalconTheme.line)
                 }
                 switch model.page {
@@ -35,10 +37,12 @@ struct WorkspaceView: View {
                 }
             }
             if model.timeline != nil, model.page == .decisions { ReplayBar(model: model) }
-        }.font(FalconTheme.body).foregroundStyle(FalconTheme.ink).background(FalconTheme.canvas).frame(
-            minWidth: 1120, minHeight: 680
-        ).preferredColorScheme(appearance == "system" ? nil : appearance == "dark" ? .dark : .light).toolbar { toolbar }
-            .toolbarBackground(FalconTheme.canvas, for: .windowToolbar).animation(
+        }.font(FalconTheme.body).foregroundStyle(FalconTheme.ink).tint(FalconTheme.accent).background(
+            FalconTheme.canvas
+        ).frame(minWidth: FalconTheme.Layout.minimumWidth, minHeight: FalconTheme.Layout.minimumHeight)
+            .preferredColorScheme(appearance == "system" ? nil : appearance == "dark" ? .dark : .light).toolbar {
+                toolbar
+            }.toolbarBackground(FalconTheme.canvas, for: .windowToolbar).animation(
                 reduceMotion ? nil : FalconTheme.motion, value: model.focusReview
             ).onChange(of: model.page) { _, _ in
                 model.pauseReplay()
@@ -73,7 +77,7 @@ struct WorkspaceView: View {
     private var decisions: some View {
         HStack(spacing: 0) {
             if !model.focusReview {
-                RequestListView(model: model).frame(width: 292)
+                RequestListView(model: model).frame(width: FalconTheme.Layout.requestListWidth)
                 Divider().overlay(FalconTheme.line)
             }
             Group {
@@ -94,28 +98,37 @@ struct WorkspaceView: View {
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 9) {
-                FalconMark(size: 30)
-                Text("Falcon").font(.system(size: 20, weight: .semibold, design: .rounded)).tracking(-0.5)
-            }.padding(.horizontal, 18).padding(.top, 22).padding(.bottom, 32)
-            Eyebrow(title: "Workspace").padding(.horizontal, 20).padding(.bottom, 9)
+            HStack(spacing: FalconTheme.Space.regular) {
+                FalconMark(size: FalconTheme.Layout.brandMark)
+                VStack(alignment: .leading, spacing: FalconTheme.Space.micro) {
+                    Text("Falcon").font(FalconTheme.brand).tracking(FalconTheme.titleTracking)
+                    Text("Local decisions").font(FalconTheme.caption).foregroundStyle(FalconTheme.secondary)
+                }
+            }.padding(.horizontal, FalconTheme.Space.large).frame(height: FalconTheme.Layout.brandHeight)
+            Eyebrow(title: "Workspace").padding(.horizontal, FalconTheme.Space.large).padding(
+                .bottom, FalconTheme.Space.compact)
             ForEach([WorkspacePage.decisions, .usage], id: \.self) { navigation($0) }
-            Eyebrow(title: "Manage").padding(.horizontal, 20).padding(.top, 29).padding(.bottom, 9)
+            Eyebrow(title: "Manage").padding(.horizontal, FalconTheme.Space.large).padding(
+                .top, FalconTheme.Space.sheet
+            ).padding(.bottom, FalconTheme.Space.compact)
             ForEach([WorkspacePage.sources, .connections], id: \.self) { navigation($0) }
             Spacer()
-            VStack(alignment: .leading, spacing: 9) {
-                HStack(spacing: 6) {
+            VStack(alignment: .leading, spacing: FalconTheme.Space.compact) {
+                HStack(spacing: FalconTheme.Space.tight) {
                     Circle().fill(runtime.isRunning ? FalconTheme.success : FalconTheme.tertiary).frame(
                         width: 6, height: 6)
-                    Text(runtime.statusTitle).font(.system(size: 11, weight: .medium))
+                    Text(runtime.statusTitle).font(FalconTheme.caption)
                 }
-                Text("127.0.0.1:\(String(runtime.port))").font(.system(size: 11, design: .monospaced)).foregroundStyle(
+                Text("127.0.0.1:\(String(runtime.port))").font(FalconTheme.monoSmall).foregroundStyle(
                     FalconTheme.secondary)
-                Text("7-day local history").font(.system(size: 11)).foregroundStyle(FalconTheme.secondary)
-            }.padding(12).frame(maxWidth: .infinity, alignment: .leading).background(
-                FalconTheme.surface.opacity(0.65), in: RoundedRectangle(cornerRadius: 9)
-            ).overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(FalconTheme.line, lineWidth: 0.75)).padding(12)
-            navigation(.settings).padding(.bottom, 14)
+                Text("7-day local history").font(FalconTheme.footnote).foregroundStyle(FalconTheme.secondary)
+            }.padding(FalconTheme.Space.regular).frame(maxWidth: .infinity, alignment: .leading).background(
+                FalconTheme.reader, in: RoundedRectangle(cornerRadius: FalconTheme.Radius.control)
+            ).overlay(
+                RoundedRectangle(cornerRadius: FalconTheme.Radius.control).strokeBorder(
+                    FalconTheme.line, lineWidth: FalconTheme.hairline)
+            ).padding(FalconTheme.Space.regular)
+            navigation(.settings).padding(.bottom, FalconTheme.Space.medium)
         }.background(FalconTheme.sidebar.overlay(QuietTexture()))
     }
 
@@ -123,49 +136,60 @@ struct WorkspaceView: View {
         Button {
             model.page = page
         } label: {
-            HStack(spacing: 9) {
-                Image(systemName: page.symbol).font(.system(size: 14, weight: .medium)).frame(width: 18)
-                Text(page.rawValue).font(.system(size: 12, weight: model.page == page ? .semibold : .medium))
+            HStack(spacing: FalconTheme.Space.compact) {
+                Image(systemName: page.symbol).font(FalconTheme.sectionTitle).frame(width: FalconTheme.Layout.menuMark)
+                Text(page.rawValue).font(FalconTheme.label.weight(model.page == page ? .semibold : .medium))
                 Spacer(minLength: 0)
                 if page == .decisions, !model.requests.isEmpty {
-                    Text(model.requests.count.formatted()).font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .padding(.horizontal, 5).padding(.vertical, 2).background(
-                            FalconTheme.surface.opacity(0.7), in: Capsule())
+                    Text(model.requests.count.formatted()).font(FalconTheme.monoSmall).padding(
+                        .horizontal, FalconTheme.Space.tight
+                    ).padding(.vertical, FalconTheme.Space.micro).background(FalconTheme.inset, in: Capsule())
                 }
-            }.foregroundStyle(model.page == page ? FalconTheme.accent : FalconTheme.secondary).padding(.horizontal, 11)
-                .frame(height: 35).background(
-                    model.page == page ? FalconTheme.surface : .clear, in: RoundedRectangle(cornerRadius: 7)
-                ).contentShape(Rectangle())
-        }.buttonStyle(.plain).padding(.horizontal, 10).padding(.bottom, 3).accessibilityAddTraits(
-            model.page == page ? .isSelected : [])
+            }.foregroundStyle(model.page == page ? FalconTheme.accent : FalconTheme.secondary).padding(
+                .horizontal, FalconTheme.Space.regular
+            ).frame(height: FalconTheme.Layout.navigationHeight).background(
+                model.page == page ? FalconTheme.surface : hoveredPage == page ? FalconTheme.accentWash : .clear,
+                in: RoundedRectangle(cornerRadius: FalconTheme.Radius.control)
+            ).contentShape(Rectangle())
+        }.buttonStyle(.plain).onHover { hoveredPage = $0 ? page : nil }.animation(
+            reduceMotion ? nil : FalconTheme.feedback, value: hoveredPage
+        ).padding(.horizontal, FalconTheme.Space.regular).padding(.bottom, FalconTheme.Space.small)
+            .accessibilityAddTraits(model.page == page ? .isSelected : [])
     }
 
     private var emptyWorkspace: some View {
-        VStack(spacing: 18) {
-            FalconMark(size: 60)
+        VStack(spacing: FalconTheme.Space.large) {
+            FalconMark(size: FalconTheme.Layout.emptyMark)
             Text(model.profiles.isEmpty ? "A window into every decision." : "Ready for the first decision.").font(
-                .system(size: 24, weight: .semibold)
-            ).tracking(-0.5)
+                FalconTheme.title
+            ).tracking(FalconTheme.titleTracking)
             Text(
                 model.profiles.isEmpty
                     ? "Connect Jev, give each agent its own key,\nand see every input and decision in one place."
                     : "Requests sent through Falcon will appear here.\n"
                         + "Filter by source and time to review the full context."
-            ).multilineTextAlignment(.center).lineSpacing(5).foregroundStyle(FalconTheme.secondary)
+            ).multilineTextAlignment(.center).lineSpacing(FalconTheme.Space.small).foregroundStyle(
+                FalconTheme.secondary)
             Button(model.profiles.isEmpty ? "Connect to Jev" : "Manage sources") {
                 model.page = model.profiles.isEmpty ? .connections : .sources
-            }.buttonStyle(FalconButtonStyle(prominent: true)).padding(.top, 5)
+            }.buttonStyle(FalconButtonStyle(prominent: true)).padding(.top, FalconTheme.Space.tight)
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
         ToolbarItem(placement: .navigation) {
-            HStack(spacing: 12) {
-                Text(model.page == .decisions ? "Decision workspace" : model.page.rawValue).font(
-                    .system(size: 13, weight: .medium)
-                ).foregroundStyle(FalconTheme.secondary)
-                if model.isPreview { Pill(text: "Synthetic preview", color: FalconTheme.warning) }
-            }.padding(.leading, 6)
+            HStack(spacing: FalconTheme.Space.compact) {
+                Text("Falcon").font(FalconTheme.emphasis)
+                Image(systemName: "chevron.right").font(FalconTheme.caption).foregroundStyle(FalconTheme.tertiary)
+                Text(model.page.rawValue).font(FalconTheme.label).foregroundStyle(FalconTheme.secondary)
+            }.padding(.leading, FalconTheme.Space.tight)
+        }.falconToolbar()
+        ToolbarItem(placement: .principal) {
+            Pill(
+                text: model.isPreview ? "Synthetic preview" : runtime.statusTitle,
+                color: model.isPreview
+                    ? FalconTheme.warning : runtime.isRunning ? FalconTheme.success : FalconTheme.secondary,
+                symbol: model.isPreview ? "sparkle" : runtime.isRunning ? "checkmark.circle" : "pause.circle")
         }.falconToolbar()
         ToolbarItemGroup(placement: .primaryAction) {
             if model.page == .decisions {
@@ -200,7 +224,8 @@ struct WorkspaceView: View {
                     Label(
                         model.focusReview ? "Show navigation" : "Focus review",
                         systemImage: model.focusReview ? "sidebar.left" : "arrow.up.left.and.arrow.down.right")
-                }.buttonStyle(FalconButtonStyle()).keyboardShortcut("f", modifiers: [.command, .shift])
+                }.labelStyle(.titleAndIcon).buttonStyle(FalconButtonStyle()).keyboardShortcut(
+                    "f", modifiers: [.command, .shift])
             }
             Button {
                 Task { await runtime.togglePause() }
@@ -208,7 +233,8 @@ struct WorkspaceView: View {
                 Label(
                     runtime.isPaused ? "Resume service" : "Pause service",
                     systemImage: runtime.isPaused ? "play" : "pause")
-            }.buttonStyle(FalconButtonStyle()).disabled(model.isPreview || runtime.service == nil)
+            }.labelStyle(.titleAndIcon).buttonStyle(FalconButtonStyle()).disabled(
+                model.isPreview || runtime.service == nil)
         }.falconToolbar()
     }
 }

@@ -14,26 +14,22 @@ struct UsageView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Eyebrow(title: "The wider picture")
-                        Text("Decision activity").font(.system(size: 28, weight: .semibold)).tracking(-0.8)
-                        Text("Understand how your agents use Jev over time.").foregroundStyle(FalconTheme.secondary)
+            VStack(alignment: .leading, spacing: FalconTheme.Space.section) {
+                PageHeading(title: "Decision activity", subtitle: "Understand how your agents use Jev over time.") {
+                    HStack(spacing: FalconTheme.Space.compact) {
+                        Picker("Time range", selection: $model.hours) {
+                            Text("1 hour").tag(1)
+                            Text("24 hours").tag(24)
+                            Text("7 days").tag(168)
+                        }.pickerStyle(.segmented).labelsHidden().frame(width: FalconTheme.Layout.rangeSwitchWidth)
+                        Button {
+                            Task { await exportCSV() }
+                        } label: {
+                            Label("Export CSV", systemImage: "square.and.arrow.up")
+                        }.buttonStyle(FalconButtonStyle())
                     }
-                    Spacer()
-                    Picker("Time range", selection: $model.hours) {
-                        Text("1 hour").tag(1)
-                        Text("24 hours").tag(24)
-                        Text("7 days").tag(168)
-                    }.pickerStyle(.segmented).labelsHidden().frame(width: 220)
-                    Button {
-                        Task { await exportCSV() }
-                    } label: {
-                        Label("Export CSV", systemImage: "square.and.arrow.up")
-                    }.buttonStyle(FalconButtonStyle())
                 }
-                HStack(spacing: 16) {
+                HStack(spacing: FalconTheme.Space.medium) {
                     usageMetric(
                         "Requests", value: usage.requests.formatted(),
                         caption: "\(usage.questions.formatted()) questions")
@@ -49,18 +45,18 @@ struct UsageView: View {
                     usageMetric(
                         "Tokens", value: DecisionFormat.tokens(usage.totalTokens),
                         caption: "\(usage.unknownUsage) requests with unknown usage")
-                }.id("overview")
-                Surface(inset: 24) {
-                    VStack(alignment: .leading, spacing: 24) {
+                }.fixedSize(horizontal: false, vertical: true).id("overview")
+                Surface(inset: FalconTheme.Space.section) {
+                    VStack(alignment: .leading, spacing: FalconTheme.Space.section) {
                         HStack {
                             Text(model.usageShowsTokens ? "Tokens over time" : "Requests over time").font(
-                                .system(size: 15, weight: .semibold))
+                                FalconTheme.sectionTitle)
                             Spacer()
                             Picker("Activity metric", selection: $model.usageShowsTokens) {
                                 Text("Requests").tag(false)
                                 Text("Tokens").tag(true)
                             }.pickerStyle(.segmented).labelsHidden().frame(width: 175)
-                        }.font(.system(size: 11))
+                        }.font(FalconTheme.footnote)
                         if usage.buckets.isEmpty {
                             ContentUnavailableView("No requests in this range", systemImage: "chart.xyaxis.line").frame(
                                 height: 220)
@@ -96,20 +92,20 @@ struct UsageView: View {
                                 }.chartXScale(range: .plotDimension(padding: 16)).chartYAxis {
                                     AxisMarks(position: .leading)
                                 }.frame(height: 236)
-                            Text("Select a bar to inspect its decisions.").font(.system(size: 11)).foregroundStyle(
+                            Text("Select a bar to inspect its decisions.").font(FalconTheme.footnote).foregroundStyle(
                                 FalconTheme.secondary)
                             if usage.totalTokens == nil {
                                 Text("Token totals exceed the supported numeric range. Unavailable values are omitted.")
-                                    .font(.system(size: 11)).foregroundStyle(FalconTheme.warning)
+                                    .font(FalconTheme.footnote).foregroundStyle(FalconTheme.warning)
                             }
                         }
                     }
                 }.id("activity")
-                HStack(alignment: .top, spacing: 20) {
-                    Surface(inset: 24) {
-                        VStack(alignment: .leading, spacing: 22) {
+                HStack(alignment: .top, spacing: FalconTheme.Space.large) {
+                    Surface(inset: FalconTheme.Space.section) {
+                        VStack(alignment: .leading, spacing: FalconTheme.Space.section) {
                             HStack {
-                                Text("By source").font(.system(size: 15, weight: .semibold))
+                                Text("By source").font(FalconTheme.sectionTitle)
                                 Spacer()
                                 Eyebrow(title: "Requests")
                             }
@@ -118,22 +114,22 @@ struct UsageView: View {
                                     model.sourceFilters = [source.id]
                                     model.page = .decisions
                                 } label: {
-                                    HStack(spacing: 12) {
-                                        SourceAvatar(name: source.name, size: 31)
-                                        VStack(alignment: .leading, spacing: 8) {
+                                    HStack(spacing: FalconTheme.Space.regular) {
+                                        SourceAvatar(name: source.name)
+                                        VStack(alignment: .leading, spacing: FalconTheme.Space.compact) {
                                             HStack {
-                                                Text(source.name).font(.system(size: 13, weight: .medium))
+                                                Text(source.name).font(FalconTheme.body)
                                                 Spacer()
                                                 Text(source.requests.formatted()).font(FalconTheme.mono)
                                             }
                                             GeometryReader { geometry in
                                                 Capsule().fill(FalconTheme.inset)
-                                                Capsule().fill(FalconTheme.accent.opacity(0.65)).frame(
+                                                Capsule().fill(FalconTheme.accent).frame(
                                                     width: geometry.size.width * Double(source.requests)
                                                         / Double(max(1, usage.requests)))
                                             }.frame(height: 5)
                                         }
-                                        Image(systemName: "arrow.up.right").font(.system(size: 11)).foregroundStyle(
+                                        Image(systemName: "arrow.up.right").font(FalconTheme.footnote).foregroundStyle(
                                             FalconTheme.tertiary)
                                     }.contentShape(Rectangle())
                                 }.buttonStyle(.plain).accessibilityLabel(
@@ -144,16 +140,16 @@ struct UsageView: View {
                             }
                         }
                     }
-                    Surface(inset: 24) {
-                        VStack(alignment: .leading, spacing: 20) {
-                            Text("Quality & timing").font(.system(size: 15, weight: .semibold))
+                    Surface(inset: FalconTheme.Space.section) {
+                        VStack(alignment: .leading, spacing: FalconTheme.Space.large) {
+                            Text("Quality & timing").font(FalconTheme.sectionTitle)
                             summaryRow("Median processing", DecisionFormat.duration(usage.p50MS))
                             summaryRow("p95 processing", DecisionFormat.duration(usage.p95MS))
                             summaryRow("Median returned", DecisionFormat.duration(usage.returnP50MS))
                             summaryRow("p95 returned", DecisionFormat.duration(usage.returnP95MS))
                             Text(
                                 "Return: \(usage.returnLatencySamples) written · \(usage.missingReturnLatency) unknown"
-                            ).font(.system(size: 11)).foregroundStyle(FalconTheme.secondary)
+                            ).font(FalconTheme.footnote).foregroundStyle(FalconTheme.secondary)
                             Divider()
                             summaryRow("Failed / finished", "\(usage.failures) / \(usage.terminal)")
                             summaryRow("Still in progress", (usage.requests - usage.terminal).formatted())
@@ -163,15 +159,16 @@ struct UsageView: View {
                             Text(
                                 "Processing includes local preparation and upstream time. "
                                     + "Missing timings and token counts remain unknown."
-                            ).font(.system(size: 11)).foregroundStyle(FalconTheme.secondary).lineSpacing(4)
+                            ).font(FalconTheme.footnote).foregroundStyle(FalconTheme.secondary).lineSpacing(
+                                FalconTheme.Space.small)
                         }
                     }.frame(maxWidth: 380)
                 }.id("sources")
-                HStack(alignment: .top, spacing: 20) {
-                    Surface(inset: 24) {
-                        VStack(alignment: .leading, spacing: 20) {
+                HStack(alignment: .top, spacing: FalconTheme.Space.large) {
+                    Surface(inset: FalconTheme.Space.section) {
+                        VStack(alignment: .leading, spacing: FalconTheme.Space.large) {
                             HStack {
-                                Text("Latency distribution").font(.system(size: 15, weight: .semibold))
+                                Text("Latency distribution").font(FalconTheme.sectionTitle)
                                 Spacer()
                                 Picker("Latency", selection: $model.usageShowsReturn) {
                                     Text("Processing").tag(false)
@@ -184,12 +181,12 @@ struct UsageView: View {
                             }.frame(height: 160)
                             Text(
                                 "\(model.usageShowsReturn ? usage.returnLatencySamples : usage.latencySamples) measured requests · \(model.usageShowsReturn ? usage.missingReturnLatency : usage.missingLatency) without a known duration"
-                            ).font(.system(size: 11)).foregroundStyle(FalconTheme.secondary)
+                            ).font(FalconTheme.footnote).foregroundStyle(FalconTheme.secondary)
                         }
                     }
-                    Surface(inset: 24) {
-                        VStack(alignment: .leading, spacing: 16) {
-                            Text("Models & question types").font(.system(size: 15, weight: .semibold))
+                    Surface(inset: FalconTheme.Space.section) {
+                        VStack(alignment: .leading, spacing: FalconTheme.Space.medium) {
+                            Text("Models & question types").font(FalconTheme.sectionTitle)
                             ForEach(usage.models) { item in summaryRow(item.name, "\(item.count) requests") }
                             Divider()
                             ForEach(usage.questionTypes) { item in
@@ -199,7 +196,7 @@ struct UsageView: View {
                         }
                     }.frame(maxWidth: 380)
                 }.id("latency")
-                HStack(alignment: .top, spacing: 20) {
+                HStack(alignment: .top, spacing: FalconTheme.Space.large) {
                     ProbabilityDistribution(
                         title: "Confidence", subtitle: "Choice & Score · concentration, not accuracy",
                         buckets: usage.confidence, missing: usage.missingConfidence
@@ -222,10 +219,11 @@ struct UsageView: View {
                     model.page = .decisions
                 }.id("definitions")
                 Text("Rolling seven-day history · UTC time buckets, displayed in \(TimeZone.current.identifier)").font(
-                    .system(size: 11)
+                    FalconTheme.footnote
                 ).foregroundStyle(FalconTheme.tertiary)
-            }.scrollTargetLayout().padding(32).frame(maxWidth: 1400, alignment: .leading).frame(
-                maxWidth: .infinity, alignment: .topLeading)
+            }.scrollTargetLayout().padding(FalconTheme.Space.page).frame(
+                maxWidth: FalconTheme.Layout.pageWidth, alignment: .leading
+            ).frame(maxWidth: .infinity, alignment: .topLeading)
         }.scrollPosition(id: $model.usageScrollID, anchor: .top).onChange(of: selectedDate) { _, date in
             guard let date,
                 let bucket = usage.buckets.min(by: {
@@ -238,12 +236,12 @@ struct UsageView: View {
     }
 
     private func usageMetric(_ title: String, value: String, caption: String) -> some View {
-        Surface(inset: 20) {
-            VStack(alignment: .leading, spacing: 13) {
-                Text(title).font(.system(size: 12, weight: .medium)).foregroundStyle(FalconTheme.secondary)
-                Text(value).font(.system(size: 27, weight: .medium, design: .rounded)).tracking(-0.8)
-                Text(caption).font(.system(size: 11)).foregroundStyle(FalconTheme.tertiary)
-            }
+        Surface {
+            VStack(alignment: .leading, spacing: FalconTheme.Space.regular) {
+                Text(title).font(FalconTheme.label).foregroundStyle(FalconTheme.secondary)
+                Text(value).font(FalconTheme.metric).tracking(FalconTheme.titleTracking)
+                Text(caption).font(FalconTheme.footnote).foregroundStyle(FalconTheme.tertiary)
+            }.frame(maxHeight: .infinity, alignment: .topLeading)
         }
     }
     private func summaryRow(_ title: String, _ value: String) -> some View {

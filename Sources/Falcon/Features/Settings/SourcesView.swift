@@ -15,11 +15,8 @@ struct SourcesView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                PageHeading(
-                    eyebrow: "Local identities", title: "Sources",
-                    subtitle: "One key per agent. A clear trail for every decision."
-                ) {
+            VStack(alignment: .leading, spacing: FalconTheme.Space.section) {
+                PageHeading(title: "Sources", subtitle: "One key per agent. A clear trail for every decision.") {
                     Button {
                         editing = nil
                         showingEditor = true
@@ -30,8 +27,8 @@ struct SourcesView: View {
                 }
                 if model.profiles.isEmpty {
                     Surface {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Add an upstream connection first.").font(.system(size: 16, weight: .semibold))
+                        VStack(alignment: .leading, spacing: FalconTheme.Space.regular) {
+                            Text("Add an upstream connection first.").font(FalconTheme.sectionTitle)
                             Text("Sources can share a connection or use different endpoints and credentials.")
                                 .foregroundStyle(FalconTheme.secondary)
                             Button("Manage connections") { model.page = .connections }.buttonStyle(
@@ -45,31 +42,32 @@ struct SourcesView: View {
                     ).frame(height: 220)
                 }
                 HStack {
-                    Text("Activity in the past 24 hours").font(.system(size: 12)).foregroundStyle(FalconTheme.secondary)
+                    Text("Activity in the past 24 hours").font(FalconTheme.detail).foregroundStyle(
+                        FalconTheme.secondary)
                     Spacer()
-                    Toggle("Show archived", isOn: $showArchived).toggleStyle(.checkbox).font(.system(size: 12))
+                    Toggle("Show archived", isOn: $showArchived).toggleStyle(.checkbox).font(FalconTheme.detail)
                 }
                 ForEach(model.sources.filter { showArchived || !$0.archived }) { source in
-                    Surface(inset: 22) {
-                        HStack(spacing: 16) {
-                            SourceAvatar(name: source.name, size: 42)
-                            VStack(alignment: .leading, spacing: 9) {
-                                HStack(spacing: 9) {
-                                    Text(source.name).font(.system(size: 16, weight: .semibold))
+                    Surface(inset: FalconTheme.Space.large) {
+                        HStack(spacing: FalconTheme.Space.medium) {
+                            SourceAvatar(name: source.name, size: FalconTheme.Layout.profileAvatar)
+                            VStack(alignment: .leading, spacing: FalconTheme.Space.compact) {
+                                HStack(spacing: FalconTheme.Space.compact) {
+                                    Text(source.name).font(FalconTheme.sectionTitle)
                                     Pill(
                                         text: source.archived ? "Archived" : source.enabled ? "Enabled" : "Disabled",
                                         color: source.enabled && !source.archived
                                             ? FalconTheme.success : FalconTheme.tertiary)
                                     Text(String(source.id.uuidString.prefix(6)).lowercased()).font(
-                                        .system(size: 11, design: .monospaced)
+                                        FalconTheme.monoSmall
                                     ).foregroundStyle(FalconTheme.tertiary)
                                 }
-                                HStack(spacing: 7) {
+                                HStack(spacing: FalconTheme.Space.compact) {
                                     Image(systemName: "arrow.up.right")
                                     Text(
                                         model.profiles.first { $0.id == source.profileID }?.name ?? "Missing connection"
                                     )
-                                    Text("·").padding(.horizontal, 3)
+                                    Text("·").padding(.horizontal, FalconTheme.Space.small)
                                     if let key = model.keys.first(where: {
                                         $0.sourceID == source.id && $0.revokedAt == nil
                                     }) {
@@ -77,16 +75,16 @@ struct SourcesView: View {
                                     } else {
                                         Text(model.isPreview ? "Preview identity" : "No active key")
                                     }
-                                }.font(.system(size: 12)).foregroundStyle(FalconTheme.secondary)
+                                }.font(FalconTheme.detail).foregroundStyle(FalconTheme.secondary)
                             }
                             Spacer()
                             if let activity = model.usage.sources.first(where: { $0.id == source.id }) {
-                                VStack(alignment: .trailing, spacing: 7) {
+                                VStack(alignment: .trailing, spacing: FalconTheme.Space.compact) {
                                     Text(
                                         "\(activity.requests) requests · \(DecisionFormat.tokens(activity.totalTokens)) tokens"
-                                    ).font(.system(size: 12))
+                                    ).font(FalconTheme.detail)
                                     if let last = activity.lastReceivedAt {
-                                        Text(last, style: .relative).font(.system(size: 11)).foregroundStyle(
+                                        Text(last, style: .relative).font(FalconTheme.footnote).foregroundStyle(
                                             FalconTheme.secondary)
                                     }
                                 }
@@ -120,17 +118,18 @@ struct SourcesView: View {
                         }
                     }
                 }
-                Surface(inset: 22) {
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text("Connect an agent").font(.system(size: 15, weight: .semibold))
-                        HStack(spacing: 24) {
+                Surface(inset: FalconTheme.Space.large) {
+                    VStack(alignment: .leading, spacing: FalconTheme.Space.medium) {
+                        Text("Connect an agent").font(FalconTheme.sectionTitle)
+                        HStack(spacing: FalconTheme.Space.section) {
                             endpoint("HTTP API root", "http://127.0.0.1:\(port)")
                             endpoint("MCP endpoint", "http://127.0.0.1:\(port)/mcp")
                         }
                         Text(
                             "Set Authorization: Bearer <source key>. "
                                 + "MCP clients must support Streamable HTTP with a fixed Authorization header."
-                        ).font(.system(size: 12)).foregroundStyle(FalconTheme.secondary).lineSpacing(4)
+                        ).font(FalconTheme.detail).foregroundStyle(FalconTheme.secondary).lineSpacing(
+                            FalconTheme.Space.small)
                         Button("Copy MCP template") {
                             let template = """
                                 {"mcpServers":{"falcon":{"url":"http://127.0.0.1:\(port)/mcp","headers":{"Authorization":"Bearer YOUR_SOURCE_KEY"}}}}
@@ -140,7 +139,8 @@ struct SourcesView: View {
                         }.buttonStyle(FalconButtonStyle())
                     }
                 }
-            }.padding(32).frame(maxWidth: 1150, alignment: .leading).frame(maxWidth: .infinity, alignment: .topLeading)
+            }.padding(FalconTheme.Space.page).frame(maxWidth: FalconTheme.Layout.managementWidth, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
         }.sheet(isPresented: $showingEditor) { SourceEditor(model: model, source: editing) }.sheet(
             item: $presentedKey, content: { key in OneTimeKeyView(issued: key.value) }
         ).confirmationDialog(
@@ -156,7 +156,7 @@ struct SourcesView: View {
     }
 
     private func endpoint(_ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: FalconTheme.Space.compact) {
             Eyebrow(title: title)
             Text(value).font(FalconTheme.mono).textSelection(.enabled)
         }
@@ -203,9 +203,9 @@ private struct SourceEditor: View {
         if let issued {
             OneTimeKeyView(issued: issued)
         } else {
-            VStack(alignment: .leading, spacing: 22) {
-                Text(source == nil ? "Add source" : "Edit source").font(.system(size: 23, weight: .semibold)).tracking(
-                    -0.5)
+            VStack(alignment: .leading, spacing: FalconTheme.Space.section) {
+                Text(source == nil ? "Add source" : "Edit source").font(FalconTheme.title).tracking(
+                    FalconTheme.titleTracking)
                 Form {
                     TextField("Source name", text: $name)
                     Picker("Connection", selection: $profileID) {
@@ -219,8 +219,8 @@ private struct SourceEditor: View {
                 Text(
                     "Each source gets its own local key. "
                         + "Multiple sources can route to the same connection without sharing their identity."
-                ).font(.system(size: 12)).foregroundStyle(FalconTheme.secondary).lineSpacing(4)
-                if let error { Text(error).font(.system(size: 12)).foregroundStyle(FalconTheme.danger) }
+                ).font(FalconTheme.detail).foregroundStyle(FalconTheme.secondary).lineSpacing(FalconTheme.Space.small)
+                if let error { Text(error).font(FalconTheme.detail).foregroundStyle(FalconTheme.danger) }
                 HStack {
                     Spacer()
                     Button("Cancel") { dismiss() }.buttonStyle(FalconButtonStyle()).keyboardShortcut(.cancelAction)
@@ -229,7 +229,9 @@ private struct SourceEditor: View {
                     }.buttonStyle(FalconButtonStyle(prominent: true)).keyboardShortcut(.defaultAction).disabled(
                         saving || name.trimmingCharacters(in: .whitespaces).isEmpty || profileID == nil)
                 }
-            }.padding(28).frame(width: 500).background(FalconTheme.canvas).foregroundStyle(FalconTheme.ink).onAppear {
+            }.padding(FalconTheme.Space.sheet).frame(width: FalconTheme.Layout.sheetWidth).background(
+                FalconTheme.canvas
+            ).foregroundStyle(FalconTheme.ink).onAppear {
                 name = source?.name ?? ""
                 profileID = source?.profileID ?? model.profiles.first?.id
                 enabled = source?.enabled ?? true
@@ -260,13 +262,13 @@ private struct OneTimeKeyView: View {
     @State private var copied = false
     @Environment(\.dismiss) private var dismiss
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Image(systemName: "key.horizontal").font(.system(size: 28)).foregroundStyle(FalconTheme.accent)
-            Text("\(issued.source.name) is ready").font(.system(size: 23, weight: .semibold)).tracking(-0.5)
+        VStack(alignment: .leading, spacing: FalconTheme.Space.large) {
+            Image(systemName: "key.horizontal").font(FalconTheme.featureSymbol).foregroundStyle(FalconTheme.accent)
+            Text("\(issued.source.name) is ready").font(FalconTheme.title).tracking(FalconTheme.titleTracking)
             Text("Save this key now. Falcon only shows it once.").foregroundStyle(FalconTheme.secondary)
-            Text(issued.token).font(.system(size: 12, design: .monospaced)).textSelection(.enabled).padding(14).frame(
+            Text(issued.token).font(FalconTheme.mono).textSelection(.enabled).padding(FalconTheme.Space.medium).frame(
                 maxWidth: .infinity, alignment: .leading
-            ).background(FalconTheme.inset, in: RoundedRectangle(cornerRadius: 8))
+            ).background(FalconTheme.inset, in: RoundedRectangle(cornerRadius: FalconTheme.Radius.control))
             HStack {
                 Button {
                     NSPasteboard.general.clearContents()
@@ -279,6 +281,7 @@ private struct OneTimeKeyView: View {
                 Button("Done") { dismiss() }.buttonStyle(FalconButtonStyle(prominent: true)).keyboardShortcut(
                     .defaultAction)
             }
-        }.padding(28).frame(width: 520).background(FalconTheme.canvas).foregroundStyle(FalconTheme.ink)
+        }.padding(FalconTheme.Space.sheet).frame(width: FalconTheme.Layout.sheetWidth).background(FalconTheme.canvas)
+            .foregroundStyle(FalconTheme.ink)
     }
 }

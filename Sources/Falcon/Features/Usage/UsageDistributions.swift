@@ -11,10 +11,10 @@ struct ProbabilityDistribution: View {
     @State private var selectedBand: Int?
 
     var body: some View {
-        Surface(inset: 24) {
-            VStack(alignment: .leading, spacing: 16) {
-                Text(title).font(.system(size: 15, weight: .semibold))
-                Text(subtitle).font(.system(size: 12)).foregroundStyle(FalconTheme.secondary)
+        Surface(inset: FalconTheme.Space.section) {
+            VStack(alignment: .leading, spacing: FalconTheme.Space.medium) {
+                Text(title).font(FalconTheme.sectionTitle)
+                Text(subtitle).font(FalconTheme.detail).foregroundStyle(FalconTheme.secondary)
                 Chart(buckets) { bucket in
                     BarMark(x: .value("Probability band", bucket.index), y: .value("Questions", bucket.count))
                         .foregroundStyle(FalconTheme.accent.gradient).cornerRadius(3).accessibilityLabel(
@@ -35,7 +35,7 @@ struct ProbabilityDistribution: View {
                             ) { inspect(bucket.index) }
                         }
                     }.menuStyle(.borderlessButton).fixedSize()
-                }.font(.system(size: 11)).foregroundStyle(FalconTheme.secondary)
+                }.font(FalconTheme.footnote).foregroundStyle(FalconTheme.secondary)
             }
         }.onChange(of: selectedBand) { _, index in
             if let index, (0...9).contains(index) {
@@ -52,24 +52,24 @@ struct DecisionGroupsView: View {
     let inspect: (DecisionGroup) -> Void
 
     var body: some View {
-        Surface(inset: 24) {
-            VStack(alignment: .leading, spacing: 20) {
-                Text("Decisions by definition").font(.system(size: 15, weight: .semibold))
+        Surface(inset: FalconTheme.Space.section) {
+            VStack(alignment: .leading, spacing: FalconTheme.Space.large) {
+                Text("Decisions by definition").font(FalconTheme.sectionTitle)
                 Text(
                     "Only identical question types and definitions share a group. Names alone never combine decisions."
-                ).font(.system(size: 12)).foregroundStyle(FalconTheme.secondary)
+                ).font(FalconTheme.detail).foregroundStyle(FalconTheme.secondary)
                 if groups.isEmpty {
                     Text("Completed decisions will appear here.").foregroundStyle(FalconTheme.tertiary)
                 }
                 ForEach(groups) { group in
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: FalconTheme.Space.regular) {
+                        HStack(spacing: FalconTheme.Space.regular) {
                             Text(group.questionID).font(FalconTheme.mono).lineLimit(1)
                             Pill(text: group.type.capitalized)
-                            Text(String(group.fingerprint.prefix(8))).font(.system(size: 11, design: .monospaced))
-                                .foregroundStyle(FalconTheme.tertiary)
+                            Text(String(group.fingerprint.prefix(8))).font(FalconTheme.monoSmall).foregroundStyle(
+                                FalconTheme.tertiary)
                             Spacer()
-                            Text("\(group.samples) questions").font(.system(size: 12)).foregroundStyle(
+                            Text("\(group.samples) questions").font(FalconTheme.detail).foregroundStyle(
                                 FalconTheme.secondary)
                             Button {
                                 inspect(group)
@@ -79,10 +79,9 @@ struct DecisionGroupsView: View {
                         }
                         if group.type == "choice" {
                             ForEach(group.outcomes) { outcome in
-                                HStack(spacing: 14) {
-                                    Text(outcome.name).font(.system(size: 12, design: .monospaced)).frame(
-                                        width: 150, alignment: .leading
-                                    ).lineLimit(1)
+                                HStack(spacing: FalconTheme.Space.medium) {
+                                    Text(outcome.name).font(FalconTheme.mono).frame(width: 150, alignment: .leading)
+                                        .lineLimit(1)
                                     ProgressView(value: Double(outcome.count), total: Double(max(1, group.samples)))
                                         .tint(FalconTheme.accent)
                                     Text("\(outcome.count)").font(FalconTheme.mono).frame(
@@ -90,18 +89,18 @@ struct DecisionGroupsView: View {
                                 }
                             }
                         } else {
-                            HStack(spacing: 28) {
+                            HStack(spacing: FalconTheme.Space.sheet) {
                                 value("Mean", group.mean, probability: group.type == "noul")
                                 value("Minimum", group.minimum, probability: group.type == "noul")
                                 value("Maximum", group.maximum, probability: group.type == "noul")
                             }
                         }
-                    }.padding(.vertical, 10)
+                    }.padding(.vertical, FalconTheme.Space.regular)
                     if group.id != groups.last?.id { Divider() }
                 }
                 if omitted > 0 {
                     Text("\(omitted) more definitions. Narrow the time or source range to inspect them.").font(
-                        .system(size: 12)
+                        FalconTheme.detail
                     ).foregroundStyle(FalconTheme.secondary)
                 }
             }
@@ -109,13 +108,13 @@ struct DecisionGroupsView: View {
     }
 
     private func value(_ title: String, _ number: Double?, probability: Bool) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: FalconTheme.Space.compact) {
             Text(title).foregroundStyle(FalconTheme.secondary)
             Text(
                 probability
                     ? DecisionFormat.probability(number)
                     : number?.formatted(.number.precision(.fractionLength(2))) ?? "—"
             ).font(FalconTheme.mono)
-        }.font(.system(size: 12))
+        }.font(FalconTheme.detail)
     }
 }

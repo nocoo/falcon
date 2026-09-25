@@ -4,13 +4,13 @@
 
 ## 视觉方向：安静、精确的观察台
 
-Falcon 的主角是证据。浅色采用纸白、冷灰石面与深青蓝；深色采用墨蓝黑、微亮边缘与清晰文字。纹理只存在于侧栏和非数据空白处，不能压在正文、表格或图表上。强调色用来表示选择和焦点，绿色只表示服务成功，琥珀表示需要观察，红色只表示故障或破坏性动作。
+Falcon 的主角是证据。浅色采用纸白、冷灰与游隼标识中的灰蓝；深色采用墨蓝黑、微亮边缘与清晰文字。纹理只存在于侧栏和非数据空白处，不能压在正文、表格或图表上。强调色用来表示选择和焦点，绿色只表示服务成功，琥珀表示需要观察，红色只表示故障或破坏性动作。
 
 Showtime 可借鉴的是统一 theme、柔和表面、细边线和 240 ms 的受控区域过渡；Lyre 可借鉴的是单主窗口、紧凑原生控件和完整浅深色状态覆盖。Falcon 不复制它们的业务布局，也不把网页 dashboard 塞进原生壳。
 
 ## 单窗口信息架构
 
-决策回看占据主要空间。窗口建议初始 1600 × 1000 pt，启动时按当前屏幕可用区域缩放，最小目标 1120 × 720 pt；不得超出屏幕。统一原生标题栏、交通灯、toolbar，保留拖动、全屏与窗口恢复。导航侧栏 160–184 pt，请求列表 260–320 pt，剩余宽度全部交给详情；两者均可独立收起。设置与关于在同一窗口，系统文件选择和破坏性确认采用 sheet。
+决策回看占据主要空间。窗口建议初始 1600 × 1000 pt，启动时按当前屏幕可用区域缩放，最小内容尺寸 1120 × 680 pt，紧凑窗口验收为 1120 × 720 pt。原生统一紧凑工具栏保留交通灯、拖动、全屏与窗口恢复；以「Falcon › 当前页面」代替重复窗口标题；服务状态居中，Focus review 与服务操作靠右。导航侧栏固定 193.6 pt（原 176 pt 加宽 10%），请求列表 292 pt，剩余宽度全部交给详情；Focus review 同时收起两者。设置与关于在同一窗口，系统文件选择和破坏性确认采用 sheet。
 
 默认 1600 pt 布局下详情净宽目标至少 1000 pt，正文占工作区可用高度至少 70%。`Focus review` 一键收起导航和请求列表，保留紧凑来源/时间筛选、上一条/下一条及回放控制；退出后恢复列宽、选中项和滚动位置。不能让大标题、统计卡片或常驻空面板挤占阅读区。大屏展开更多正文，不能只把留白拉宽。
 
@@ -38,7 +38,7 @@ Showtime 可借鉴的是统一 theme、柔和表面、细边线和 240 ms 的受
 
 以上数据全部为合成布局示例，不是实测结果。默认导航 Decisions；总体 KPI 放在 Usage，回看页优先显示当前记录的输入与结果。回放控制仅在用户进入 Replay 时出现；多来源轨道按需展开，不能长期占据正文高度。
 
-详情净宽低于 960 pt 时自动建议 Focus review，用户进入后收起两列导航；仍不足时 State 与题目纵向排列在同一个 overview 中，不改回互斥 tab。分隔线可拖动，长 JSON 和长选项定义可展开、查找和复制；不能通过缩小字号或横向溢出适配小窗口。分隔线、图表和长 JSON 均需验证 1× / 2× 屏幕。
+详情净宽低于 850 pt 时显示 Focus review 入口，用户进入后收起两列导航；仍不足时 State 与题目纵向排列在同一个 overview 中，不改回互斥 tab。分隔线可拖动，长 JSON 和长选项定义可展开、查找和复制；不能通过缩小字号或横向溢出适配小窗口。分隔线、图表和长 JSON 均需验证 1× / 2× 屏幕。
 
 ## Decisions：默认工作台
 
@@ -48,7 +48,7 @@ Showtime 可借鉴的是统一 theme、柔和表面、细边线和 240 ms 的受
 
 自动到来的记录不抢选中、不滚动用户正在阅读的区域；用户离开顶端后显示 `12 new · Show latest`。查看历史不停止后台记录；Live 按钮只控制列表追随，Pause service 才停止新推理。
 
-详情首屏包括来源、项目自报标签、毫秒级接收/返回时间、调用状态、request ID 短标识、model、上游往返/处理/返回耗时和 token。日期跨日时显示完整日期，时区和 UTC 原值可核验；返回时点未知则标为 Unknown。完整 ID 与配置快照在元数据展开层。
+详情头部采用三行：来源与项目自报标签、毫秒级接收时间、状态和 request ID；Overview / Raw JSON 切换与 Timeline、Replay、Copy、Export 操作；上游往返、处理、返回耗时、token 和 model 指标带。标题使用统一 22 pt 字体，左右内边距 24 pt、上下 16 pt，行间距 12 pt。状态与指标继续按回放时间显示，不能提前透露结果。日期跨日时显示完整日期，时区和 UTC 原值可核验；返回时点未知则标为 Unknown。完整 ID 与配置快照在元数据展开层。
 
 默认 overview 同时呈现输入与问题/结果，不用切换 tab 才能核对：
 
@@ -59,7 +59,7 @@ Showtime 可借鉴的是统一 theme、柔和表面、细边线和 240 ms 的受
 
 `confidence` 的帮助文字为“分布集中程度，不是准确率”；margin 为最大的两个 probability 之差，若只有一个合法选项则不展示。上游没有 reasoning 时，不出现“AI reasoning”空面板，更不能调用第二个模型补造解释。
 
-底部固定紧凑 review bar：状态 picker、备注入口、复制菜单、导出。notes 在稳定选中 ID 下持久化；切换记录时提交或保留该记录草稿，不能写到新记录。删除/到期时清理对应草稿，避免正文泄漏到长期配置。
+底部固定 48 pt review bar，放状态 picker、备注与保存；复制与导出放在头部操作栏。notes 在稳定选中 ID 下持久化；切换记录时提交或保留该记录草稿，不能写到新记录。删除/到期时清理对应草稿，避免正文泄漏到长期配置。
 
 ## 来源时间线与动画回放
 
@@ -87,26 +87,33 @@ Connections 表格列出 profile 名称、目标 host、default model、配置�
 
 ## 视觉 token
 
-所有值集中在 `FalconTheme` / asset catalog；业务 view 不散落 hex 和重复 spacing。下列为起始 token，最终以真实 App 截图、对比度检查与交互验证调整。
+所有颜色、字体、间距、圆角、常用控件与窗口尺寸集中在 `FalconTheme`。共享组件在 `FalconComponents`；Usage、Sources、Connections、Settings 共用 `PageHeading`，取消重复 eyebrow，标题左对齐、说明在下、操作在右。图表量纲与文本所需列宽仍由对应视图控制。
 
 | Token | Light | Dark / 尺寸 |
 | --- | --- | --- |
-| `canvas` | `#F4F5F5` | `#11181D` |
-| `surface` | `#FFFFFF` | `#19232B` |
-| `raised` | `#F8FAFA` | `#22303A` |
-| `text.primary` | `#172C35` | `#E8EFF2` |
-| `text.secondary` | `#526571` | `#A9BDC7` |
-| `accent` | `#176B82` | `#7ECADF` |
-| `onAccent` | `#FFFFFF` | `#102E38` |
-| `success / warning / error` | `#256B4B / #86550A / #B13B3B` | `#86CCA9 / #E8BD70 / #FFAAA4` |
-| `separator` | primary 10% | primary 14%；高对比模式提升 |
-| spacing | 4 / 8 / 12 / 16 / 20 / 24 | 页面 24、详情 20、控件水平 12、表格 cell 8–12 |
-| radius | 控件 8、panel 12 | sheet 交由系统；不把每一行包成卡片 |
+| `canvas` | `#F5F6FA` | `#11151F` |
+| `sidebar` | `#EDF0F6` | `#171D2A` |
+| `surface` | `#FFFFFF` | `#1D2433` |
+| `reader` | `#FAFBFD` | `#181F2D` |
+| `inset` | `#F1F3F8` | `#151B27` |
+| `ink` | `#293043` | `#E9EDF5` |
+| `secondary` | `#556277` | `#A7B1C6` |
+| `tertiary` | `#5E6A7D` | `#95A2BA` |
+| `accent` | `#515677` | `#B8C6EC` |
+| `accentWash` | `#E9ECF5` | `#2A344D` |
+| `onAccent` | `#FFFFFF` | `#192239` |
+| `success / warning / danger` | `#256B52 / #86550A / #B13B3B` | `#8AD2AF / #E8BD70 / #FFAAA4` |
+| `line` | `#DCE1EB` | `#323D52`；高对比模式的控件与卡片边线使用 `secondary` |
+| `Space` | 2 / 4 / 6 / 8 / 12 / 16 / 20 / 24 / 28 / 32 | 页面 32、详情水平 24、sheet 28、控件水平 12 |
+| `Radius` | 小元素 4、badge 5、控件 8、panel 12 | sheet 交由系统 |
 | type | SF 系统字体 | 页标题 22、分区 15、正文 13、辅助 12、最小信息文字 11 pt |
-| numeric | monospaced digits | 只用于时间、token、概率和耗时，正文不等宽 |
-| controls | 32 pt 主控件，28 pt 紧凑筛选 | 图标按钮 32×32；按下、hover、disabled、focus 状态完整 |
+| numeric | monospaced digits | 时间、token、概率、耗时；原始字段与 JSON 使用等宽字体 |
+| controls | 32 pt 主控件、28 pt 紧凑控件 | 导航行 36 pt；hover / selected / disabled 共用样式 |
+| motion | 区域过渡 240 ms、反馈 140 ms | Reduce Motion 关闭自定义反馈动画 |
 
-侧栏使用原生 material，内容区用实体 surface。可选 128×128 单通道静态 grain，目标不超过 16 KiB，以 1%–2% 强度绘制一次；不做实时噪声 shader。增加对比度 / 减少透明度时关闭纹理、改用不透明表面。浅深两套各测文字至少 4.5:1，重要控件边界与图表至少 3:1；未测之前不得宣称已达标。
+侧栏与内容使用适应浅深色的实体表面。侧栏的静态点纹由 Canvas 绘制；增加对比度或减少透明度时关闭，不运行持续噪声动画。对上述最终 sRGB token 计算 WCAG 相对亮度：`ink`、`secondary`、`tertiary`、`accent` 和三个状态色与六种内容表面的全部组合中，最低文字对比度为浅色 4.64:1、深色 4.81:1；主按钮 `onAccent/accent` 分别为 7.13:1、9.27:1。这是实体 token 组合的计算结果，不代表所有透明叠层、原生控件、图表或 VoiceOver 均已完成验收。
+
+品牌资源沿用已批准的游隼头像。侧栏显示 44 pt 透明标识及 Falcon 字标，空态显示 64 pt；菜单栏使用同一轮廓，Dock 使用平台 ICNS。保留原画完整构图，不添加底板、不重绘。资源来源与重建方式见 [品牌说明](../assets/brand/README.md)。
 
 ## 动效、加载和反馈
 
@@ -133,6 +140,8 @@ Connections 表格列出 profile 名称、目标 host、default model、配置�
 控件使用原生 Button / Picker / TextField / Table；自定义样式保留 role、label、disabled 和 focus ring。概率图提供 VoiceOver 文本序列（选项、概率、是否选中）；图表有可阅读的数据表替代。状态同时使用文字与图标；支持 Reduce Motion、Reduce Transparency、Increase Contrast 和系统文字尺寸变化，不以 hover 作为唯一操作入口。
 
 ## 品质验收证据
+
+2026-09-25 头部与品牌调整：Release 构建成功；SwiftLint strict 与 swift-format strict 均通过；回放与决策呈现的 4 项定向测试通过。最终生成并逐张检查 12 个原生窗口截图，覆盖浅/深色、1120 × 720 紧凑窗口、标准与紧凑 Focus、回放、Usage 标准与紧凑布局、Sources、Connections、Settings 和空态。12 个隔离 preview 进程均退出 0、stderr 为空，未调用真实 Jev 或 Keychain。截图包括应用自身的原生工具栏；这些静态证据不替代下面的完整交互和无障碍验收。
 
 实现时用真实 SwiftUI 视图与隔离合成数据渲染 Light/Dark 的正常、多题、255 选项、长 JSON、超时、空态、满盘等场景；检查 1120×720、1440×900、1600×1000、全屏与 Focus review、1×/2×、键盘与 VoiceOver。大窗口须同时看见 State、当前题 instructions/criteria 与 Decision；小窗口通过同一 overview 滚动访问完整内容。截图只能证明静态外观；回放、焦点、滚动、等待和错误修复需实际运行验证。
 

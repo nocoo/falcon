@@ -10,12 +10,14 @@
 		1FCE7B9DAEFC3DA8AD9F5556 /* FalconTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 355A5657689CBD16190B9D48 /* FalconTheme.swift */; };
 		2C6D28F9F2D8D4BBA4FF7708 /* AppRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F9C1898667F98C1A7FF19D6 /* AppRuntime.swift */; };
 		36565E102548AAA057B6F6C3 /* UsageDistributions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EDEC317F309102A9D049E79 /* UsageDistributions.swift */; };
+		372F67EE6BB246ABD451D213 /* DecisionHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5196D5DD27FE3F8593D6888 /* DecisionHeader.swift */; };
 		606C54465C29E5A3BBF60046 /* FalconCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0604BE68134B276DC7285E02 /* FalconCore */; };
 		6184CCC6FF9234D80DA26605 /* Falcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 461E33FA103A877747A2F53D /* Falcon.icns */; };
 		66433E11A9B10AD9C5C47F4B /* FalconApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5286317EA0C2DF15B1685DE /* FalconApp.swift */; };
 		69AEF4B62167C54FF6277F1E /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7DD7255ED63BF9CC6354CA9 /* SourcesView.swift */; };
 		6BEA7C1ADB1601947C021682 /* ConnectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57636B4C16617F1CEF68DAED /* ConnectionsView.swift */; };
 		7E21D5777622CC8AD46E7152 /* QuestionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12707A79497822218E6F256 /* QuestionCard.swift */; };
+		9BD62DA37D4A4FA7BA3937BB /* FalconComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 283DB285BD3A273FF3B2F6F4 /* FalconComponents.swift */; };
 		B2D83D06AA3127E3DD3134F3 /* ReplayBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87CAE6CCEC5889434BFC2426 /* ReplayBar.swift */; };
 		BE4A4EEDEDB708D956163B7B /* FalconAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45FCBEE07A8E6EC091C7457 /* FalconAssets.swift */; };
 		D283E5C93EC6DDBB8FFCE08D /* FalconMark.png in Resources */ = {isa = PBXBuildFile; fileRef = 256011CFF0AFFAA381CDE9D9 /* FalconMark.png */; };
@@ -32,6 +34,7 @@
 		0F9C1898667F98C1A7FF19D6 /* AppRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRuntime.swift; sourceTree = "<group>"; };
 		22D1E8005B3E782DB2FE957C /* falcon */ = {isa = PBXFileReference; lastKnownFileType = folder; name = falcon; path = .; sourceTree = SOURCE_ROOT; };
 		256011CFF0AFFAA381CDE9D9 /* FalconMark.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = FalconMark.png; sourceTree = "<group>"; };
+		283DB285BD3A273FF3B2F6F4 /* FalconComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FalconComponents.swift; sourceTree = "<group>"; };
 		355A5657689CBD16190B9D48 /* FalconTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FalconTheme.swift; sourceTree = "<group>"; };
 		3567D90E4EEAB4C16F411FE2 /* FalconMark@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "FalconMark@2x.png"; sourceTree = "<group>"; };
 		37AAB24B0D1107783F166BFD /* WorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceView.swift; sourceTree = "<group>"; };
@@ -44,6 +47,7 @@
 		A7DD7255ED63BF9CC6354CA9 /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcesView.swift; sourceTree = "<group>"; };
 		B12707A79497822218E6F256 /* QuestionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionCard.swift; sourceTree = "<group>"; };
 		B45FCBEE07A8E6EC091C7457 /* FalconAssets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FalconAssets.swift; sourceTree = "<group>"; };
+		D5196D5DD27FE3F8593D6888 /* DecisionHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecisionHeader.swift; sourceTree = "<group>"; };
 		DC205BDBF2A6DE494CF7CC31 /* UsageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageView.swift; sourceTree = "<group>"; };
 		EEBFAA421C254997F349D067 /* DecisionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecisionDetailView.swift; sourceTree = "<group>"; };
 		F1BA48BB62DE46EAB5E2253F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -123,6 +127,7 @@
 			isa = PBXGroup;
 			children = (
 				EEBFAA421C254997F349D067 /* DecisionDetailView.swift */,
+				D5196D5DD27FE3F8593D6888 /* DecisionHeader.swift */,
 				B12707A79497822218E6F256 /* QuestionCard.swift */,
 				87CAE6CCEC5889434BFC2426 /* ReplayBar.swift */,
 				02C97FDAA89707D9F335E347 /* RequestListView.swift */,
@@ -160,6 +165,7 @@
 			isa = PBXGroup;
 			children = (
 				B45FCBEE07A8E6EC091C7457 /* FalconAssets.swift */,
+				283DB285BD3A273FF3B2F6F4 /* FalconComponents.swift */,
 				355A5657689CBD16190B9D48 /* FalconTheme.swift */,
 			);
 			path = Design;
@@ -254,8 +260,10 @@
 				2C6D28F9F2D8D4BBA4FF7708 /* AppRuntime.swift in Sources */,
 				6BEA7C1ADB1601947C021682 /* ConnectionsView.swift in Sources */,
 				F4712270A79C897AAA1E20CA /* DecisionDetailView.swift in Sources */,
+				372F67EE6BB246ABD451D213 /* DecisionHeader.swift in Sources */,
 				66433E11A9B10AD9C5C47F4B /* FalconApp.swift in Sources */,
 				BE4A4EEDEDB708D956163B7B /* FalconAssets.swift in Sources */,
+				9BD62DA37D4A4FA7BA3937BB /* FalconComponents.swift in Sources */,
 				1FCE7B9DAEFC3DA8AD9F5556 /* FalconTheme.swift in Sources */,
 				7E21D5777622CC8AD46E7152 /* QuestionCard.swift in Sources */,
 				B2D83D06AA3127E3DD3134F3 /* ReplayBar.swift in Sources */,

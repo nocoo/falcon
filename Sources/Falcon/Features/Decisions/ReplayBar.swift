@@ -5,23 +5,23 @@ import SwiftUI
 struct ReplayBar: View {
     @Bindable var model: WorkspaceModel
     var body: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 12) {
+        VStack(spacing: FalconTheme.Space.compact) {
+            HStack(spacing: FalconTheme.Space.regular) {
                 ForEach(model.selectedEvents) { event in
                     Button {
                         model.seekEvent(event)
                     } label: {
-                        HStack(spacing: 5) {
+                        HStack(spacing: FalconTheme.Space.tight) {
                             Circle().fill(event.date <= model.playbackDate ? FalconTheme.accent : FalconTheme.line)
                                 .frame(width: 5, height: 5)
                             Text(event.stage.title)
-                        }.font(.system(size: 11)).foregroundStyle(
+                        }.font(FalconTheme.footnote).foregroundStyle(
                             event.date <= model.playbackDate ? FalconTheme.ink : FalconTheme.secondary)
                     }.buttonStyle(.plain).help(event.date.ISO8601Format())
                 }
                 Spacer(minLength: 0)
             }
-            HStack(spacing: 12) {
+            HStack(spacing: FalconTheme.Space.regular) {
                 Pill(text: "Historical replay", symbol: "clock.arrow.circlepath")
                 Button {
                     model.step(forward: false)
@@ -43,7 +43,7 @@ struct ReplayBar: View {
                     FalconTheme.accent
                 ).accessibilityLabel("Historical playback position")
                 Text(model.playbackDate.formatted(.dateTime.hour().minute().second().secondFraction(.fractional(3))))
-                    .font(.system(size: 12, design: .monospaced)).monospacedDigit().frame(width: 126)
+                    .font(FalconTheme.mono).monospacedDigit().frame(width: 126)
                 Picker("Playback speed", selection: $model.playbackSpeed) {
                     ForEach([0.5, 1.0, 2.0, 4.0], id: \.self) { speed in Text("\(speed.formatted())×").tag(speed) }
                 }.labelsHidden().frame(width: 65)
@@ -58,11 +58,11 @@ struct ReplayBar: View {
             if model.skippedSeconds > 0 {
                 Text(
                     "Skipped \(model.skippedSeconds.formatted(.number.precision(.fractionLength(1)))) s of verified idle time"
-                ).font(.system(size: 11)).foregroundStyle(FalconTheme.secondary)
+                ).font(FalconTheme.footnote).foregroundStyle(FalconTheme.secondary)
             }
-        }.padding(.horizontal, 20).padding(.vertical, 13).background(FalconTheme.surface).overlay(alignment: .top) {
-            Rectangle().fill(FalconTheme.line).frame(height: 0.75)
-        }
+        }.padding(.horizontal, FalconTheme.Space.large).padding(.vertical, FalconTheme.Space.regular).background(
+            FalconTheme.surface
+        ).overlay(alignment: .top) { Rectangle().fill(FalconTheme.line).frame(height: FalconTheme.hairline) }
     }
 }
 
@@ -70,11 +70,11 @@ struct SourceTimelineView: View {
     @Bindable var model: WorkspaceModel
     private var records: [RequestSummary] { model.timeline?.records ?? model.requests }
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: FalconTheme.Space.compact) {
             HStack {
                 Eyebrow(title: model.timeline == nil ? "Loaded activity by source" : "Replay range by source")
                 Spacer()
-                Text("Overlapping requests stay concurrent").font(.system(size: 11)).foregroundStyle(
+                Text("Overlapping requests stay concurrent").font(FalconTheme.footnote).foregroundStyle(
                     FalconTheme.secondary)
             }
             Chart {
@@ -93,7 +93,7 @@ struct SourceTimelineView: View {
                                 "Unknown end", record.receivedAt.addingTimeInterval(record.timing.lastKnownMS / 1000)),
                             y: .value("Source", sourceLabel(record))
                         ).symbol(.diamond).foregroundStyle(FalconTheme.warning).annotation {
-                            Text("?").font(.system(size: 11))
+                            Text("?").font(FalconTheme.footnote)
                         }
                     }
                 }

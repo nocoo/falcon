@@ -13,18 +13,17 @@ struct SettingsView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                PageHeading(
-                    eyebrow: "Your workspace", title: "Settings",
-                    subtitle: "Keep Falcon small, local, and under your control."
-                ) { EmptyView() }
-                Surface(inset: 24) {
-                    VStack(alignment: .leading, spacing: 22) {
-                        Text("Appearance").font(.system(size: 15, weight: .semibold))
+            VStack(alignment: .leading, spacing: FalconTheme.Space.section) {
+                PageHeading(title: "Settings", subtitle: "Keep Falcon small, local, and under your control.") {
+                    EmptyView()
+                }
+                Surface(inset: FalconTheme.Space.section) {
+                    VStack(alignment: .leading, spacing: FalconTheme.Space.section) {
+                        Text("Appearance").font(FalconTheme.sectionTitle)
                         HStack {
-                            VStack(alignment: .leading, spacing: 5) {
+                            VStack(alignment: .leading, spacing: FalconTheme.Space.tight) {
                                 Text("Theme")
-                                Text("Follows macOS accessibility and motion preferences.").font(.system(size: 12))
+                                Text("Follows macOS accessibility and motion preferences.").font(FalconTheme.detail)
                                     .foregroundStyle(FalconTheme.secondary)
                             }
                             Spacer()
@@ -36,19 +35,19 @@ struct SettingsView: View {
                         }
                     }
                 }
-                Surface(inset: 24) {
-                    VStack(alignment: .leading, spacing: 22) {
+                Surface(inset: FalconTheme.Space.section) {
+                    VStack(alignment: .leading, spacing: FalconTheme.Space.section) {
                         HStack {
-                            Text("Local service").font(.system(size: 15, weight: .semibold))
+                            Text("Local service").font(FalconTheme.sectionTitle)
                             Spacer()
                             Pill(
                                 text: runtime.statusTitle,
                                 color: runtime.isRunning ? FalconTheme.success : FalconTheme.tertiary)
                         }
                         HStack {
-                            VStack(alignment: .leading, spacing: 5) {
+                            VStack(alignment: .leading, spacing: FalconTheme.Space.tight) {
                                 Text("Listening port")
-                                Text("Available only at 127.0.0.1 on this Mac.").font(.system(size: 12))
+                                Text("Available only at 127.0.0.1 on this Mac.").font(FalconTheme.detail)
                                     .foregroundStyle(FalconTheme.secondary)
                             }
                             Spacer()
@@ -73,23 +72,24 @@ struct SettingsView: View {
                             }
                         }
                         Text("Closing the window keeps the service running in the menu bar. Quit Falcon to stop it.")
-                            .font(.system(size: 12)).foregroundStyle(FalconTheme.secondary)
+                            .font(FalconTheme.detail).foregroundStyle(FalconTheme.secondary)
                     }
                 }
-                Surface(inset: 24) {
-                    VStack(alignment: .leading, spacing: 19) {
-                        Text("History & storage").font(.system(size: 15, weight: .semibold))
+                Surface(inset: FalconTheme.Space.section) {
+                    VStack(alignment: .leading, spacing: FalconTheme.Space.large) {
+                        Text("History & storage").font(FalconTheme.sectionTitle)
                         HStack {
-                            VStack(alignment: .leading, spacing: 7) {
-                                Text("Seven rolling days").font(.system(size: 16, weight: .medium))
+                            VStack(alignment: .leading, spacing: FalconTheme.Space.compact) {
+                                Text("Seven rolling days").font(FalconTheme.sectionTitle)
                                 Text(
                                     "Full inputs and responses stay on this Mac for 168 hours. "
                                         + "Every new request still calls Jev."
-                                ).font(.system(size: 12)).foregroundStyle(FalconTheme.secondary).lineSpacing(4)
+                                ).font(FalconTheme.detail).foregroundStyle(FalconTheme.secondary).lineSpacing(
+                                    FalconTheme.Space.small)
                             }
                             Spacer()
                             Text(ByteCountFormatter.string(fromByteCount: model.storageBytes, countStyle: .binary))
-                                .font(.system(size: 18, weight: .medium, design: .rounded))
+                                .font(FalconTheme.compactValue)
                         }
                         ProgressView(value: Double(model.storageBytes), total: Double(FalconLimits.storageBytes)).tint(
                             FalconTheme.accent)
@@ -97,10 +97,10 @@ struct SettingsView: View {
                             Label(
                                 "\(runtime.storageRejections) requests rejected for insufficient storage in this session.",
                                 systemImage: "exclamationmark.triangle"
-                            ).font(.system(size: 12)).foregroundStyle(FalconTheme.warning)
+                            ).font(FalconTheme.detail).foregroundStyle(FalconTheme.warning)
                         }
                         HStack {
-                            Text("2 GiB limit · history is never silently shortened").font(.system(size: 11))
+                            Text("2 GiB limit · history is never silently shortened").font(FalconTheme.footnote)
                                 .foregroundStyle(FalconTheme.tertiary)
                             Spacer()
                             Button(clearing ? "Clearing…" : "Clear history…", role: .destructive) {
@@ -110,15 +110,17 @@ struct SettingsView: View {
                         Text(
                             "Recorded payloads may include sensitive context. "
                                 + "Exported files are yours to manage and are not removed by Falcon."
-                        ).font(.system(size: 12)).foregroundStyle(FalconTheme.secondary).lineSpacing(4)
+                        ).font(FalconTheme.detail).foregroundStyle(FalconTheme.secondary).lineSpacing(
+                            FalconTheme.Space.small)
                     }
                 }
-                HStack(spacing: 10) {
-                    FalconMark(size: 28)
-                    Text("Falcon 0.1.0").font(.system(size: 12, weight: .medium))
-                    Text("Native decision observability").font(.system(size: 12)).foregroundStyle(FalconTheme.tertiary)
+                HStack(spacing: FalconTheme.Space.regular) {
+                    FalconMark()
+                    Text("Falcon 0.1.0").font(FalconTheme.label)
+                    Text("Native decision observability").font(FalconTheme.detail).foregroundStyle(FalconTheme.tertiary)
                 }
-            }.padding(32).frame(maxWidth: 1080, alignment: .leading).frame(maxWidth: .infinity, alignment: .topLeading)
+            }.padding(FalconTheme.Space.page).frame(maxWidth: FalconTheme.Layout.settingsWidth, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
         }.onAppear { portText = String(runtime.port) }.confirmationDialog(
             "Clear all decision history?", isPresented: $confirmClear, titleVisibility: .visible
         ) {
