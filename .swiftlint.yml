@@ -1,0 +1,38 @@
+# SwiftLint 0.65 recommended preset. Gate: `swiftlint lint --strict`.
+# No only_rules and no disabled_rules. Correctness rules stay at the preset,
+# including force_try, unused_closure_parameter, optional_data_string_conversion,
+# and cyclomatic_complexity. force_unwrapping remains an opt-in rule.
+# Nested files override size budgets only. They are style limits for this new
+# project, not coverage exclusions. Do not add parent_config or included there:
+# native nested inheritance is the merge, and parent_config replays included paths.
+
+included:
+  - Sources
+  - Tests
+excluded:
+  - .build
+  - .derived
+
+line_length:
+  warning: 120
+  error: 200
+  ignores_urls: true
+  ignores_comments: true
+  ignores_interpolated_strings: true
+
+opening_brace:
+  ignore_multiline_statement_conditions: true
+  ignore_multiline_function_signatures: true
+
+trailing_comma:
+  mandatory_comma: true
+
+identifier_name:
+  excluded:
+    - id
+    - URL
+    - GlobalAPIKey
+    - x
+    - y
+    - db
+    - fd

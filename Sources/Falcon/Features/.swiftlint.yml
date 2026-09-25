@@ -1,0 +1,11 @@
+# SwiftUI view builder bodies. AppRuntime is outside this directory.
+# Complexity and force_try stay at the recommended preset.
+# Style budget only; not a coverage exclusion.
+
+function_body_length:
+  warning: 80
+  error: 160
+
+type_body_length:
+  warning: 300
+  error: 500
