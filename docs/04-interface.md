@@ -30,7 +30,7 @@ Showtime 可借鉴的是统一 theme、柔和表面、细边线和 240 ms 的受
 │           │ Timed out      │                      │ confidence 0.64 · margin 0.64     │
 │           │                │                      │ next_step · Choice …              │
 │           │                ├──────────────────────┴──────────────────────────────────┤
-│ Settings  │ 12 new         │ Unreviewed ▾   Note…     Raw JSON       Copy / Export    │
+│ Settings  │ 12 new         │ Flag   Note                    Reviewed   Review & next │
 ├───────────┴────────────────┴─────────────────────────────────────────────────────────┤
 │ Replay  ▶  Previous / Next  ─────────●────────────────  1×   14:32:08.700  Sources ▾  │
 └──────────────────────────────────────────────────────────────────────────────────────┘
@@ -77,7 +77,9 @@ Replay 作为独立查看模式，与 Live 和 Pause service 明确分开。建�
 
 ## Sources 与 Connections
 
-Sources 用紧凑表格：名称、状态、绑定连接、24h 请求/token、最后使用、key 后四位。新增 sheet 先选择连接，再输入来源名；创建后只出现一次明文 key。复制反馈 1.5 秒，关闭后只显示后四位。示例配置使用环境变量名，不自动改写 agent 的配置文件。
+Sources 用紧凑表格：harness 图标、名称、状态、绑定连接、24h 请求/token、最后使用、key 后四位。新增和编辑 sheet 选择连接、输入来源名并选择图标；默认 Unknown，不按来源名称推断。Codex、Grok、Claude Code、Gemini、OpenCode、Hermes、OpenClaw、Qwen 使用 Manifest 资源；Pi 使用原生 π 字形。创建后只出现一次明文 key。复制反馈 1.5 秒，关闭后只显示后四位。示例配置使用环境变量名，不自动改写 agent 的配置文件。
+
+编辑弹窗由包含来源快照的单一 presentation item 驱动；首次编辑即填入当前名称、连接、启用状态和图标，显示 Save changes。创建入口使用空来源 item，显示 Create source；编辑不会生成新的来源或 key。
 
 轮换 sheet 明确“旧 key 立即失效，新请求需更新配置”；撤销后保留来源历史。归档来源从默认管理列表收起，但历史仍能筛选；同名来源用短 ID 区分。
 
@@ -91,19 +93,21 @@ Connections 表格列出 profile 名称、目标 host、default model、配置�
 
 | Token | Light | Dark / 尺寸 |
 | --- | --- | --- |
-| `canvas` | `#F5F6FA` | `#11151F` |
-| `sidebar` | `#EDF0F6` | `#171D2A` |
-| `surface` | `#FFFFFF` | `#1D2433` |
-| `reader` | `#FAFBFD` | `#181F2D` |
-| `inset` | `#F1F3F8` | `#151B27` |
-| `ink` | `#293043` | `#E9EDF5` |
-| `secondary` | `#556277` | `#A7B1C6` |
-| `tertiary` | `#5E6A7D` | `#95A2BA` |
-| `accent` | `#515677` | `#B8C6EC` |
-| `accentWash` | `#E9ECF5` | `#2A344D` |
-| `onAccent` | `#FFFFFF` | `#192239` |
-| `success / warning / danger` | `#256B52 / #86550A / #B13B3B` | `#8AD2AF / #E8BD70 / #FFAAA4` |
-| `line` | `#DCE1EB` | `#323D52`；高对比模式的控件与卡片边线使用 `secondary` |
+| `canvas` | `#F6F9FA` | `#131A20` |
+| `sidebar` | `#EBF4F8` | `#18252F` |
+| `surface` | `#FFFFFF` | `#1D2A34` |
+| `reader` | `#FAFDFE` | `#17222B` |
+| `inset` | `#EFF5F7` | `#14212A` |
+| `ink` | `#203340` | `#EDF7FA` |
+| `secondary` | `#506674` | `#ADC1CD` |
+| `tertiary` | `#596D79` | `#9EB3C0` |
+| `accent` | `#006D96` | `#63CEF2` |
+| `accentWash` | `#DCF3FC` | `#173C4E` |
+| `action / onAction` | `#006D96 / #FFFFFF` | `#007DA9 / #FFFFFF` |
+| `flag` | `#BD7A1F` | `#FFCC66` |
+| `success / warning / danger` | `#397023 / #806100 / #AF3657` | `#ACDE70 / #FFE26A / #FF9AAF` |
+| `line` | `#DCE7ED` | `#31434F`；高对比模式的控件与卡片边线使用 `secondary` |
+| `Candy.blue / green / yellow / pink / white` | `#57C7EF / #A6D96A / #FFE16B / #F684A4 / #FFFFFF` | `#63CEF2 / #B3E57A / #FFE889 / #FF9AAF / #EDF7FA` |
 | `Space` | 2 / 4 / 6 / 8 / 12 / 16 / 20 / 24 / 28 / 32 | 页面 32、详情水平 24、sheet 28、控件水平 12 |
 | `Radius` | 小元素 4、badge 5、控件 8、panel 12 | sheet 交由系统 |
 | type | SF 系统字体 | 页标题 22、分区 15、正文 13、辅助 12、最小信息文字 11 pt |
@@ -111,9 +115,17 @@ Connections 表格列出 profile 名称、目标 host、default model、配置�
 | controls | 32 pt 主控件、28 pt 紧凑控件 | 导航行 36 pt；hover / selected / disabled 共用样式 |
 | motion | 区域过渡 240 ms、反馈 140 ms | Reduce Motion 关闭自定义反馈动画 |
 
-侧栏与内容使用适应浅深色的实体表面。侧栏的静态点纹由 Canvas 绘制；增加对比度或减少透明度时关闭，不运行持续噪声动画。对上述最终 sRGB token 计算 WCAG 相对亮度：`ink`、`secondary`、`tertiary`、`accent` 和三个状态色与六种内容表面的全部组合中，最低文字对比度为浅色 4.64:1、深色 4.81:1；主按钮 `onAccent/accent` 分别为 7.13:1、9.27:1。这是实体 token 组合的计算结果，不代表所有透明叠层、原生控件、图表或 VoiceOver 均已完成验收。
+色板以 iPhone 5c 的蓝、绿、黄、粉、白为方向：糖果色用于图表与辅助标识，主操作统一使用较深的 `action` 蓝色与白字。旗标图标使用更明亮的琥珀 `flag`，文字仍采用可读的语义色。侧栏与内容使用适应浅深色的实体表面。侧栏的静态点纹由 Canvas 绘制；增加对比度或减少透明度时关闭，不运行持续噪声动画。对上述最终 sRGB token 计算 WCAG 相对亮度：`ink`、`secondary`、`tertiary`、`accent` 和三个状态色与六种内容表面的全部组合中，最低文字对比度为浅色 4.70:1、深色 5.39:1；主按钮 `onAction/action` 分别为 5.79:1、4.66:1。这是实体 token 组合的计算结果，不代表所有透明叠层、原生控件、图表或 VoiceOver 均已完成验收。
 
-品牌资源沿用已批准的游隼头像。侧栏显示 44 pt 透明标识及 Falcon 字标，空态显示 64 pt；菜单栏使用同一轮廓，Dock 使用平台 ICNS。保留原画完整构图，不添加底板、不重绘。资源来源与重建方式见 [品牌说明](../assets/brand/README.md)。
+品牌资源沿用已批准的游隼头像。侧栏显示 44 pt 透明标识及 Falcon 字标，空态显示 64 pt；菜单栏使用通过 workflow GPT Image 生成的独立单色隼形图标，18 pt 逻辑尺寸与 1×/2× 透明模板资源；Dock 使用原有平台 ICNS。应用内品牌头像保留原画完整构图。资源来源与重建方式见 [品牌说明](../assets/brand/README.md)。
+
+## Triage 与星标
+
+详情底部以单击 `Review & next` 保存当前备注、标记已阅并进入下一条未阅；持久化失败时保持当前记录与草稿。旗标、备注和已阅撤销独立呈现，不再使用 review 下拉菜单。已阅状态与星标相互独立。
+
+星标位于详情工具栏和列表右键菜单，已加星行显示星形指示。列表搜索旁的星标按钮打开全部时间的星标视图，来源、全文、状态和 review 筛选继续生效。加星保留完整证据；超过七天的记录取消星标前确认删除，设置中的清空历史明确包含星标。所有入口通过同一 WorkspaceModel 更新，不自行操作数据库。
+
+来源图标在列表、详情标题、Sources、用量来源列表中使用同一用户选择。来源名、source ID 和快照仍是审计事实，图标是可修改的展示偏好。
 
 ## 动效、加载和反馈
 
@@ -135,7 +147,7 @@ Connections 表格列出 profile 名称、目标 host、default model、配置�
 
 必须分别设计：未配置、配置完成但尚无请求、有数据、搜索无结果、加载中、上游错误、超时、响应未知、磁盘已满、来源禁用、key 撤销、记录到期、服务暂停、关窗后台运行。错误页保留已有可读历史，不整窗替换成错误遮罩。
 
-键盘：Cmd-1 Decisions、Cmd-2 Usage、Cmd-3 Sources、Cmd-4 Connections、Cmd-, Settings、Cmd-F 搜索、方向键换行。Space 仅在 Replay 控制区域聚焦时播放/暂停，普通列表用 Return 打开详情；文本编辑聚焦时不劫持 Space。Esc 关闭弹层，复制遵循选中文本优先。
+键盘：Cmd-1 Decisions、Cmd-2 Usage、Cmd-3 Sources、Cmd-4 Connections、Cmd-, Settings、Cmd-F 搜索、方向键换行、Cmd-Return 已阅并下一条、Shift-Cmd-S 切换星标。Space 仅在 Replay 控制区域聚焦时播放/暂停，普通列表用 Return 打开详情；文本编辑聚焦时不劫持 Space。Esc 关闭弹层，复制遵循选中文本优先。
 
 控件使用原生 Button / Picker / TextField / Table；自定义样式保留 role、label、disabled 和 focus ring。概率图提供 VoiceOver 文本序列（选项、概率、是否选中）；图表有可阅读的数据表替代。状态同时使用文字与图标；支持 Reduce Motion、Reduce Transparency、Increase Contrast 和系统文字尺寸变化，不以 hover 作为唯一操作入口。
 

@@ -6,7 +6,7 @@
 
 Falcon 是 macOS 原生 Jev HTTP / MCP 代理与七天决策观察应用。每个来源使用独立本地 key，可以映射同一个或不同的上游。SwiftUI、AppKit、Swift Charts 与 Swift 服务运行在同一进程中。
 
-宽幅工作区同时展示 state、定义、问题、选项和决策；支持来源与时间筛选、全文检索、review 备注、真实阶段回放、延迟与 token 统计、JSON / CSV 导出。七天缓存用于历史留存，每次新请求仍然调用 Jev。
+宽幅工作区同时展示 state、定义、问题、选项和决策；支持来源图标、来源与时间筛选、全文检索、一键 triage、备注、真实阶段回放、延迟与 token 统计、JSON / CSV 导出。普通记录保留七天，加星记录永久保留完整证据，每次新请求仍然调用 Jev。
 
 ## 运行
 
@@ -22,7 +22,7 @@ open build/Build/Products/Release/Falcon.app
 版本只在 [project.yml](project.yml) 的 `MARKETING_VERSION` 中维护；侧栏、设置、关于面板和服务元信息读取同一构建版本。界面使用 `vX.Y.Z`，HTTP `/health` 与 MCP `serverInfo.version` 返回 `X.Y.Z`。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 1. 首次真实启动自动进入 **Connections**，保存 Jev key、HTTPS API root 和默认模型。官方 root 是 `https://api.typesafe.ai`。
-2. 在 **Sources** 创建来源并选择 connection，复制仅显示一次的本地 key。
+2. 在 **Sources** 创建来源、选择 connection 和图标，复制仅显示一次的本地 key。图标默认 Unknown，可选择 Codex、Grok、Claude Code 等；点击现有来源图标即可编辑。
 3. 将 Agent 的 API root 指向 `http://127.0.0.1:19823`，Bearer token 使用该来源的本地 key。
 4. 发起决策后，在 **Decisions** 回看；**Focus review** 可收起导航与列表，**Usage** 可点击图表钻取。
 
@@ -60,7 +60,9 @@ MCP 使用 Streamable HTTP、JSON response 和 `jev_decide` 工具；客户端�
 }
 ```
 
-上游 key 明文保存在 `~/.config/falcon/credentials.json`，文件由 Connections 自动维护，目录权限 `0700`、文件权限 `0600`，采用原子写入。应用不使用 Keychain。本地来源 key 只持久化摘要。请求和响应在本机保留 168 小时，默认明文存储于当前用户的 Application Support/Falcon，导出文件由用户管理。回放不会再次请求 Jev，也不表示 Agent 已执行了决策。
+上游 key 明文保存在 `~/.config/falcon/credentials.json`，文件由 Connections 自动维护，目录权限 `0700`、文件权限 `0600`，采用原子写入。应用不使用 Keychain。本地来源 key 只持久化摘要。未加星的请求和响应在本机保留 168 小时；加星后永久保留，可从列表的星标入口查看全部时间。超过七天的记录取消星标会删除，操作前确认；设置中的清空历史也包含星标。数据默认明文存储于当前用户的 Application Support/Falcon，导出文件由用户管理。回放不会再次请求 Jev，也不表示 Agent 已执行了决策。
+
+详情底部的 **Review & next**（⌘Return）保存当前备注、标记已阅并打开下一条未阅。旗标和备注独立操作；详情工具栏的星标（⇧⌘S）及列表右键菜单控制永久留存。来源图标的出处与许可见 [harness assets](assets/harness/README.md)，菜单栏符号见 [brand assets](assets/brand/README.md)。
 
 ## 开发验证
 

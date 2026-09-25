@@ -45,6 +45,8 @@ HTTP 和 MCP 只负责协议映射；业务管线不依赖 SwiftUI。UI 直接�
 - 第一次真实启动自动打开 Connections 配置上游与来源；未配置时服务状态为 `Needs setup`，不宣称 ready。合成历史只在显式 `--preview` 时写入隔离测试库。
 - 服务默认绑定 `127.0.0.1:19823`，端口可在设置修改；bind 冲突显示实际错误并支持重试，不静默换端口。首版只支持 IPv4 数字地址，接入配置不使用可能解析到 IPv6 的 localhost。
 - 窗口关闭后主进程和 MenuBarExtra 保持运行；Dock / 菜单栏可重新打开同一主窗口。Quit 明确停止服务。登录启动可选、默认关闭。
+- AppRuntime 持有数据库监听和维护任务。退出时停止 workspace，取消并等待两个任务、排空服务，再关闭 GRDB 与数据库锁；预览目录还须核验 marker，关闭数据库后才删除，迟到的界面激活不得重启监听。
+- HTTP listener 使用 Hummingbird 默认的地址复用，允许上一次连接处于 TCP 等待状态时立即重启；同端口的第二个运行中 listener 仍被拒绝，数据库实例锁继续独立保护数据。
 - Pause 停止接收新的推理请求，返回 503；已有任务在原截止时间内完成。Quit 最多等待 5 秒，再取消本地任务并记为 interrupted / unknown；取消不保证上游未计费。
 - 睡眠、断网、凭据不可用、端口冲突和磁盘错误分别展示，不合并成“Offline”。睡醒后先做留存清理，再重新接收推理。
 - 启动先恢复数据库、清理过期记录；把未完成记录标成 interrupted，不自动重试。禁止两个进程同时服务同一数据库；通常由 LaunchServices 复用已打开应用，强制启动第二进程时显示冲突并拒绝服务。
@@ -80,12 +82,13 @@ body_received_ms 随 received/effective request 的 accepted 事务落盘，后�
 | --- | --- |
 | `upstream_profiles` | UUID、名称、base URL、default model、credential reference、revision、enabled；不保存明文 key |
 | `sources` | UUID、名称、profile ID、enabled、archived、created_at；source ID 永不复用 |
+| `source_icons` | source ID 与可选的 icon ID；无条目表示 Unknown，图标选择与来源/首把 key 原子保存，不通过名称推断 |
 | `source_keys` | UUID、source ID、token digest、display suffix、created_at、revoked_at；同一来源只有一把 active key |
 | `requests` | UUID、source/key ID、来源名称快照、profile ID/revision/base URL 快照、transport、caller metadata、received_at、expires_at、status、delivery、requested/resolved model、五个 nullable 阶段 offset、HTTP 状态、错误分类、token nullable、`received_request` / `effective_request` / `upstream_response` 三个独立 BLOB |
 | `questions` | request ID + question ID 联合主键，type、结果摘要、confidence nullable、top probability、margin nullable；用于筛选的投影，不重复保存 state |
 | `reviews` | request ID 唯一外键、state、note、updated_at；与 request 级联删除 |
 
-原始 JSON 是证据来源，投影可重建；不因为未知字段而丢失原文。`received_request` 是收到的 HTTP JSON 或完整 MCP JSON-RPC body；`effective_request` 是真正送上游的 JSON（包含补齐的默认 model），`upstream_response` 是上游原文；未发上游/无响应时对应列 nullable，不能伪造空成功对象。三列、投影和 review 同时到期。不单独复制全文到 FTS、日志、诊断报告或分析服务。备注上限 4 KiB；source/profile 名称上限 120 字符；caller metadata 序列化上限 4 KiB。
+原始 JSON 是证据来源，投影可重建；不因为未知字段而丢失原文。`received_request` 是收到的 HTTP JSON 或完整 MCP JSON-RPC body；`effective_request` 是真正送上游的 JSON（包含补齐的默认 model），`upstream_response` 是上游原文；未发上游/无响应时对应列 nullable，不能伪造空成功对象。三列、投影和 review 共享留存规则：未加星同时到期，加星整体保留。`summary_json.starredAt` 是可选本地标注，缺省表示未加星；在途完成与 delivery 更新保留当前标注。不单独复制全文到 FTS、日志、诊断报告或分析服务。备注上限 4 KiB；source/profile 名称上限 120 字符；caller metadata 序列化上限 4 KiB。
 
 索引以 `(received_at, id)`、`(source_id, received_at, id)`、`(status, received_at, id)`、`(profile_id, received_at, id)` 与 question 类型/置信度为起点，根据 query plan 添加必要索引。列表使用游标分页，每页 100；正文按需读，不把全库解码到内存。首版全文关键词搜索在时间和元数据筛选后执行有界、可取消的扫描；不许仅扫描当前页而显示为全库结果。
 
@@ -98,17 +101,18 @@ body_received_ms 随 received/effective request 的 accepted 事务落盘，后�
 ## 七天留存与容量
 
 - `expires_at = received_at + 604800 秒`，UTC 持久化；用户 UI 使用本地时区。这里是滚动 168 小时，不是七个日历日。
-- 每次列表、详情、搜索、统计、导出和回放都强制 `expires_at > now`，这里的 now 永远是当前真实时钟，不是回放游标。恰好到期即不可见；已打开详情及回放缓存到期时清空并显示已过期。request、questions、review 同生命周期，无永久汇总绕过留存。
+- 每次列表、详情、搜索、统计、导出和回放都强制“已加星或 `expires_at > now`”，这里的 now 永远是当前真实时钟，不是回放游标。未加星记录恰好到期即不可见，已打开详情及回放缓存同步清空。request、questions、review 共享生命周期；星标永久保留完整证据。
+- 星标列表取消默认时间下界，保留来源、搜索、状态与 review 筛选。普通列表及统计继续遵守所选时间范围。取消星标恢复原始 `expires_at`，不会重新延长七天；已超时记录当场删除并清理对应缓存，界面先确认。
 - 启动、唤醒和每分钟清理批量删除过期记录；清理失败进入存储故障，不继续积累调用。睡眠/退出期间无法物理删除，恢复后先清理再服务。
 - SQLite 启用 secure delete；清理后在无长事务时 checkpoint WAL 并 truncate。控制读事务寿命，防止旧页在 WAL 长期保留。说明这是应用逻辑清理，不保证 SSD、快照或用户外部备份的物理擦除。
 - 数据目录 `~/Library/Application Support/Falcon/`，目录 0700、DB / WAL / SHM 0600，排除系统备份；只操作自己的目录。正文默认本地明文存储，依赖当前用户权限与系统磁盘保护，不声称有应用级加密。
 - 初始受管存储预算 2 GiB（DB + WAL + SHM）。唯一 admission actor 维护全局在途预留总账，原子执行 `physical_bytes + outstanding_reservations + new_reservation <= budget` 检查与预留；同时检查文件系统可用空间并保留至少 256 MiB 系统余量。所有写入者（含 review、配置、拒绝记录）都走同一总账，不能分别看到相同空闲空间后超发。
 - `new_reservation` 包含两份请求体、最大 4 MiB response、由已验证题目数量/字段长度算出的投影与索引上界、SQLite 页对齐/分裂余量，以及这些页写入 DB 和 WAL 的双份增长预算。计算公式与最大合法输入压力 fixture 同时实现并验证，不把 JSON 字节数直接当磁盘增长。无法证明本次上界就拒绝，不先转发。请求完成/失败/取消后，在落盘结束并重新采样文件大小时释放预留；按 request ID 只释放一次。已消耗部分继续计入预留会保守降低可用量，但不得过早释放正在提交的空间。
-- 达到预算先清理过期记录、checkpoint，并用建库时启用的 incremental auto-vacuum 逐批回收空闲页；仍不足返回 507，不提前删未满 7 天的数据，不静默只留摘要。存储不足时拒绝计数只放有界内存，不继续写满数据库。UI 显示容量与拒绝状态。外部进程耗尽磁盘仍可能导致已预留写入失败，按前述审计故障路径处理，预留不等于操作系统磁盘保证。
+- 达到预算先清理过期的未加星记录、checkpoint，并用建库时启用的 incremental auto-vacuum 逐批回收空闲页；仍不足返回 507，不提前删未满 7 天或已加星的数据，不静默只留摘要。存储不足时拒绝计数只放有界内存，不继续写满数据库。UI 显示容量与拒绝状态。外部进程耗尽磁盘仍可能导致已预留写入失败，按前述审计故障路径处理，预留不等于操作系统磁盘保证。
 - HTTP 请求体上限 1 MiB，上游响应上限 4 MiB；最多 8 个全局、每来源 2 个推理在途；超限立即拒绝，不设置无限队列。全部是 Falcon 本地保护值，不冒充 TypeSafe 限额。
 - 系统时钟跳变会影响墙钟留存；耗时一律使用单调时钟。前跳不恢复已删除数据；后跳可能推迟物理到期，UI 的时间范围以当前 UTC 计算。当前没有系统时钟跳变提示。
 
-手动清空停止接收、等待在途排空或取消后，在事务中删除历史与 review、清空 UI 缓存并 checkpoint；结束后恢复服务。不能在删除后让迟到回调把旧记录重新写回。用户导出的文件不受自动七天清理管理，导出时明确这一点。
+手动清空先确认包含星标，再停止接收、等待在途排空或取消后，在事务中删除全部历史与 review、清空 UI 缓存并 checkpoint；结束后恢复服务。不能在删除后让迟到回调把旧记录重新写回。用户导出的文件不受自动七天清理管理，导出时明确这一点。
 
 ## 统计定义
 

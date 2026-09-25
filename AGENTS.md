@@ -1,6 +1,6 @@
 # Falcon
 
-Falcon is a native macOS Jev proxy and seven-day decision observability app with a working local implementation.
+Falcon is a native macOS Jev proxy with seven-day decision history and indefinitely retained starred decisions.
 Human overview: [README.md](README.md). Design index: [docs/README.md](docs/README.md).
 
 ## Scope and current state
@@ -81,10 +81,14 @@ SwiftLint needs the Xcode `DEVELOPER_DIR` above; do not change global xcode-sele
 - Do not access Keychain, inspect unrelated credentials, or alter machine ACLs/certificates.
 - Preserve Jev request and response semantics. Never invent reasoning or infer agent execution.
 - Keep input, question definitions, and results visible together in the primary review workspace.
-- Historical replay is local and read-only; never call Jev, invent per-question timing, or bypass expiry with the playback clock.
+- Historical replay is local and read-only; never call Jev, invent per-question timing, or bypass unstarred expiry with the playback clock.
 - Do not implement result reuse unless the owner explicitly chooses it.
 - No automatic inference retry; each incoming call represents one observable attempt.
-- Keep seven-day retention and deletion consistent across details, search, and aggregates.
+- AppRuntime owns observation and maintenance tasks. On shutdown, stop the workspace, cancel and await those tasks, drain the service, close the store, and only then remove a verified preview directory.
+- Keep Hummingbird's default address reuse so immediate same-port restarts work; a second live listener must still fail.
+- Keep seven-day unstarred retention and indefinite starred retention consistent across details, search, aggregates, previews, replay and export. Unstarring an expired decision removes it; the UI confirms that deletion. Explicit clear-all also clears stars.
+- Source icons are user-selected presentation metadata, defaulting to Unknown. Do not infer a harness from the source name or change source/key identity when an icon changes.
+- Source editor sheets use one identifiable presentation item carrying the selected source. Keep create and edit identity together with presentation state.
 - No production payloads, keys, or machine-private paths in fixtures or committed screenshots.
 
 ## Testing and quality contract

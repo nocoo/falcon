@@ -27,7 +27,7 @@ UI 主题、大空间 overview 与输入/问题/结果同时可见从第 1 层�
 | MCP | 标准客户端跨 POST 的 initialize / initialized / ping / list / call 全序列、独立版本头校验、202 notification、GET/DELETE 405、错误映射、同 id 多客户端并发、waiter 清理、显式宽松模式与实例生命周期 |
 | HTTP | 每一 endpoint/method；分块/超长 body、错误 Content-Type/Encoding、断开、deadline、并发超额、未配置与 pause |
 | 存储 | 写入失败不调用上游、响应写入失败但上游已执行、重启 interrupted、事务原子性、列表游标同时间稳定性、归档/重命名不破坏历史 |
-| 留存 | 恰好 168h、三份原文与 questions/reviews 级联、到期详情清空、唤醒清理、清理后统计、WAL checkpoint/页回收、8 个并发请求的容量原子预留/单次释放、满盘不提前删未到期数据、手动清空与迟到回调竞争 |
+| 留存 | 未加星恰好 168h、星标跨七天保持完整列表/详情/预览/统计/回放/导出、取消超时星标、三份原文与 questions/reviews 级联、到期详情清空、唤醒清理、清理后统计、WAL checkpoint/页回收、8 个并发请求的容量原子预留/单次释放、满盘不提前删未到期或星标数据、手动清空与迟到回调竞争 |
 | 统计 | 请求/题/token 不重复、未知不补零、错误率/上游成功率分母、处理/返回耗时及分母区分、返回写回后元数据更新失败、精确 p95、低样本、跨时区/夏令时、同名不同题指纹不混合 |
 | UI | 大小窗口同时核对输入/定义/结果、Focus review 恢复布局、首次配置、第一条请求、筛选与钻取、review 草稿切换、复制/导出、来源轮换/撤销、错误恢复、保留滚动与选中、键盘和 VoiceOver |
 | 回放 | 注入时钟、慢速/分块正文完成前不揭示、逐事件与拖动/倍速、并发来源不串行化、多题共用响应时点、零出站调用且 usage/review 不变、未知尾部不跳空档、10,000 条上限、后台暂停、播放/暂停中到期清除正文、休眠唤醒先核验再渲染、清空历史停止回放 |
@@ -85,6 +85,23 @@ Release 已核验无 LLVM coverage sections、无打包进入 App 的 lint 配�
 上游凭据改为 `~/.config/falcon/credentials.json` 后，完整 Swift 回归通过 Core 40 项、Integration 18 项，默认跳过 1 项 opt-in Python SDK 用例。新增文件测试覆盖保存与重开、`0700` / `0600` 权限、32 个并发更新、4 类损坏内容、符号链接拒绝、目录不可写时保留原 profile，以及轮换后重启和孤立凭据回收。测试均使用独立临时目录与合成 key，没有访问真实凭据。
 
 Release 构建、SwiftLint strict、swift-format strict、Markdown 本地链接与 Git whitespace 检查通过。此变更直接移除 Keychain 后端；首次真实启动进入 Connections，真实 Jev 调用由用户填写配置后发起。以上回归结果不改变完整 L1 尚未达标的状态。
+
+### 2026-09-25 图标、triage、星标与生命周期验证
+
+本轮实现代码为 `dd87f03`，包含预览数据库退出修复 `09f42b9` 与代理即时重启修复 `44c3d7a`。菜单栏符号来自 Workflow GPT Image，harness 资源保留 Manifest 原图、来源 revision 与许可；运行时仍为纯 Swift，版本保持 0.1.0。
+
+| 检查 | 实际结果 |
+| --- | --- |
+| 完整 Swift 测试 | `swift test --enable-code-coverage` 退出 0，Core 56 项、Integration 20 项通过；1 项 opt-in Python SDK 用例跳过 |
+| 存储与观察 | 覆盖星标跨到期的完整证据、统一查询/回放/导出、取消超时星标、在途更新保留星标、连续 triage、监听时退出、关闭后迟到刷新、重新打开及锁所有权 |
+| 代理重启 | 旧实现的隔离 fixture 复现同端口重绑 `Address already in use`；修复后立即重启与拒绝第二个运行中 listener 两项回归通过 |
+| 严格静态检查 | SwiftLint strict 在 53 个文件中无违规，swift-format strict 无输出，均退出 0 |
+| 最终原生界面 | 创建来源、首次编辑已有来源、浅色新请求到达、深色决策页共 4 个隔离 preview 均退出 0，4.27–4.85 秒完成并生成截图，应用日志为空 |
+| 编辑与视觉 | 编辑首帧包含原名称、连接、启用状态、已选图标和 Save changes；创建仍为 Unknown。已检查深蓝主按钮、明亮旗标和列表/详情图标，实时到达断言通过 |
+| SQLite 退出诊断 | 按上述 4 个 preview 的精确 PID 查询系统日志，无 SQLite、I/O 或文件使用中删除诊断；此前同场景的错误已由隔离 GRDB fixture 复现 |
+| Release 与真实重启 | arm64 bundle 15,565,275 bytes（14.84 MiB），构建成功。正常退出并重开后认证 health 为 ready / 0.1.0，SQLite quick_check 为 ok，原有请求、连接、来源、来源 key 标识全部保留，两份凭据文件摘要不变 |
+
+此前还检查了紧凑深色、来源选择器与 Usage 图表。Usage 仍输出 Charts 的轴尺寸诊断；Release 保留未使用 AppIntents 的 metadata 提示。上述证据不代表完整 L1 或 L3 达标，本轮没有更新四项覆盖率结论，也没有执行签名、公证、发布或推送。
 
 ## 小体积与性能验收预算
 

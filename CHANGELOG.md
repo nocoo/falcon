@@ -10,3 +10,7 @@ Initial local development version.
 - Live request updates, searchable history, review notes, recorded-stage replay, usage charts and JSON/CSV export.
 - Compact activity rows, stable selection and scrolling, smooth detail changes and reliable database reopening.
 - Bundle-derived version information in the sidebar, Settings, About, health response and MCP initialization.
+- User-selected harness icons, a generated monochrome menu-bar symbol, and an iPhone 5c-inspired candy palette.
+- One-click review and next-unread navigation, with separate flags and notes.
+- Indefinite retention of complete starred decisions and an all-time starred view.
+- Safe preview shutdown, immediate proxy restart, and correctly populated source editing.
