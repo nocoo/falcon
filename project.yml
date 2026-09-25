@@ -15,12 +15,21 @@ settings:
     GCC_TREAT_WARNINGS_AS_ERRORS: YES
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     DEAD_CODE_STRIPPING: YES
+  configs:
+    Release:
+      SWIFT_OPTIMIZATION_LEVEL: -Osize
+      DEPLOYMENT_POSTPROCESSING: YES
+      STRIP_INSTALLED_PRODUCT: YES
+      COPY_PHASE_STRIP: YES
+      STRIP_STYLE: all
 targets:
   Falcon:
     type: application
     platform: macOS
     sources:
-      - Sources/Falcon
+      - path: Sources/Falcon
+        excludes:
+          - "**/.swiftlint.yml"
     dependencies:
       - package: FalconLocal
         product: FalconCore
@@ -37,4 +46,4 @@ targets:
         CODE_SIGN_STYLE: Automatic
         COMBINE_HIDPI_IMAGES: YES
     scheme:
-      gatherCoverageData: true
+      gatherCoverageData: false
