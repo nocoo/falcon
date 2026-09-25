@@ -64,6 +64,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
     @ObservationIgnored private var selectionRevision = 0
     @ObservationIgnored private var filterAnchor = Date()
     @ObservationIgnored private var refreshRevision = 0
+    @ObservationIgnored private var paginationCursor: RequestCursor?
 
     public init(store: DecisionStore, configuration: ConfigurationManager? = nil, preview: Bool = false) {
         self.store = store
@@ -114,6 +115,15 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
     }
     public var selectedEvents: [ReplayEvent] { timeline?.events.filter { $0.requestID == selectedID } ?? [] }
 
+    public func observeChanges() async {
+        do {
+            for try await _ in await store.changes() {
+                guard !Task.isCancelled else { return }
+                await refresh()
+            }
+        } catch { if !Task.isCancelled { errorMessage = error.localizedDescription } }
+    }
+
     public func refresh(reset: Bool = false) async {
         validateExpiry()
         guard isActive else { return }
@@ -161,17 +171,17 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
         let arrivals = fetched.filter {
             !loadedIDs.contains($0.id) && $0.receivedAt >= (requests.first?.receivedAt ?? .distantFuture)
         }
-        let holdPosition = !reset && !requests.isEmpty && (timeline != nil || selectedID != requests.first?.id)
-        if holdPosition && !arrivals.isEmpty {
-            newArrivalCount = arrivals.count
-            let updates = Dictionary(uniqueKeysWithValues: fetched.map { ($0.id, $0) })
-            requests = requests.map { updates[$0.id] ?? $0 }
-        } else if reset || requests.count <= 100 {
-            newArrivalCount = 0
+        newArrivalCount = reset ? 0 : min(100, newArrivalCount + arrivals.count)
+        if reset || fetched.count < 100 || loadedIDs.isEmpty {
             requests = fetched
             hasMore = fetched.count == 100
+            paginationCursor = fetched.last.map { RequestCursor(receivedAt: $0.receivedAt, id: $0.id) }
         } else {
             let newIDs = Set(fetched.map(\.id))
+            if loadedIDs.isDisjoint(with: newIDs) {
+                paginationCursor = fetched.last.map { RequestCursor(receivedAt: $0.receivedAt, id: $0.id) }
+                hasMore = true
+            }
             requests =
                 fetched
                 + requests.filter {
@@ -181,16 +191,19 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
     }
 
     public func loadMore() async {
-        guard let last = requests.last, hasMore, !isLoading else { return }
+        guard let cursor = paginationCursor, hasMore, !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
         do {
             let query = filter
-            let rows = try await store.requests(
-                filter: query, before: RequestCursor(receivedAt: last.receivedAt, id: last.id))
+            let rows = try await store.requests(filter: query, before: cursor)
             guard query == filter else { return }
             let ids = Set(requests.map(\.id))
             requests += rows.filter { !ids.contains($0.id) }
+            requests.sort {
+                $0.receivedAt == $1.receivedAt ? $0.id.uuidString > $1.id.uuidString : $0.receivedAt > $1.receivedAt
+            }
+            paginationCursor = rows.last.map { RequestCursor(receivedAt: $0.receivedAt, id: $0.id) }
             hasMore = rows.count == 100
         } catch { errorMessage = error.localizedDescription }
     }
@@ -312,6 +325,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
         stopReplay()
         beginSelection(nil)
         requests = []
+        paginationCursor = nil
         newArrivalCount = 0
         usage = UsageSnapshot()
     }

@@ -7,6 +7,7 @@ struct RequestListView: View {
     @State private var showRange = false
     @State private var rangeStart = Date().addingTimeInterval(-3600)
     @State private var rangeEnd = Date()
+    @State private var scrollPosition: UUID?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -114,9 +115,14 @@ struct RequestListView: View {
                                 FalconButtonStyle()
                             ).padding(FalconTheme.Space.medium).disabled(model.isLoading)
                         }
-                    }.padding(.horizontal, FalconTheme.Space.compact).padding(.vertical, FalconTheme.Space.compact)
-                }.onChange(of: model.selectedID) { _, id in
+                    }.scrollTargetLayout().padding(.horizontal, FalconTheme.Space.compact).padding(
+                        .vertical, FalconTheme.Space.compact)
+                }.scrollPosition(id: $scrollPosition, anchor: .top).onChange(of: model.selectedID) { _, id in
                     if model.followArrivals, let id { proxy.scrollTo(id, anchor: .center) }
+                }.onChange(of: model.newArrivalCount) { previous, current in
+                    if previous > 0, current == 0, let first = model.requests.first {
+                        proxy.scrollTo(first.id, anchor: .top)
+                    }
                 }
             }
             HStack {

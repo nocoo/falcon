@@ -143,7 +143,7 @@ private struct WorkspaceFixture {
     try await fixture.finish()
 }
 
-@MainActor @Test func workspaceHoldsReviewDuringArrivalsAndRefreshesOlderInflight() async throws {
+@MainActor @Test func workspaceShowsArrivalsWhilePreservingReviewAndPagination() async throws {
     let fixture = try WorkspaceFixture()
     var records = try Array(PreviewData.records().prefix(2))
     let completed = records[1]
@@ -167,8 +167,12 @@ private struct WorkspaceFixture {
     try await fixture.insert(arrivals)
     await model.refresh()
     #expect(model.newArrivalCount == 100)
-    #expect(model.requests.map(\.id) == records.map(\.id))
+    #expect(model.requests.first?.id == arrivals[0].id)
+    #expect(model.requests.count == 102)
     #expect(model.selectedID == records[1].id && model.noteIsDirty)
+    await model.loadMore()
+    #expect(Set(model.requests.map(\.id)) == Set((arrivals + records).map(\.id)))
+    #expect(!model.hasMore)
     await model.saveReview()
     try await fixture.store.reserve(
         requestID: completed.id, requestBytes: completed.effectiveRequest?.count ?? 0,
@@ -186,6 +190,63 @@ private struct WorkspaceFixture {
     await model.selectAdjacent(forward: true)
     #expect(model.selectedID == arrivals[1].id)
     try await fixture.finish()
+}
+
+@MainActor @Test func workspaceObservesRequestsBeforeUpstreamReturns() async throws {
+    let fixture = try WorkspaceFixture()
+    let records = try Array(PreviewData.records().prefix(2))
+    try await fixture.insert(records)
+    let configuration = ConfigurationManager(store: fixture.store, vault: .memory())
+    let profile = try await configuration.saveProfile(UpstreamProfile(name: "Synthetic"), apiKey: "synthetic")
+    let issued = try await configuration.createSource(name: "Fresh arrival", profileID: profile.id)
+    let gate = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+    defer { gate.continuation.finish() }
+    let responseBody = try #require(records[0].upstreamResponse)
+    let client = JevClient { request in
+        for await _ in gate.stream { break }
+        let url = try #require(request.url)
+        let response = try #require(HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil))
+        return (responseBody, response)
+    }
+    let service = DecisionService(store: fixture.store, configuration: configuration, client: client)
+    let model = WorkspaceModel(store: fixture.store)
+    let observation = Task { await model.observeChanges() }
+    defer { observation.cancel() }
+    try await waitForWorkspace { model.requests.count == 2 && model.detail != nil }
+    await model.select(records[1].id)
+    model.editNote("Keep this draft while another agent decides")
+    let requestBody = try #require(records[0].effectiveRequest)
+    let request = Task { await service.submit(token: issued.token, body: requestBody) }
+    defer { request.cancel() }
+    try await waitForWorkspace { model.requests.first?.sourceName == "Fresh arrival" }
+    #expect(model.requests.first?.status.isTerminal == false)
+    #expect(model.selectedID == records[1].id && model.detail?.id == records[1].id)
+    #expect(model.noteIsDirty && model.note == "Keep this draft while another agent decides")
+    #expect(model.newArrivalCount == 1)
+    gate.continuation.yield(())
+    gate.continuation.finish()
+    let reply = await request.value
+    #expect(reply.status == 200)
+    try await waitForWorkspace { model.requests.first?.status == .succeeded }
+    let id = try #require(reply.requestID)
+    try await fixture.store.updateDelivery(id: id, state: .written, finishedMS: 123)
+    try await waitForWorkspace { model.requests.first?.delivery == .written }
+    #expect(model.requests.first?.timing.deliveryFinishedMS == 123)
+    #expect(model.newArrivalCount == 1 && model.noteIsDirty)
+    observation.cancel()
+    await observation.value
+    await service.shutdown()
+    try await fixture.finish()
+}
+
+@MainActor private func waitForWorkspace(_ predicate: () -> Bool) async throws {
+    let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+    while !predicate() {
+        guard ContinuousClock.now < deadline else {
+            throw FalconError("test_timeout", "Workspace did not receive the committed database change.")
+        }
+        try await Task.sleep(for: .milliseconds(10))
+    }
 }
 
 @MainActor @Test func workspaceReplayUsesStoredEvidenceAndWallClockExpiry() async throws {

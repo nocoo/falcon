@@ -58,13 +58,8 @@ struct WorkspaceView: View {
             }.task(id: model.search) {
                 do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
                 await model.refresh(reset: true)
-            }.onChange(of: scenePhase) { _, phase in Task { await model.setActive(phase == .active) } }.task {
-                await model.refresh()
-                while !Task.isCancelled {
-                    do { try await Task.sleep(for: .milliseconds(1000)) } catch { return }
-                    await model.refresh()
-                    await runtime.refreshStatus()
-                }
+            }.onChange(of: scenePhase) { _, phase in Task { await model.setActive(phase != .background) } }.task {
+                await model.observeChanges()
             }.alert(
                 "Falcon",
                 isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })

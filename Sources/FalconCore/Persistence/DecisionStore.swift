@@ -239,6 +239,11 @@ public actor DecisionStore {
         close(lockFD)
     }
 
+    public func changes() -> AsyncValueObservation<Void> {
+        ValueObservation.tracking(regions: [DatabaseRegion.fullDatabase]) { _ in () }.values(
+            in: db, bufferingPolicy: .bufferingNewest(1))
+    }
+
     public func profiles() throws -> [UpstreamProfile] {
         try db.read { database in
             try Row.fetchAll(database, sql: "SELECT * FROM upstream_profiles ORDER BY name, id").map(Self.profile)

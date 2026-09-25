@@ -4,6 +4,12 @@
 
 稳定项目约束维护在 [AGENTS.md](AGENTS.md)，架构与设计维护在 [docs](docs/README.md)。
 
+## 2026-09-25: Incoming decisions were withheld from the list
+
+- The owner reported delayed arrivals. The workspace polled once a second, treated every inactive window as suspended, and kept new request rows out of the list while an older decision was selected. Successful API persistence alone did not establish live visibility.
+- Subscribe to committed database changes through GRDB with a bounded notification buffer. A visible inactive window keeps refreshing; new rows enter immediately while selection, notes and the scroll anchor remain stable. Track the pagination cursor separately so a burst larger than one page cannot hide intervening records.
+- A synthetic upstream is held behind a gate while the workspace observes the store. The test verifies that the request appears before the gate opens, then receives completion and delivery updates without manual refresh. Separate pagination coverage retains the selected draft through 101 arrivals and loads every intervening row.
+
 ## 2026-09-25: Database restart failed during journal setup
 
 - Restarting Falcon failed with `cannot change into wal mode from within a transaction`. The original setup ran journal PRAGMAs inside `DatabaseQueue.write`. SQLite left a new database in rollback-journal mode and rejected the same WAL switch when that populated database reopened. Fresh-store tests had missed the reopen path.

@@ -104,6 +104,7 @@ import Observation
                         await service.pause()
                         self.startupError = "History cleanup failed: \(error.localizedDescription)"
                     }
+                    await self.workspace?.refresh()
                 }
                 await self.refreshStatus()
             }

@@ -56,7 +56,7 @@ HTTP 和 MCP 只负责协议映射；业务管线不依赖 SwiftUI。UI 直接�
 3. 在全局存储 admission actor 中原子预留本次完整审计空间，再事务写入 received/effective request 与 `accepted` 记录。预留或事务失败则返回本地 507，不发送上游。
 4. 标记 `in_flight`，通过唯一 JevClient 发出一次调用。全程最多 30 秒，不自动 retry。
 5. 接收并校验响应，单事务写入终态、response、题目投影与 usage，再将结果返回调用方。
-6. 前台 ViewModel 每秒刷新列表摘要，选中后读取正文；后台暂停展示和回放，服务继续运行。刷新不延迟协议响应；阅读旧记录时保留位置并提示新到达。
+6. ViewModel 通过 GRDB 订阅已提交的数据库变化，接收、执行中、完成与返回状态落盘后立即触发刷新；合并尚未消费的通知，正文只在选中后读取。窗口失焦仍更新可见内容，进入后台或睡眠时暂停展示与回放；恢复时重新查询。每分钟校准滚动时间范围与留存。刷新不延迟协议响应；新请求插入列表，保留当前详情、草稿和滚动锚点，并提示新到达。
 
 终态分为 `succeeded`、`rejected`、`upstream_error`、`transport_error`、`timed_out`、`cancelled`、`interrupted`、`invalid_response`。`accepted/in_flight` 是非终态；本地校验拒绝不算上游失败。鉴权成功但 JSON 无效的请求保留有界原文及拒绝原因；未鉴权流量只做有界诊断计数，不保存正文，也不归属任意来源。
 
