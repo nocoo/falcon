@@ -20,11 +20,16 @@ identity; support documentation follows the repository license.
 
 ## Native application consumers
 
-The native app uses the same approved identity in its sidebar, empty state,
-Settings footer, menu bar and Dock. `Sources/Falcon/Resources/FalconMark.png`
+The native app uses the approved identity in its sidebar, empty state,
+Settings footer and Dock. `Sources/Falcon/Resources/FalconMark.png`
 and its 2x variant retain the entire transparent canvas and original colors.
 Small in-app marks have no background tile or extra mask. The menu bar uses
-the same alpha silhouette in a separate 18-point native macOS template image.
+a separate generated falcon profile designed for a monochrome 18-point status symbol.
+Its untouched GPT Image output, exact prompt, request, provenance and derived
+master are archived in [menu/2026-09-25-01](menu/2026-09-25-01/).
+`FalconMenu.png` and its 2x variant provide the native template with transparent
+negative space. `FalconAssets` sets the image's logical size and template flag
+before passing it to `MenuBarExtra`.
 
 `Sources/Falcon/Resources/Falcon.icns` contains the ten standard macOS icon
 representations. Each places the approved rounded presentation at 824/1024
@@ -38,5 +43,6 @@ Regenerate these derivatives from the repository root with the native toolchain:
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift scripts/build-brand-assets.swift
 ```
 
-The full-resolution masters remain source assets and are not bundled in the app.
+The same script renders the [harness icon assets](../harness/README.md).
+The full-resolution masters and SVG sources are not bundled in the app.
 This application adoption is local; it does not publish or notarize a release.

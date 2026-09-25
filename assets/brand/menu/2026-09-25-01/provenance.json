@@ -1,0 +1,9 @@
+{
+  "model": "gpt-image-2.5-sunburst",
+  "helper": "workflow/agents/skills/agi-image-generation/scripts/generate.py",
+  "requestedSize": "1024x1024",
+  "quality": "high",
+  "rawSha256": "8b01733143bb027079e208cebe08d332f4db6086fe09ae7f221db74d31598696",
+  "purpose": "Native monochrome menu-bar template",
+  "authorization": "Owner requested generation and integration of a simple recognizable menu-bar icon on 2026-09-25"
+}

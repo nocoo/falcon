@@ -1,0 +1,64 @@
+{
+  "repository": "mnfst/llm-gateway",
+  "revision": "ce109227d0c7fab485fb5d223e82f971722c1753",
+  "license": "MIT",
+  "icons": [
+    {
+      "id": "codex",
+      "path": "packages/frontend/public/icons/providers/codex.svg",
+      "url": "https://github.com/mnfst/llm-gateway/blob/ce109227d0c7fab485fb5d223e82f971722c1753/packages/frontend/public/icons/providers/codex.svg",
+      "sha256": "971e1c172b38f6cec0eb1b9a8d06a2b7e27422a199ba28ace4c50114d8c94a4a"
+    },
+    {
+      "id": "claude",
+      "path": "packages/frontend/public/icons/providers/claude-code.svg",
+      "url": "https://github.com/mnfst/llm-gateway/blob/ce109227d0c7fab485fb5d223e82f971722c1753/packages/frontend/public/icons/providers/claude-code.svg",
+      "sha256": "c156209ad5008df828d3b17f8be508dae6f962bebe09a77abcb522f5f60f4f2f"
+    },
+    {
+      "id": "grok",
+      "path": "packages/frontend/public/icons/providers/xai.svg",
+      "url": "https://github.com/mnfst/llm-gateway/blob/ce109227d0c7fab485fb5d223e82f971722c1753/packages/frontend/public/icons/providers/xai.svg",
+      "sha256": "afb81b82074827e77ea845c66181b2833c1bdc9469bd4257ffd316c4a770ffd9"
+    },
+    {
+      "id": "gemini",
+      "path": "packages/frontend/public/icons/gemini.svg",
+      "url": "https://github.com/mnfst/llm-gateway/blob/ce109227d0c7fab485fb5d223e82f971722c1753/packages/frontend/public/icons/gemini.svg",
+      "sha256": "defc65f5f30d8d797f3aba3f5476d74b732849185b11bfeae1fa4e0b14c09d67"
+    },
+    {
+      "id": "opencode",
+      "path": "packages/frontend/public/icons/providers/opencode.svg",
+      "url": "https://github.com/mnfst/llm-gateway/blob/ce109227d0c7fab485fb5d223e82f971722c1753/packages/frontend/public/icons/providers/opencode.svg",
+      "sha256": "438855d7c95bdddfb00b718e051f207ac89ca73d57f9814a13bd8aa7b14ad915"
+    },
+    {
+      "id": "hermes",
+      "path": "packages/frontend/public/icons/hermes.svg",
+      "url": "https://github.com/mnfst/llm-gateway/blob/ce109227d0c7fab485fb5d223e82f971722c1753/packages/frontend/public/icons/hermes.svg",
+      "sha256": "197ef9fe5b7b21df80b7b32862b9e9ce419c16eec20bb9c523ae9cd515bf3ecc"
+    },
+    {
+      "id": "openclaw",
+      "path": "packages/frontend/public/icons/openclaw.svg",
+      "url": "https://github.com/mnfst/llm-gateway/blob/ce109227d0c7fab485fb5d223e82f971722c1753/packages/frontend/public/icons/openclaw.svg",
+      "sha256": "3caaae34b7b1e4c0d831a8f107095b5362e0581bcc300118fa7e1b45317674a2"
+    },
+    {
+      "id": "qwen",
+      "path": "packages/frontend/public/icons/qwen.svg",
+      "url": "https://github.com/mnfst/llm-gateway/blob/ce109227d0c7fab485fb5d223e82f971722c1753/packages/frontend/public/icons/qwen.svg",
+      "sha256": "8c0323ac0cbe104cffd95d8ba4a06ffb1c51c7aba99afb083e8e8b8abdcb9f76"
+    }
+  ],
+  "prepared": {
+    "hermes": {
+      "path": "prepared/hermes.png",
+      "size": 512,
+      "sha256": "c72e1c73bf547f4bc30a6410ff3fcd3abd6d3a0a3fb1bb7846f8e1ce687e95dd",
+      "renderer": "sharp 0.35.4 / librsvg",
+      "reason": "AppKit CoreSVG rejects compact arc commands in this source SVG"
+    }
+  }
+}

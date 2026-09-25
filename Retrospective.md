@@ -63,3 +63,12 @@
 - **经过**：品牌接入后的窗口截图正常，但用户发现系统菜单栏显示了过大的彩色游隼头像。
 - **原因**：原图的 `NSImage` 逻辑尺寸为 64×64 pt，且不是模板图片；`MenuBarExtra` 没有采用 SwiftUI 的尺寸与渲染修饰。此前的窗口截图没有覆盖菜单栏消费者。
 - **修复与防范**：菜单栏使用原图副本，在 AppKit 层设为 18×18 pt 和模板图片。临时原生探针使用生产图片加载代码与打包资源，确认真实 `MenuBarExtra` 按钮为 34×22 pt、图像为 18×18 pt 且模板标志有效，并捕获自身控件检查显示；原始品牌图仍保持 64×64 pt 和彩色模式。后续品牌验证分别覆盖窗口、菜单栏与 Dock。
+
+
+## 2026-09-25: Normalize image pixels before extracting a template
+
+- The first menu-template exporter used `NSBitmapImageRep.colorAt` and per-pixel NSColor conversion on a generated PNG. AppKit repeatedly reported an unrecognized color-space model, producing excessive diagnostics and making the resulting mask unreliable. The raw image and production app were unchanged.
+- Convert the decoded CGImage once into an explicit sRGB RGBA bitmap, then derive alpha directly from normalized bytes. Avoid per-pixel color-object conversion. Capture build output in a bounded log, inspect the actual alpha coverage, and review small light/dark specimens before adopting generated menu assets.
+
+- During this task, the first Herdr Codex worker also inherited an unsupported service tier. Resuming that worker with `-c service_tier=default` made its first real model turn succeed. Keep the override local to the worker, and inspect the first completed tool action before treating an idle/ready process as functioning delegation.
+- CoreSVG separately rejected compact arc commands in the Manifest Hermes SVG. The checked-in original stays unchanged; a 512 px transparent master from the existing Sharp/librsvg toolchain supplies the native downsizing step. Require a clean resource-generation log and inspect every bundled icon.
