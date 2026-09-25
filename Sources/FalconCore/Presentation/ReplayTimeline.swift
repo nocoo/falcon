@@ -58,7 +58,6 @@ public struct ReplayTimeline: Sendable {
             var light = record
             light.metadata = [:]
             light.reviewNote = ""
-            light.preview = ""
             light.errorMessage = nil
             return light
         }

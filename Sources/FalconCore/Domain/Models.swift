@@ -187,7 +187,6 @@ public struct RequestSummary: Identifiable, Codable, Sendable, Equatable {
     public var inputTokens: Int?
     public var outputTokens: Int?
     public var questionCount: Int
-    public var preview: String
     public var metadata: [String: String]
     public var reviewState: ReviewState
     public var reviewNote: String
@@ -212,7 +211,6 @@ public struct RequestSummary: Identifiable, Codable, Sendable, Equatable {
         self.requestedModel = requestedModel
         self.timing = RequestTiming()
         self.questionCount = 0
-        self.preview = ""
         self.metadata = [:]
         self.reviewState = .unreviewed
         self.reviewNote = ""

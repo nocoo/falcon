@@ -41,6 +41,8 @@ enum FalconTheme {
     enum Layout {
         static let sidebarWidth: CGFloat = 176 * 1.1
         static let requestListWidth: CGFloat = 292
+        static let requestRowHeight: CGFloat = 60
+        static let requestStatusMark: CGFloat = 12
         static let minimumWidth: CGFloat = 1120
         static let minimumHeight: CGFloat = 680
         static let defaultWidth: CGFloat = 1600

@@ -480,6 +480,53 @@ public actor DecisionStore {
         }
     }
 
+    public func requestPreviews(ids: [UUID], now: Date = Date()) throws -> [UUID: RequestPreview] {
+        guard ids.count <= 100 else {
+            throw FalconError("invalid_limit", "Preview batch must contain at most 100 requests.")
+        }
+        guard !ids.isEmpty else { return [:] }
+        let paths = [
+            "$.state.task", "$.state.purpose", "$.state.question", "$.state.prompt", "$.state.proposed_action",
+            "$.state",
+        ]
+        let contextSQL = paths.map {
+            "CASE WHEN json_type(input, '\($0)')='text' THEN json_extract(input, '\($0)') END"
+        }.joined(separator: ",")
+        let placeholders = Array(repeating: "?", count: ids.count).joined(separator: ",")
+        var arguments: [any DatabaseValueConvertible] = ids.map(\.uuidString)
+        arguments.append(max(now, Date()).timeIntervalSince1970)
+        return try db.read { database in
+            let rows = try Row.fetchAll(
+                database,
+                sql: """
+                    WITH selected AS (
+                        SELECT id, status, expires_at,
+                            CASE WHEN json_valid(CAST(effective_request AS TEXT))
+                                THEN CAST(effective_request AS TEXT) END AS input
+                        FROM requests WHERE id IN (\(placeholders)) AND expires_at > ?
+                    )
+                    SELECT id, status, expires_at, substr(coalesce(\(contextSQL)), 1, 241) AS context,
+                        (SELECT json_object('id', substr(q.question_id, 1, 81), 'type', q.type,
+                            'choice', substr(q.result, 1, 161), 'numeric', q.numeric_value)
+                         FROM questions q WHERE q.request_id=selected.id AND selected.status='succeeded'
+                         ORDER BY q.question_id LIMIT 1) AS question
+                    FROM selected
+                    """, arguments: StatementArguments(arguments))
+            return try Dictionary(
+                uniqueKeysWithValues: rows.map { row in
+                    guard let id = UUID(uuidString: row["id"]), let status = RequestStatus(rawValue: row["status"])
+                    else { throw FalconError("invalid_record", "Invalid request preview identity.") }
+                    let question: String? = row["question"]
+                    return (
+                        id,
+                        RequestPreview(
+                            status: status, expiresAt: Date(timeIntervalSince1970: row["expires_at"]),
+                            context: row["context"], question: try question.map { try JSONValue.decode(Data($0.utf8)) })
+                    )
+                })
+        }
+    }
+
     public func replayCandidates(filter: DecisionFilter, limit: Int = 10_000, now: Date = Date()) async throws
         -> [RequestSummary]
     {
@@ -645,8 +692,7 @@ public actor DecisionStore {
     private func validate(_ detail: RequestDetail) throws {
         let summary = detail.summary
         guard summary.expiresAt == summary.receivedAt.addingTimeInterval(FalconLimits.retention),
-            summary.questionCount >= 0, summary.preview.utf8.count <= 4_096,
-            (try? JSONEncoder().encode(summary.metadata).count) ?? Int.max <= 4_096,
+            summary.questionCount >= 0, (try? JSONEncoder().encode(summary.metadata).count) ?? Int.max <= 4_096,
             (try? JSONEncoder().encode(summary).count) ?? Int.max <= 32_768,
             (detail.receivedRequest?.count ?? 0) <= FalconLimits.requestBytes,
             (detail.effectiveRequest?.count ?? 0) <= FalconLimits.requestBytes,

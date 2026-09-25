@@ -92,7 +92,6 @@ public enum PreviewData {
             summary.inputTokens = summary.status == .succeeded ? 824 : nil
             summary.outputTokens = summary.status == .succeeded ? 76 : nil
             summary.questionCount = 3
-            summary.preview = summary.status == .succeeded ? "local" : "Upstream deadline exceeded"
             summary.metadata = ["project": "falcon", "agent": source.name, "run_id": "preview-\(index / 4)"]
             summary.reviewState = index % 7 == 3 ? .flagged : index % 3 == 1 ? .reviewed : .unreviewed
             summary.httpStatus = summary.status == .succeeded ? 200 : 504

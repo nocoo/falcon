@@ -173,7 +173,6 @@ private struct WorkspaceFixture {
     await model.loadMore()
     #expect(Set(model.requests.map(\.id)) == Set((arrivals + records).map(\.id)))
     #expect(!model.hasMore)
-    await model.saveReview()
     try await fixture.store.reserve(
         requestID: completed.id, requestBytes: completed.effectiveRequest?.count ?? 0,
         questionCount: completed.summary.questionCount)
@@ -182,6 +181,10 @@ private struct WorkspaceFixture {
     await model.refresh()
     #expect(model.detail?.summary.status == .succeeded)
     #expect(model.note == "Keep the current reading position")
+    #expect(model.noteIsDirty)
+    #expect(model.requests.first { $0.id == completed.id }?.status == .succeeded)
+    #expect(model.previews[completed.id]?.decision == "local")
+    await model.saveReview()
     await model.showLatest()
     #expect(model.newArrivalCount == 0)
     #expect(model.selectedID == arrivals[0].id)
@@ -220,6 +223,7 @@ private struct WorkspaceFixture {
     defer { request.cancel() }
     try await waitForWorkspace { model.requests.first?.sourceName == "Fresh arrival" }
     #expect(model.requests.first?.status.isTerminal == false)
+    #expect(model.previews[model.requests[0].id]?.decision == nil)
     #expect(model.selectedID == records[1].id && model.detail?.id == records[1].id)
     #expect(model.noteIsDirty && model.note == "Keep this draft while another agent decides")
     #expect(model.newArrivalCount == 1)
@@ -229,6 +233,7 @@ private struct WorkspaceFixture {
     #expect(reply.status == 200)
     try await waitForWorkspace { model.requests.first?.status == .succeeded }
     let id = try #require(reply.requestID)
+    #expect(model.previews[id]?.decision == "local")
     try await fixture.store.updateDelivery(id: id, state: .written, finishedMS: 123)
     try await waitForWorkspace { model.requests.first?.delivery == .written }
     #expect(model.requests.first?.timing.deliveryFinishedMS == 123)

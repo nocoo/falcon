@@ -35,6 +35,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
     public var usageScrollID: String?
     public var selectedID: UUID?
     public private(set) var requests: [RequestSummary] = []
+    public private(set) var previews: [UUID: RequestPreview] = [:]
     public private(set) var detail: RequestDetail?
     public private(set) var presentation: DecisionPresentation?
     public private(set) var profiles: [UpstreamProfile] = []
@@ -138,6 +139,8 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
         do {
             let query = filter
             let fetched = try await store.requests(filter: query)
+            let updatedPreviews = try await store.requestPreviews(
+                ids: fetched.filter { previews[$0.id]?.status != $0.status }.map(\.id))
             let currentProfiles = try await store.profiles()
             let currentSources = try await store.sources()
             let currentKeys = try await store.sourceKeys()
@@ -153,11 +156,14 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
             storageBytes = bytes
             if let snapshot { usage = snapshot }
             mergeRequests(fetched, query: query, reset: reset)
+            previews.merge(updatedPreviews) { _, new in new }
+            let visibleIDs = Set(requests.map(\.id))
+            previews = previews.filter { visibleIDs.contains($0.key) }
             if selectedID == nil, let first = requests.first {
                 await select(first.id)
             } else if reset, let selectedID, !requests.contains(where: { $0.id == selectedID }) {
                 await select(requests.first?.id)
-            } else if let detail, !noteIsDirty, !isSelecting,
+            } else if let detail, !isSelecting,
                 !detail.summary.status.isTerminal
                     || fetched.first(where: { $0.id == detail.id }).map({ $0 != detail.summary }) == true
             {
@@ -197,7 +203,9 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
         do {
             let query = filter
             let rows = try await store.requests(filter: query, before: cursor)
+            let updatedPreviews = try await store.requestPreviews(ids: rows.map(\.id))
             guard query == filter else { return }
+            previews.merge(updatedPreviews) { _, new in new }
             let ids = Set(requests.map(\.id))
             requests += rows.filter { !ids.contains($0.id) }
             requests.sort {
@@ -260,6 +268,9 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
                 return
             }
             let parsed = await Task.detached { DecisionPresentation(detail: loaded) }.value
+            let preview =
+                previews[id]?.status == loaded.summary.status
+                ? previews[id] : try await store.requestPreviews(ids: [id])[id]
             guard revision == selectionRevision, selectedID == id, isActive else { return }
             if !noteIsDirty || detail?.id != id {
                 note = loaded.summary.reviewNote
@@ -268,6 +279,12 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
             }
             detail = loaded
             presentation = parsed
+            previews[id] = preview
+            if let index = requests.firstIndex(where: { $0.id == id }),
+                !requests[index].status.isTerminal || loaded.summary.status.isTerminal
+            {
+                requests[index] = loaded.summary
+            }
             validateExpiry()
         } catch {
             guard revision == selectionRevision, selectedID == id else { return }
@@ -312,6 +329,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
 
     public func validateExpiry(now: Date = Date()) {
         requests.removeAll { $0.expiresAt <= now }
+        previews = previews.filter { $0.value.expiresAt > now }
         timeline?.removeExpired(now: now)
         if let detail, detail.summary.expiresAt <= now {
             beginSelection(nil)
@@ -325,6 +343,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
         stopReplay()
         beginSelection(nil)
         requests = []
+        previews = [:]
         paginationCursor = nil
         newArrivalCount = 0
         usage = UsageSnapshot()

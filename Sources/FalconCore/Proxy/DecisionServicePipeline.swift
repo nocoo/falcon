@@ -135,7 +135,6 @@ extension DecisionService {
         }
         summary.requestedModel = request.model
         summary.questionCount = request.questions.count
-        summary.preview = request.value["state"]?.displayText.prefix(160).description ?? ""
         return (request, effectiveBody)
     }
 

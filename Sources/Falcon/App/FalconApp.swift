@@ -141,19 +141,7 @@ import SwiftUI
                 throw FalconError(
                     "capture_window", "Falcon's preview window is unavailable: \(NSApp.windows.map(\.title)).")
             }
-            if CommandLine.arguments.contains("--compact") {
-                window.setContentSize(
-                    NSSize(width: FalconTheme.Layout.minimumWidth, height: FalconTheme.Layout.compactHeight))
-            } else {
-                window.setContentSize(
-                    NSSize(width: FalconTheme.Layout.defaultWidth, height: FalconTheme.Layout.defaultHeight))
-            }
-            if CommandLine.arguments.contains("--replay") {
-                await runtime.workspace?.startReplay(range: false)
-                runtime.workspace?.step(forward: true)
-                runtime.workspace?.step(forward: true)
-            }
-            try await Task.sleep(for: .milliseconds(500))
+            try await prepareCapture(window: window)
             content.layoutSubtreeIfNeeded()
             guard let bitmap = content.bitmapImageRepForCachingDisplay(in: content.bounds) else {
                 throw FalconError("capture_bitmap", "Falcon's preview bitmap is unavailable.")
@@ -167,5 +155,64 @@ import SwiftUI
         await runtime.shutdown()
         shutdownComplete = true
         NSApp.terminate(nil)
+    }
+
+    private func prepareCapture(window: NSWindow) async throws {
+        if CommandLine.arguments.contains("--compact") {
+            window.setContentSize(
+                NSSize(width: FalconTheme.Layout.minimumWidth, height: FalconTheme.Layout.compactHeight))
+        } else {
+            window.setContentSize(
+                NSSize(width: FalconTheme.Layout.defaultWidth, height: FalconTheme.Layout.defaultHeight))
+        }
+        if CommandLine.arguments.contains("--replay") {
+            await runtime.workspace?.startReplay(range: false)
+            runtime.workspace?.step(forward: true)
+            runtime.workspace?.step(forward: true)
+        }
+        try await prepareHistoryCapture()
+        if CommandLine.arguments.contains("--inactive") { NSApp.deactivate() }
+        let arrivalID = CommandLine.arguments.contains("--arrival") ? try await insertCaptureArrival() : nil
+        try await Task.sleep(for: .milliseconds(500))
+        if let arrivalID {
+            guard runtime.workspace?.requests.first?.id == arrivalID, runtime.workspace?.isActive == true else {
+                throw FalconError("capture_arrival", "The visible workspace did not receive the new request.")
+            }
+        }
+        if CommandLine.arguments.contains("--inactive"), NSApp.isActive {
+            throw FalconError("capture_inactive", "The preview window did not lose focus.")
+        }
+    }
+
+    private func prepareHistoryCapture() async throws {
+        guard CommandLine.arguments.contains("--history"), let workspace = runtime.workspace,
+            workspace.requests.count > 20
+        else { return }
+        await workspace.select(workspace.requests[20].id)
+        try await Task.sleep(for: .milliseconds(200))
+    }
+
+    private func insertCaptureArrival() async throws -> UUID {
+        guard let workspace = runtime.workspace, var arrival = try PreviewData.records().first else {
+            throw FalconError("capture_arrival", "The preview workspace is unavailable.")
+        }
+        arrival.summary.id = UUID()
+        arrival.summary.sourceName = "Live arrival"
+        arrival.summary.receivedAt = Date()
+        arrival.summary.expiresAt = arrival.summary.receivedAt.addingTimeInterval(FalconLimits.retention)
+        arrival.summary.status = .inFlight
+        arrival.summary.delivery = .unknown
+        arrival.summary.timing = RequestTiming(bodyReceivedMS: 2, upstreamStartedMS: 4)
+        arrival.summary.resolvedModel = nil
+        arrival.summary.httpStatus = nil
+        arrival.summary.inputTokens = nil
+        arrival.summary.outputTokens = nil
+        arrival.upstreamResponse = nil
+        try await workspace.store.reserve(
+            requestID: arrival.id, requestBytes: arrival.effectiveRequest?.count ?? 0,
+            questionCount: arrival.summary.questionCount)
+        try await workspace.store.insert(arrival)
+        try await workspace.store.release(requestID: arrival.id)
+        return arrival.id
     }
 }

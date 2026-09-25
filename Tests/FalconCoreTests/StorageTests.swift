@@ -35,7 +35,6 @@ private func sampleDetail(
         id: id, sourceID: sourceID, keyID: UUID(), sourceName: "Agent", profileID: UUID(), profileName: "Upstream",
         receivedAt: receivedAt, status: status)
     summary.questionCount = questionCount
-    summary.preview = "fixture"
     summary.timing.bodyReceivedMS = 1
     if status == .succeeded {
         summary.timing.upstreamStartedMS = 2
@@ -75,6 +74,59 @@ private func persist(_ detail: RequestDetail, in store: DecisionStore) async thr
         requestID: detail.id, requestBytes: detail.receivedRequest!.count, questionCount: detail.summary.questionCount)
     try await store.insert(detail)
     try await store.release(requestID: detail.id)
+}
+
+private func addingState(_ state: JSONValue, to detail: RequestDetail) throws -> RequestDetail {
+    var record = detail
+    let body = try #require(record.effectiveRequest)
+    var request = try #require(JSONValue.decode(body).objectValue)
+    request["state"] = state
+    record.effectiveRequest = try JSONValue.object(request).data()
+    record.receivedRequest = record.effectiveRequest
+    return record
+}
+
+@Test func storagePreviewsReadBoundedStateAndTypedResults() async throws {
+    let fixture = try StorageFixture()
+    let question: JSONValue = .object(["type": .string("choice"), "criteria": .object(["local": .string("Here")])])
+    let choice = try addingState(
+        .object(["task": .string(String(repeating: "x", count: 500))]),
+        to: projectedDetail(
+            at: Date(), questions: ["route": question, "zz_other": question],
+            answers: [
+                "route": .object(["choice": .string("local")]), "zz_other": .object(["choice": .string("local")]),
+            ]))
+    let noul = try addingState(
+        .object(["purpose": .string("Assess\n risk")]),
+        to: projectedDetail(
+            at: Date(), questions: ["risk": .object(["type": .string("noul")])],
+            answers: ["risk": .object(["noul": .number(0.7)])]))
+    let score = try addingState(
+        .string("Rate the change"),
+        to: projectedDetail(
+            at: Date(), questions: ["rank": .object(["type": .string("score")])],
+            answers: ["rank": .object(["score": .number(1.25)])]))
+    var invalid = noul
+    invalid.summary.id = UUID()
+    invalid.summary.status = .invalidResponse
+    var malformed = sampleDetail(status: .rejected, questionCount: 0)
+    malformed.effectiveRequest = Data("incomplete JSON".utf8)
+    let records = [choice, noul, score, invalid, malformed]
+    for record in records { try await persist(record, in: fixture.store) }
+    let previews = try await fixture.store.requestPreviews(ids: records.map(\.id))
+    #expect(previews[choice.id]?.context == String(repeating: "x", count: 240) + "…")
+    #expect(previews[choice.id]?.questionID == "route" && previews[choice.id]?.decision == "local")
+    #expect(previews[noul.id]?.context == "Assess risk" && previews[noul.id]?.decision == "Yes 70.0%")
+    #expect(previews[score.id]?.context == "Rate the change" && previews[score.id]?.decision == "Score 1.25")
+    #expect(previews[invalid.id]?.decision == nil && previews[invalid.id]?.questionID == nil)
+    #expect(previews[malformed.id]?.context == "" && previews[malformed.id]?.decision == nil)
+    #expect(try await fixture.store.requestPreviews(ids: records.map(\.id), now: .distantFuture).isEmpty)
+    #expect(try await fixture.store.requestPreviews(ids: []).isEmpty)
+    await #expect(throws: FalconError.self) {
+        try await fixture.store.requestPreviews(ids: Array(repeating: choice.id, count: 101))
+    }
+    #expect(try await fixture.store.detail(id: choice.id)?.effectiveRequest == choice.effectiveRequest)
+    try await fixture.finish()
 }
 
 @Test func storageUsagePreservesUnrepresentableTokenTotals() async throws {
@@ -268,7 +320,7 @@ private func persist(_ detail: RequestDetail, in store: DecisionStore) async thr
     var oldest: UUID?
     for index in 0..<130 {
         var detail = sampleDetail(receivedAt: start.addingTimeInterval(Double(index)))
-        detail.summary.preview = index == 0 ? "needle deep-match" : "needle"
+        detail.summary.metadata["fixture_search"] = index == 0 ? "needle deep-match" : "needle"
         if index == 0 { oldest = detail.id }
         try await store.reserve(requestID: detail.id, requestBytes: detail.receivedRequest!.count, questionCount: 1)
         try await store.insert(detail)

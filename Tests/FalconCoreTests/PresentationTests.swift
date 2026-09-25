@@ -107,7 +107,6 @@ private func sampleRecord() -> RequestSummary {
         bodyReceivedMS: 1, upstreamStartedMS: 2, responseReceivedMS: 3, terminalMS: 4, deliveryFinishedMS: 5)
     terminal.reviewNote = "private"
     terminal.metadata = ["label": "private"]
-    terminal.preview = "private"
     var live = terminal
     live.id = UUID()
     live.status = .inFlight
@@ -116,9 +115,7 @@ private func sampleRecord() -> RequestSummary {
     expired.expiresAt = now
     let timeline = try ReplayTimeline(records: [live, expired, terminal], now: now)
     #expect(timeline.records.count == 1)
-    #expect(
-        timeline.records[0].reviewNote.isEmpty && timeline.records[0].metadata.isEmpty
-            && timeline.records[0].preview.isEmpty)
+    #expect(timeline.records[0].reviewNote.isEmpty && timeline.records[0].metadata.isEmpty)
     #expect(timeline.events.map(\.stage) == ReplayStage.allCases)
     #expect(timeline.nextEvent(after: timeline.end) == nil)
     #expect(timeline.previousEvent(before: timeline.start) == nil)
