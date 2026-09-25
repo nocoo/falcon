@@ -55,7 +55,7 @@ import SwiftUI
                     }
                 }
             }
-        MenuBarExtra("Falcon", systemImage: "bird") {
+        MenuBarExtra {
             Text("Falcon · \(runtime.statusTitle)")
             Divider()
             Button("Open workspace") {
@@ -66,6 +66,11 @@ import SwiftUI
                 .disabled(runtime.preview)
             Divider()
             Button("Quit Falcon") { NSApp.terminate(nil) }.keyboardShortcut("q")
+        } label: {
+            if let image = FalconAssets.mark {
+                Image(nsImage: image).resizable().renderingMode(.template).scaledToFit().frame(width: 18, height: 18)
+                    .accessibilityLabel("Falcon")
+            }
         }
     }
 }
@@ -78,6 +83,7 @@ import SwiftUI
     private var didCapture = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.applicationIconImage = FalconAssets.bundle.image(forResource: "Falcon")
         NSApp.setActivationPolicy(.regular)
         NSApp.activate()
         if CommandLine.arguments.contains("--dark") {

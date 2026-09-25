@@ -95,11 +95,11 @@ struct Pill: View {
 struct FalconMark: View {
     var size: CGFloat = 28
     var body: some View {
-        Image(systemName: "bird.fill").font(.system(size: size * 0.62, weight: .medium)).foregroundStyle(
-            FalconTheme.accent
-        ).frame(width: size, height: size).background(
-            FalconTheme.accentWash, in: RoundedRectangle(cornerRadius: size * 0.28)
-        ).accessibilityHidden(true)
+        if let image = FalconAssets.mark {
+            Image(nsImage: image).resizable().renderingMode(.original).interpolation(.high).scaledToFit().frame(
+                width: size, height: size
+            ).accessibilityHidden(true)
+        }
     }
 }
 

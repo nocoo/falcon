@@ -1,5 +1,7 @@
 # Falcon
 
+<img src="assets/brand/icon-rounded.png" width="128" height="128" alt="Falcon">
+
 **让本机 Agent 的 Jev 决策看得见。**
 
 Falcon 是 macOS 原生 Jev HTTP / MCP 代理与七天决策观察应用。每个来源使用独立本地 key，可以映射同一个或不同的上游。SwiftUI、AppKit、Swift Charts 与 Swift 服务运行在同一进程中。

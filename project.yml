@@ -41,6 +41,7 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
         INFOPLIST_KEY_CFBundleDisplayName: Falcon
+        INFOPLIST_KEY_CFBundleIconFile: Falcon
         INFOPLIST_KEY_NSHumanReadableCopyright: Copyright © 2026 Zheng Li
         ENABLE_APP_SANDBOX: NO
         CODE_SIGN_STYLE: Automatic
