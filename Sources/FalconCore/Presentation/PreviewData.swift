@@ -5,7 +5,7 @@ public enum PreviewData {
     public static let sources = ["Codex", "Grok", "Pi", "Claude"].enumerated().map { index, name in
         AgentSource(
             id: UUID(uuidString: String(format: "FACA0000-0000-0000-0000-%012d", index + 10))!, name: name,
-            profileID: profileID)
+            profileID: profileID, iconID: name.lowercased())
     }
 
     public static func records(now: Date = Date()) throws -> [RequestDetail] {

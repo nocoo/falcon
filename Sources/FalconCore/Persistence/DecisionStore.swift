@@ -39,6 +39,10 @@ private enum StoreSetup {
                     suffix TEXT NOT NULL, created_at REAL NOT NULL, revoked_at REAL,
                     FOREIGN KEY (source_id) REFERENCES sources(id)
                 );
+                CREATE TABLE IF NOT EXISTS source_icons (
+                    source_id TEXT PRIMARY KEY, icon_id TEXT NOT NULL,
+                    FOREIGN KEY (source_id) REFERENCES sources(id) ON DELETE CASCADE
+                );
                 CREATE UNIQUE INDEX IF NOT EXISTS source_keys_active ON source_keys(source_id) WHERE revoked_at IS NULL;
                 CREATE TABLE IF NOT EXISTS requests (
                     id TEXT PRIMARY KEY, source_id TEXT NOT NULL, profile_id TEXT NOT NULL,
@@ -269,12 +273,20 @@ public actor DecisionStore {
 
     public func sources() throws -> [AgentSource] {
         try db.read { database in
-            try Row.fetchAll(database, sql: "SELECT * FROM sources ORDER BY created_at, id").map(Self.source)
+            try Row.fetchAll(
+                database,
+                sql: """
+                    SELECT sources.*, source_icons.icon_id FROM sources
+                    LEFT JOIN source_icons ON source_icons.source_id=sources.id
+                    ORDER BY sources.created_at, sources.id
+                    """
+            ).map(Self.source)
         }
     }
 
     public func saveSource(_ source: AgentSource) throws {
         try checkName(source.name)
+        try checkIconID(source.iconID)
         try managedWrite(131_072) { database in
             try database.execute(
                 sql: """
@@ -286,11 +298,13 @@ public actor DecisionStore {
                     source.id.uuidString, source.name, source.profileID.uuidString, source.enabled, source.archived,
                     source.createdAt.timeIntervalSince1970,
                 ])
+            try Self.saveSourceIcon(source, database: database)
         }
     }
 
     public func createSourceWithKey(_ source: AgentSource, key: SourceKey) throws {
         try checkName(source.name)
+        try checkIconID(source.iconID)
         guard key.sourceID == source.id, key.digest.count == 32, key.suffix.count == 4, key.revokedAt == nil else {
             throw FalconError("invalid_key", "Invalid source key.")
         }
@@ -301,6 +315,7 @@ public actor DecisionStore {
                     source.id.uuidString, source.name, source.profileID.uuidString, source.enabled, source.archived,
                     source.createdAt.timeIntervalSince1970,
                 ])
+            try Self.saveSourceIcon(source, database: database)
             try database.execute(
                 sql: "INSERT INTO source_keys VALUES (?, ?, ?, ?, ?, NULL)",
                 arguments: [
@@ -329,7 +344,11 @@ public actor DecisionStore {
             }
             guard let key = matched,
                 let sourceRow = try Row.fetchOne(
-                    database, sql: "SELECT * FROM sources WHERE id=?", arguments: [key.sourceID.uuidString])
+                    database,
+                    sql: """
+                        SELECT sources.*, source_icons.icon_id FROM sources
+                        LEFT JOIN source_icons ON source_icons.source_id=sources.id WHERE sources.id=?
+                        """, arguments: [key.sourceID.uuidString])
             else { return nil }
             let source = Self.source(sourceRow)
             guard
@@ -786,6 +805,25 @@ public actor DecisionStore {
         }
     }
 
+    private func checkIconID(_ iconID: String?) throws {
+        guard let iconID else { return }
+        guard !iconID.isEmpty, iconID.utf8.count <= 120 else {
+            throw FalconError("invalid_icon", "Source icon identifier is invalid.")
+        }
+    }
+
+    private static func saveSourceIcon(_ source: AgentSource, database: Database) throws {
+        if let iconID = source.iconID {
+            try database.execute(
+                sql: """
+                    INSERT INTO source_icons VALUES (?, ?)
+                    ON CONFLICT(source_id) DO UPDATE SET icon_id=excluded.icon_id
+                    """, arguments: [source.id.uuidString, iconID])
+        } else {
+            try database.execute(sql: "DELETE FROM source_icons WHERE source_id=?", arguments: [source.id.uuidString])
+        }
+    }
+
     private static func profile(_ row: Row) -> UpstreamProfile {
         UpstreamProfile(
             id: UUID(uuidString: row["id"] as String)!, name: row["name"], baseURL: row["base_url"],
@@ -797,7 +835,8 @@ public actor DecisionStore {
         AgentSource(
             id: UUID(uuidString: row["id"] as String)!, name: row["name"],
             profileID: UUID(uuidString: row["profile_id"] as String)!, enabled: row["enabled"],
-            archived: row["archived"], createdAt: Date(timeIntervalSince1970: row["created_at"]))
+            archived: row["archived"], createdAt: Date(timeIntervalSince1970: row["created_at"]), iconID: row["icon_id"]
+        )
     }
 
     private static func key(_ row: Row) -> SourceKey {

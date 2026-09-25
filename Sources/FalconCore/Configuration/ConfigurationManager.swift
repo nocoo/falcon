@@ -94,13 +94,13 @@ public actor ConfigurationManager {
         return newVersion
     }
 
-    public func createSource(name: String, profileID: UUID) async throws -> IssuedSourceKey {
+    public func createSource(name: String, profileID: UUID, iconID: String? = nil) async throws -> IssuedSourceKey {
         await enter()
         defer { leave() }
         guard try await store.profiles().contains(where: { $0.id == profileID && $0.enabled }) else {
             throw FalconError("profile_missing", "Enabled upstream profile is required.")
         }
-        let source = AgentSource(name: name, profileID: profileID)
+        let source = AgentSource(name: name, profileID: profileID, iconID: iconID)
         let issued = try Self.generateKey(for: source)
         try await store.createSourceWithKey(source, key: issued.key)
         return issued

@@ -52,9 +52,10 @@ public struct AgentSource: Identifiable, Codable, Sendable, Equatable {
     public var enabled: Bool
     public var archived: Bool
     public var createdAt: Date
+    public var iconID: String?
     public init(
         id: UUID = UUID(), name: String, profileID: UUID, enabled: Bool = true, archived: Bool = false,
-        createdAt: Date = Date()
+        createdAt: Date = Date(), iconID: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -62,6 +63,7 @@ public struct AgentSource: Identifiable, Codable, Sendable, Equatable {
         self.enabled = enabled
         self.archived = archived
         self.createdAt = createdAt
+        self.iconID = iconID
     }
 }
 

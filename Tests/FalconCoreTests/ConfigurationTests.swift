@@ -13,10 +13,12 @@ import Testing
     let profile = try await manager.saveProfile(
         UpstreamProfile(name: "Primary", baseURL: "https://api.example.test/base/"), apiKey: "synthetic-one")
     #expect(profile.baseURL == "https://api.example.test/base")
-    let issued = try await manager.createSource(name: "IDE", profileID: profile.id)
+    let issued = try await manager.createSource(name: "IDE", profileID: profile.id, iconID: "codex")
+    #expect(issued.source.iconID == "codex")
     #expect(issued.token.hasPrefix("falcon_"))
     #expect(issued.token.count == 50)
     let snapshot = try await manager.acquire(token: issued.token)
+    #expect(snapshot.identity.source.iconID == "codex")
     #expect(snapshot.endpoint.absoluteString == "https://api.example.test/base/v1/systemone")
     #expect(snapshot.credential == "synthetic-one")
 

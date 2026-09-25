@@ -305,7 +305,7 @@ private func addingState(_ state: JSONValue, to detail: RequestDetail) throws ->
     let first = AgentSource(name: "First", profileID: profile.id)
     let key = SourceKey(sourceID: first.id, digest: Data(repeating: 1, count: 32), suffix: "abcd")
     try await store.createSourceWithKey(first, key: key)
-    let second = AgentSource(name: "Second", profileID: profile.id)
+    let second = AgentSource(name: "Second", profileID: profile.id, iconID: "grok")
     let collision = SourceKey(id: key.id, sourceID: second.id, digest: Data(repeating: 2, count: 32), suffix: "efgh")
     await #expect(throws: (any Error).self) { try await store.createSourceWithKey(second, key: collision) }
     #expect(try await store.sources().map(\.id) == [first.id])

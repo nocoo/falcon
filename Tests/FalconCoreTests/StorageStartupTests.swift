@@ -52,3 +52,44 @@ private func writeStartupHistory(_ record: RequestDetail, path: String, marker: 
     try await store.release(requestID: record.id)
     try await store.saveReview(id: record.id, state: .reviewed, note: "Survives a restart")
 }
+
+@Test func sourceIconsPersistWithExistingKeysAcrossReopen() async throws {
+    let marker = UUID()
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent("FalconIconsTests-\(marker)")
+    let path = directory.appendingPathComponent("history.sqlite").path
+    let profile = UpstreamProfile(name: "Synthetic")
+    let keyless = AgentSource(name: "Existing", profileID: profile.id)
+    let existingKey = SourceKey(sourceID: keyless.id, digest: Data(repeating: 8, count: 32), suffix: "old!")
+    var decorated = AgentSource(name: "New", profileID: profile.id, iconID: "codex")
+    let key = SourceKey(sourceID: decorated.id, digest: Data(repeating: 7, count: 32), suffix: "test")
+    do {
+        let store = try DecisionStore(path: path, testRunID: marker)
+        try await store.saveProfile(profile)
+        try await store.createSourceWithKey(keyless, key: existingKey)
+        try await store.createSourceWithKey(decorated, key: key)
+        let sources = try await store.sources()
+        #expect(sources.first { $0.id == keyless.id }?.iconID == nil)
+        let existing = try #require(await store.configurationSnapshot(tokenDigest: existingKey.digest))
+        #expect(existing.0.source.iconID == nil)
+        decorated.iconID = "grok"
+        try await store.saveSource(decorated)
+        let identity = try #require(await store.configurationSnapshot(tokenDigest: key.digest))
+        #expect(identity.0.source.iconID == "grok")
+    }
+    let reopened = try DecisionStore(path: path, testRunID: marker)
+    let restoredSources = try await reopened.sources()
+    #expect(restoredSources.first { $0.id == keyless.id }?.iconID == nil)
+    #expect(restoredSources.first { $0.id == decorated.id }?.iconID == "grok")
+    let restoredExisting = try #require(await reopened.configurationSnapshot(tokenDigest: existingKey.digest))
+    #expect(restoredExisting.0.source.iconID == nil)
+    let identity = try #require(await reopened.configurationSnapshot(tokenDigest: key.digest))
+    #expect(identity.0.source.iconID == "grok")
+    decorated.iconID = nil
+    try await reopened.saveSource(decorated)
+    let cleared = try #require(await reopened.configurationSnapshot(tokenDigest: key.digest))
+    #expect(cleared.0.source.iconID == nil)
+    guard try await reopened.testMarkerMatches(marker) else {
+        throw FalconError("test_marker", "Refuse to clean an unmarked fixture.")
+    }
+    try FileManager.default.removeItem(at: directory)
+}
