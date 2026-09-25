@@ -7,51 +7,93 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		00D6AE2F3EC97DB8542FC188 /* Harness-gemini.png in Resources */ = {isa = PBXBuildFile; fileRef = CFCC64140EC3F163664E12D1 /* Harness-gemini.png */; };
+		0275A6CF2772502903D56CF1 /* HarnessIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 755949CBD050F4961896C939 /* HarnessIcon.swift */; };
+		099B7C0EBC3BB15E32670F34 /* Harness-claude.png in Resources */ = {isa = PBXBuildFile; fileRef = 7811649D9FA510986A4D9FED /* Harness-claude.png */; };
+		12FF14745FAF56FDF0803AD1 /* Harness-hermes.png in Resources */ = {isa = PBXBuildFile; fileRef = A60E112AAD518DBDFF5E9850 /* Harness-hermes.png */; };
+		1AB0703806412F47E892CB59 /* Harness-grok.png in Resources */ = {isa = PBXBuildFile; fileRef = BA91786075A8AC6D323FC21E /* Harness-grok.png */; };
 		1FCE7B9DAEFC3DA8AD9F5556 /* FalconTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 355A5657689CBD16190B9D48 /* FalconTheme.swift */; };
 		2C6D28F9F2D8D4BBA4FF7708 /* AppRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F9C1898667F98C1A7FF19D6 /* AppRuntime.swift */; };
+		36157E2235BBDCF314420AC9 /* FalconMenu@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1E0D248D49C81BB0B1A16BDC /* FalconMenu@2x.png */; };
 		36565E102548AAA057B6F6C3 /* UsageDistributions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EDEC317F309102A9D049E79 /* UsageDistributions.swift */; };
 		372F67EE6BB246ABD451D213 /* DecisionHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5196D5DD27FE3F8593D6888 /* DecisionHeader.swift */; };
+		5570D334AB0B7CEDCFF6438C /* Harness-qwen@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 19E9EB528050A3B596FA60C6 /* Harness-qwen@2x.png */; };
+		597C246D1A25AA48F3915F12 /* Harness-Notices.txt in Resources */ = {isa = PBXBuildFile; fileRef = 83E33FD18F067B51B93D8D2F /* Harness-Notices.txt */; };
 		606C54465C29E5A3BBF60046 /* FalconCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0604BE68134B276DC7285E02 /* FalconCore */; };
 		6184CCC6FF9234D80DA26605 /* Falcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = 461E33FA103A877747A2F53D /* Falcon.icns */; };
+		646AEBF15D97EE3300B73E10 /* Harness-opencode@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D189CA3DC3535B1AE53DFAF4 /* Harness-opencode@2x.png */; };
 		66433E11A9B10AD9C5C47F4B /* FalconApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5286317EA0C2DF15B1685DE /* FalconApp.swift */; };
 		69AEF4B62167C54FF6277F1E /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7DD7255ED63BF9CC6354CA9 /* SourcesView.swift */; };
 		6BEA7C1ADB1601947C021682 /* ConnectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57636B4C16617F1CEF68DAED /* ConnectionsView.swift */; };
+		71D71629245321CB8FACF51B /* Harness-grok@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 2CAEA8ACEA3A3E84CBB78EE4 /* Harness-grok@2x.png */; };
+		78BB596973D05279AF359CF3 /* Harness-qwen.png in Resources */ = {isa = PBXBuildFile; fileRef = D76070898CB91587E3120801 /* Harness-qwen.png */; };
 		7E21D5777622CC8AD46E7152 /* QuestionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B12707A79497822218E6F256 /* QuestionCard.swift */; };
+		7F073213D60B0F4DAAA05171 /* FalconMenu.png in Resources */ = {isa = PBXBuildFile; fileRef = F1B762B9081C87EA9099516B /* FalconMenu.png */; };
+		864A135E1905A7DDCD628759 /* Harness-claude@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = B68BCE51E1D91BD8526D21B6 /* Harness-claude@2x.png */; };
+		93AFA3BBBFB19CEBF0E96C16 /* Harness-hermes@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = F0FE03733E1655039D6C6E8C /* Harness-hermes@2x.png */; };
+		95FC8E8F3A8B422DF778375F /* Harness-codex@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 5C536D2743E32E4AA21CE2A6 /* Harness-codex@2x.png */; };
 		9BD62DA37D4A4FA7BA3937BB /* FalconComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 283DB285BD3A273FF3B2F6F4 /* FalconComponents.swift */; };
 		B2D83D06AA3127E3DD3134F3 /* ReplayBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87CAE6CCEC5889434BFC2426 /* ReplayBar.swift */; };
 		BE4A4EEDEDB708D956163B7B /* FalconAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45FCBEE07A8E6EC091C7457 /* FalconAssets.swift */; };
+		C53A902A3E560B4D43727C23 /* Harness-openclaw.png in Resources */ = {isa = PBXBuildFile; fileRef = 33E5F0F51BBE9C73B7BA9ABB /* Harness-openclaw.png */; };
+		C6FF47019EE241EE5D4C1AD6 /* Harness-codex.png in Resources */ = {isa = PBXBuildFile; fileRef = D620585AB19FB561350F532F /* Harness-codex.png */; };
+		D126E7C3A186B31BC74954CC /* Harness-openclaw@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 80EF71D23C28BB9BE975678B /* Harness-openclaw@2x.png */; };
 		D283E5C93EC6DDBB8FFCE08D /* FalconMark.png in Resources */ = {isa = PBXBuildFile; fileRef = 256011CFF0AFFAA381CDE9D9 /* FalconMark.png */; };
 		D387D07D3452ACB2FAF888BF /* RequestRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D15B022D190E091572D872 /* RequestRow.swift */; };
+		D6B57CC59A5D67E58F8AC207 /* DecisionReviewBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA5A2BF1E3D2CF4ADAB62AD1 /* DecisionReviewBar.swift */; };
+		D98C86A317EFF376D762C8DD /* Harness-opencode.png in Resources */ = {isa = PBXBuildFile; fileRef = 506481FEE821B33A82C3D4DA /* Harness-opencode.png */; };
 		DBD81F2FA5A4D260FD2DEE23 /* UsageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC205BDBF2A6DE494CF7CC31 /* UsageView.swift */; };
 		E11C150E5E47A1FD04A80463 /* WorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37AAB24B0D1107783F166BFD /* WorkspaceView.swift */; };
 		E9053D2C1055132DC797A66B /* RequestListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02C97FDAA89707D9F335E347 /* RequestListView.swift */; };
 		EA8BE88545F26BD1DF1B303B /* FalconMark@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 3567D90E4EEAB4C16F411FE2 /* FalconMark@2x.png */; };
 		F4712270A79C897AAA1E20CA /* DecisionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEBFAA421C254997F349D067 /* DecisionDetailView.swift */; };
 		F7065AF05F483EBAF0ED83CC /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1BA48BB62DE46EAB5E2253F /* SettingsView.swift */; };
+		FF4FB4F201FCE09D995B7B73 /* Harness-gemini@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = E396D51B1C0196135B0D405F /* Harness-gemini@2x.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		02C97FDAA89707D9F335E347 /* RequestListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestListView.swift; sourceTree = "<group>"; };
 		0F9C1898667F98C1A7FF19D6 /* AppRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRuntime.swift; sourceTree = "<group>"; };
+		19E9EB528050A3B596FA60C6 /* Harness-qwen@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Harness-qwen@2x.png"; sourceTree = "<group>"; };
+		1E0D248D49C81BB0B1A16BDC /* FalconMenu@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "FalconMenu@2x.png"; sourceTree = "<group>"; };
 		22D1E8005B3E782DB2FE957C /* falcon */ = {isa = PBXFileReference; lastKnownFileType = folder; name = falcon; path = .; sourceTree = SOURCE_ROOT; };
 		256011CFF0AFFAA381CDE9D9 /* FalconMark.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = FalconMark.png; sourceTree = "<group>"; };
 		283DB285BD3A273FF3B2F6F4 /* FalconComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FalconComponents.swift; sourceTree = "<group>"; };
+		2CAEA8ACEA3A3E84CBB78EE4 /* Harness-grok@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Harness-grok@2x.png"; sourceTree = "<group>"; };
+		33E5F0F51BBE9C73B7BA9ABB /* Harness-openclaw.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Harness-openclaw.png"; sourceTree = "<group>"; };
 		355A5657689CBD16190B9D48 /* FalconTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FalconTheme.swift; sourceTree = "<group>"; };
 		3567D90E4EEAB4C16F411FE2 /* FalconMark@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "FalconMark@2x.png"; sourceTree = "<group>"; };
 		37AAB24B0D1107783F166BFD /* WorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceView.swift; sourceTree = "<group>"; };
 		461E33FA103A877747A2F53D /* Falcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Falcon.icns; sourceTree = "<group>"; };
+		506481FEE821B33A82C3D4DA /* Harness-opencode.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Harness-opencode.png"; sourceTree = "<group>"; };
 		57636B4C16617F1CEF68DAED /* ConnectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionsView.swift; sourceTree = "<group>"; };
+		5C536D2743E32E4AA21CE2A6 /* Harness-codex@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Harness-codex@2x.png"; sourceTree = "<group>"; };
+		755949CBD050F4961896C939 /* HarnessIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HarnessIcon.swift; sourceTree = "<group>"; };
+		7811649D9FA510986A4D9FED /* Harness-claude.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Harness-claude.png"; sourceTree = "<group>"; };
 		7EDEC317F309102A9D049E79 /* UsageDistributions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageDistributions.swift; sourceTree = "<group>"; };
+		80EF71D23C28BB9BE975678B /* Harness-openclaw@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Harness-openclaw@2x.png"; sourceTree = "<group>"; };
+		83E33FD18F067B51B93D8D2F /* Harness-Notices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Harness-Notices.txt"; sourceTree = "<group>"; };
 		87CAE6CCEC5889434BFC2426 /* ReplayBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReplayBar.swift; sourceTree = "<group>"; };
 		8CA5E8C6CF95BB32C8D3AAD7 /* Falcon.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Falcon.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A5286317EA0C2DF15B1685DE /* FalconApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FalconApp.swift; sourceTree = "<group>"; };
+		A60E112AAD518DBDFF5E9850 /* Harness-hermes.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Harness-hermes.png"; sourceTree = "<group>"; };
 		A7DD7255ED63BF9CC6354CA9 /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcesView.swift; sourceTree = "<group>"; };
 		B12707A79497822218E6F256 /* QuestionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionCard.swift; sourceTree = "<group>"; };
 		B45FCBEE07A8E6EC091C7457 /* FalconAssets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FalconAssets.swift; sourceTree = "<group>"; };
+		B68BCE51E1D91BD8526D21B6 /* Harness-claude@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Harness-claude@2x.png"; sourceTree = "<group>"; };
+		BA91786075A8AC6D323FC21E /* Harness-grok.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Harness-grok.png"; sourceTree = "<group>"; };
+		CFCC64140EC3F163664E12D1 /* Harness-gemini.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Harness-gemini.png"; sourceTree = "<group>"; };
 		D0D15B022D190E091572D872 /* RequestRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestRow.swift; sourceTree = "<group>"; };
+		D189CA3DC3535B1AE53DFAF4 /* Harness-opencode@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Harness-opencode@2x.png"; sourceTree = "<group>"; };
 		D5196D5DD27FE3F8593D6888 /* DecisionHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecisionHeader.swift; sourceTree = "<group>"; };
+		D620585AB19FB561350F532F /* Harness-codex.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Harness-codex.png"; sourceTree = "<group>"; };
+		D76070898CB91587E3120801 /* Harness-qwen.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Harness-qwen.png"; sourceTree = "<group>"; };
 		DC205BDBF2A6DE494CF7CC31 /* UsageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageView.swift; sourceTree = "<group>"; };
+		E396D51B1C0196135B0D405F /* Harness-gemini@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Harness-gemini@2x.png"; sourceTree = "<group>"; };
+		EA5A2BF1E3D2CF4ADAB62AD1 /* DecisionReviewBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecisionReviewBar.swift; sourceTree = "<group>"; };
 		EEBFAA421C254997F349D067 /* DecisionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecisionDetailView.swift; sourceTree = "<group>"; };
+		F0FE03733E1655039D6C6E8C /* Harness-hermes@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Harness-hermes@2x.png"; sourceTree = "<group>"; };
+		F1B762B9081C87EA9099516B /* FalconMenu.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = FalconMenu.png; sourceTree = "<group>"; };
 		F1BA48BB62DE46EAB5E2253F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -102,6 +144,25 @@
 				461E33FA103A877747A2F53D /* Falcon.icns */,
 				256011CFF0AFFAA381CDE9D9 /* FalconMark.png */,
 				3567D90E4EEAB4C16F411FE2 /* FalconMark@2x.png */,
+				F1B762B9081C87EA9099516B /* FalconMenu.png */,
+				1E0D248D49C81BB0B1A16BDC /* FalconMenu@2x.png */,
+				7811649D9FA510986A4D9FED /* Harness-claude.png */,
+				B68BCE51E1D91BD8526D21B6 /* Harness-claude@2x.png */,
+				D620585AB19FB561350F532F /* Harness-codex.png */,
+				5C536D2743E32E4AA21CE2A6 /* Harness-codex@2x.png */,
+				CFCC64140EC3F163664E12D1 /* Harness-gemini.png */,
+				E396D51B1C0196135B0D405F /* Harness-gemini@2x.png */,
+				BA91786075A8AC6D323FC21E /* Harness-grok.png */,
+				2CAEA8ACEA3A3E84CBB78EE4 /* Harness-grok@2x.png */,
+				A60E112AAD518DBDFF5E9850 /* Harness-hermes.png */,
+				F0FE03733E1655039D6C6E8C /* Harness-hermes@2x.png */,
+				83E33FD18F067B51B93D8D2F /* Harness-Notices.txt */,
+				33E5F0F51BBE9C73B7BA9ABB /* Harness-openclaw.png */,
+				80EF71D23C28BB9BE975678B /* Harness-openclaw@2x.png */,
+				506481FEE821B33A82C3D4DA /* Harness-opencode.png */,
+				D189CA3DC3535B1AE53DFAF4 /* Harness-opencode@2x.png */,
+				D76070898CB91587E3120801 /* Harness-qwen.png */,
+				19E9EB528050A3B596FA60C6 /* Harness-qwen@2x.png */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -130,6 +191,7 @@
 			children = (
 				EEBFAA421C254997F349D067 /* DecisionDetailView.swift */,
 				D5196D5DD27FE3F8593D6888 /* DecisionHeader.swift */,
+				EA5A2BF1E3D2CF4ADAB62AD1 /* DecisionReviewBar.swift */,
 				B12707A79497822218E6F256 /* QuestionCard.swift */,
 				87CAE6CCEC5889434BFC2426 /* ReplayBar.swift */,
 				02C97FDAA89707D9F335E347 /* RequestListView.swift */,
@@ -170,6 +232,7 @@
 				B45FCBEE07A8E6EC091C7457 /* FalconAssets.swift */,
 				283DB285BD3A273FF3B2F6F4 /* FalconComponents.swift */,
 				355A5657689CBD16190B9D48 /* FalconTheme.swift */,
+				755949CBD050F4961896C939 /* HarnessIcon.swift */,
 			);
 			path = Design;
 			sourceTree = "<group>";
@@ -250,6 +313,25 @@
 				6184CCC6FF9234D80DA26605 /* Falcon.icns in Resources */,
 				D283E5C93EC6DDBB8FFCE08D /* FalconMark.png in Resources */,
 				EA8BE88545F26BD1DF1B303B /* FalconMark@2x.png in Resources */,
+				7F073213D60B0F4DAAA05171 /* FalconMenu.png in Resources */,
+				36157E2235BBDCF314420AC9 /* FalconMenu@2x.png in Resources */,
+				597C246D1A25AA48F3915F12 /* Harness-Notices.txt in Resources */,
+				099B7C0EBC3BB15E32670F34 /* Harness-claude.png in Resources */,
+				864A135E1905A7DDCD628759 /* Harness-claude@2x.png in Resources */,
+				C6FF47019EE241EE5D4C1AD6 /* Harness-codex.png in Resources */,
+				95FC8E8F3A8B422DF778375F /* Harness-codex@2x.png in Resources */,
+				00D6AE2F3EC97DB8542FC188 /* Harness-gemini.png in Resources */,
+				FF4FB4F201FCE09D995B7B73 /* Harness-gemini@2x.png in Resources */,
+				1AB0703806412F47E892CB59 /* Harness-grok.png in Resources */,
+				71D71629245321CB8FACF51B /* Harness-grok@2x.png in Resources */,
+				12FF14745FAF56FDF0803AD1 /* Harness-hermes.png in Resources */,
+				93AFA3BBBFB19CEBF0E96C16 /* Harness-hermes@2x.png in Resources */,
+				C53A902A3E560B4D43727C23 /* Harness-openclaw.png in Resources */,
+				D126E7C3A186B31BC74954CC /* Harness-openclaw@2x.png in Resources */,
+				D98C86A317EFF376D762C8DD /* Harness-opencode.png in Resources */,
+				646AEBF15D97EE3300B73E10 /* Harness-opencode@2x.png in Resources */,
+				78BB596973D05279AF359CF3 /* Harness-qwen.png in Resources */,
+				5570D334AB0B7CEDCFF6438C /* Harness-qwen@2x.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -264,10 +346,12 @@
 				6BEA7C1ADB1601947C021682 /* ConnectionsView.swift in Sources */,
 				F4712270A79C897AAA1E20CA /* DecisionDetailView.swift in Sources */,
 				372F67EE6BB246ABD451D213 /* DecisionHeader.swift in Sources */,
+				D6B57CC59A5D67E58F8AC207 /* DecisionReviewBar.swift in Sources */,
 				66433E11A9B10AD9C5C47F4B /* FalconApp.swift in Sources */,
 				BE4A4EEDEDB708D956163B7B /* FalconAssets.swift in Sources */,
 				9BD62DA37D4A4FA7BA3937BB /* FalconComponents.swift in Sources */,
 				1FCE7B9DAEFC3DA8AD9F5556 /* FalconTheme.swift in Sources */,
+				0275A6CF2772502903D56CF1 /* HarnessIcon.swift in Sources */,
 				7E21D5777622CC8AD46E7152 /* QuestionCard.swift in Sources */,
 				B2D83D06AA3127E3DD3134F3 /* ReplayBar.swift in Sources */,
 				E9053D2C1055132DC797A66B /* RequestListView.swift in Sources */,

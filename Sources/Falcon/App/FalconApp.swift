@@ -140,13 +140,15 @@ import SwiftUI
         }
         do { try await Task.sleep(for: .seconds(2)) } catch { return }
         do {
-            guard let window = NSApp.windows.first(where: { $0.canBecomeMain }),
+            let capturingSheet = CommandLine.arguments.contains("--source-editor")
+            guard
+                let window = NSApp.windows.first(where: { capturingSheet ? $0.sheetParent != nil : $0.canBecomeMain }),
                 let content = window.contentView?.superview
             else {
                 throw FalconError(
                     "capture_window", "Falcon's preview window is unavailable: \(NSApp.windows.map(\.title)).")
             }
-            try await prepareCapture(window: window)
+            if !capturingSheet { try await prepareCapture(window: window) }
             content.layoutSubtreeIfNeeded()
             guard let bitmap = content.bitmapImageRepForCachingDisplay(in: content.bounds) else {
                 throw FalconError("capture_bitmap", "Falcon's preview bitmap is unavailable.")

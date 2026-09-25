@@ -10,6 +10,7 @@ struct RequestListView: View {
     @State private var rangeEnd = Date()
     @State private var scrollPosition: UUID?
     @State private var isAtTop = true
+    @State private var pendingUnstar: UUID?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,9 +28,23 @@ struct RequestListView: View {
                                         Task { await model.select(request.id) }
                                     } label: {
                                         RequestRow(
-                                            record: request, preview: model.previews[request.id],
+                                            record: request,
+                                            iconID: model.sources.first { $0.id == request.sourceID }?.iconID,
+                                            preview: model.previews[request.id],
                                             selected: model.selectedID == request.id)
-                                    }.buttonStyle(.plain).id(request.id)
+                                    }.buttonStyle(.plain).id(request.id).contextMenu {
+                                        Button {
+                                            if request.isStarred, request.expiresAt <= Date() {
+                                                pendingUnstar = request.id
+                                            } else {
+                                                Task { await model.toggleStar(id: request.id) }
+                                            }
+                                        } label: {
+                                            Label(
+                                                request.isStarred ? "Remove star" : "Star · keep indefinitely",
+                                                systemImage: request.isStarred ? "star.slash" : "star")
+                                        }.disabled(model.isUpdatingStar || model.isTriaging)
+                                    }
                                 }
                             } header: {
                                 Text(dayTitle(day.date)).font(FalconTheme.caption).foregroundStyle(
@@ -61,7 +76,11 @@ struct RequestListView: View {
                         if previous > 0, current == 0 { proxy.scrollTo("activity-top", anchor: .top) }
                     }.overlay {
                         if model.requests.isEmpty, !model.isLoading {
-                            if model.search.isEmpty, filterSummary.isEmpty {
+                            if model.starredOnly, model.search.isEmpty, filterSummary.isEmpty {
+                                ContentUnavailableView(
+                                    "No starred decisions", systemImage: "star",
+                                    description: Text("Star a decision to keep it beyond seven days."))
+                            } else if model.search.isEmpty, filterSummary.isEmpty {
                                 ContentUnavailableView(
                                     "Waiting for decisions", systemImage: "tray",
                                     description: Text("Requests appear here as they arrive."))
@@ -74,24 +93,37 @@ struct RequestListView: View {
             footer
         }.background(FalconTheme.surface).background {
             Button("Search") { focusedRegion = .search }.keyboardShortcut("f").hidden()
-        }.sheet(isPresented: $showRange) { rangeSheet }
+        }.sheet(isPresented: $showRange) { rangeSheet }.confirmationDialog(
+            "Remove this saved decision?",
+            isPresented: Binding(get: { pendingUnstar != nil }, set: { if !$0 { pendingUnstar = nil } }),
+            titleVisibility: .visible, presenting: pendingUnstar
+        ) { id in
+            Button("Remove star and delete", role: .destructive) { Task { await model.toggleStar(id: id) } }
+        } message: { _ in
+            Text("This decision is older than seven days. Removing its star also removes its saved evidence.")
+        }
     }
 
     private var header: some View {
         VStack(spacing: FalconTheme.Space.compact) {
             HStack(spacing: FalconTheme.Space.compact) {
-                Text("Activity").font(FalconTheme.sectionTitle).tracking(FalconTheme.titleTracking)
+                Text(model.starredOnly ? "Starred" : "Activity").font(FalconTheme.sectionTitle).tracking(
+                    FalconTheme.titleTracking)
                 Spacer(minLength: 0)
-                Menu {
-                    Picker("Time range", selection: $model.hours) {
-                        Text("Past hour").tag(1)
-                        Text("Past 24 hours").tag(24)
-                        Text("Past 7 days").tag(168)
-                    }
-                    Button("Custom range…") { showRange = true }
-                } label: {
-                    Text(rangeTitle).font(FalconTheme.caption).foregroundStyle(FalconTheme.secondary)
-                }.menuStyle(.borderlessButton).fixedSize().help("Time range")
+                if model.starredOnly {
+                    Text("All time").font(FalconTheme.caption).foregroundStyle(FalconTheme.secondary)
+                } else {
+                    Menu {
+                        Picker("Time range", selection: $model.hours) {
+                            Text("Past hour").tag(1)
+                            Text("Past 24 hours").tag(24)
+                            Text("Past 7 days").tag(168)
+                        }
+                        Button("Custom range…") { showRange = true }
+                    } label: {
+                        Text(rangeTitle).font(FalconTheme.caption).foregroundStyle(FalconTheme.secondary)
+                    }.menuStyle(.borderlessButton).fixedSize().help("Time range")
+                }
                 Menu {
                     Button("Replay this range") { Task { await model.startReplay(range: true) } }
                     Button("Refresh") { Task { await model.refresh(reset: true) } }
@@ -114,6 +146,18 @@ struct RequestListView: View {
                     }
                 }.padding(.horizontal, FalconTheme.Space.compact).frame(height: FalconTheme.Layout.compactControlHeight)
                     .background(FalconTheme.inset, in: RoundedRectangle(cornerRadius: FalconTheme.Radius.control))
+                Button {
+                    model.starredOnly.toggle()
+                } label: {
+                    Image(systemName: model.starredOnly ? "star.fill" : "star").font(FalconTheme.label).foregroundStyle(
+                        model.starredOnly ? FalconTheme.warning : FalconTheme.secondary
+                    ).frame(
+                        width: FalconTheme.Layout.compactControlHeight, height: FalconTheme.Layout.compactControlHeight
+                    ).background(
+                        model.starredOnly ? FalconTheme.Candy.yellow.opacity(0.2) : FalconTheme.inset,
+                        in: RoundedRectangle(cornerRadius: FalconTheme.Radius.control))
+                }.buttonStyle(.plain).help(model.starredOnly ? "Show recent decisions" : "Show all starred decisions")
+                    .accessibilityLabel("Starred decisions").accessibilityValue(model.starredOnly ? "On" : "Off")
                 filterMenu
             }
         }.padding(FalconTheme.Space.regular).padding(.bottom, FalconTheme.Space.micro)

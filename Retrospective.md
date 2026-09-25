@@ -10,6 +10,12 @@
 - ProxyServer explicitly disabled Hummingbird's default address reuse. It now uses the library default, with regressions for immediate same-port restart and rejection of a second live listener. Fixture teardown drains the service and closes SQLite before deleting its marked directory.
 - Validate service readiness immediately after restart. A successful process launch and preserved database alone do not establish a working proxy.
 
+## 2026-09-25: Source editing opened the creation sheet
+
+- The owner selected Edit source and saw Add source. Presentation used separate Boolean and optional-source state; the lazy sheet closure could capture the earlier empty source during its first presentation.
+- One identifiable presentation item now carries the source snapshot into the sheet. Add and edit each set that item directly. Native checks cover the first edit presentation, populated fields, selected icon and Save changes, alongside the separate creation sheet.
+- For editors whose content depends on a selection, bind sheet presentation to that selection instead of maintaining a separate visibility flag.
+
 ## 2026-09-25: Preview teardown deleted an open database
 
 - The owner saw `SQLite error 10: disk I/O error` at `PRAGMA query_only = 1` while the source-icon preview was closing. System logs tied the exact error to that preview process: its marked temporary database, WAL and SHM had been unlinked while SQLite still used them. The production database passed a read-only integrity check and continued accepting requests.

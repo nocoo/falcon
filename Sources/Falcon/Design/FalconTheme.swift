@@ -2,21 +2,31 @@ import AppKit
 import SwiftUI
 
 enum FalconTheme {
-    static let canvas = adaptive("canvas", light: 0xF5F6FA, dark: 0x11151F)
-    static let sidebar = adaptive("sidebar", light: 0xEDF0F6, dark: 0x171D2A)
-    static let surface = adaptive("surface", light: 0xFFFFFF, dark: 0x1D2433)
-    static let reader = adaptive("reader", light: 0xFAFBFD, dark: 0x181F2D)
-    static let inset = adaptive("inset", light: 0xF1F3F8, dark: 0x151B27)
-    static let ink = adaptive("ink", light: 0x293043, dark: 0xE9EDF5)
-    static let secondary = adaptive("secondary", light: 0x556277, dark: 0xA7B1C6)
-    static let tertiary = adaptive("tertiary", light: 0x5E6A7D, dark: 0x95A2BA)
-    static let accent = adaptive("accent", light: 0x515677, dark: 0xB8C6EC)
-    static let onAccent = adaptive("onAccent", light: 0xFFFFFF, dark: 0x192239)
-    static let accentWash = adaptive("accentWash", light: 0xE9ECF5, dark: 0x2A344D)
-    static let success = adaptive("success", light: 0x256B52, dark: 0x8AD2AF)
-    static let warning = adaptive("warning", light: 0x86550A, dark: 0xE8BD70)
-    static let danger = adaptive("danger", light: 0xB13B3B, dark: 0xFFAAA4)
-    static let line = adaptive("line", light: 0xDCE1EB, dark: 0x323D52)
+    static let canvas = adaptive("canvas", light: 0xF6F9FA, dark: 0x131A20)
+    static let sidebar = adaptive("sidebar", light: 0xEBF4F8, dark: 0x18252F)
+    static let surface = adaptive("surface", light: 0xFFFFFF, dark: 0x1D2A34)
+    static let reader = adaptive("reader", light: 0xFAFDFE, dark: 0x17222B)
+    static let inset = adaptive("inset", light: 0xEFF5F7, dark: 0x14212A)
+    static let ink = adaptive("ink", light: 0x203340, dark: 0xEDF7FA)
+    static let secondary = adaptive("secondary", light: 0x506674, dark: 0xADC1CD)
+    static let tertiary = adaptive("tertiary", light: 0x596D79, dark: 0x9EB3C0)
+    static let accent = adaptive("accent", light: 0x006D96, dark: 0x63CEF2)
+    static let action = adaptive("action", light: 0x006D96, dark: 0x007DA9)
+    static let onAction = Color.white
+    static let accentWash = adaptive("accentWash", light: 0xDCF3FC, dark: 0x173C4E)
+    static let success = adaptive("success", light: 0x397023, dark: 0xACDE70)
+    static let warning = adaptive("warning", light: 0x806100, dark: 0xFFE26A)
+    static let flag = adaptive("flag", light: 0xBD7A1F, dark: 0xFFCC66)
+    static let danger = adaptive("danger", light: 0xAF3657, dark: 0xFF9AAF)
+    static let line = adaptive("line", light: 0xDCE7ED, dark: 0x31434F)
+
+    enum Candy {
+        static let blue = adaptive("candy.blue", light: 0x57C7EF, dark: 0x63CEF2)
+        static let green = adaptive("candy.green", light: 0xA6D96A, dark: 0xB3E57A)
+        static let yellow = adaptive("candy.yellow", light: 0xFFE16B, dark: 0xFFE889)
+        static let pink = adaptive("candy.pink", light: 0xF684A4, dark: 0xFF9AAF)
+        static let white = adaptive("candy.white", light: 0xFFFFFF, dark: 0xEDF7FA)
+    }
 
     enum Space {
         static let micro: CGFloat = 2
@@ -43,6 +53,7 @@ enum FalconTheme {
         static let requestListWidth: CGFloat = 292
         static let requestRowHeight: CGFloat = 60
         static let requestStatusMark: CGFloat = 12
+        static let requestIcon: CGFloat = 16
         static let minimumWidth: CGFloat = 1120
         static let minimumHeight: CGFloat = 680
         static let defaultWidth: CGFloat = 1600
@@ -61,10 +72,13 @@ enum FalconTheme {
         static let avatar: CGFloat = 28
         static let detailAvatar: CGFloat = 36
         static let profileAvatar: CGFloat = 40
+        static let iconChoiceHeight: CGFloat = 66
         static let pageWidth: CGFloat = 1400
         static let managementWidth: CGFloat = 1150
         static let settingsWidth: CGFloat = 1080
         static let sheetWidth: CGFloat = 520
+        static let notePopoverWidth: CGFloat = 360
+        static let noteEditorHeight: CGFloat = 120
     }
 
     static let hairline: CGFloat = 0.75

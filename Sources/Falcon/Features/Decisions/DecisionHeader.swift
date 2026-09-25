@@ -8,6 +8,7 @@ struct DecisionHeader: View {
     @Binding var timelineVisible: Bool
     let copyJSON: () -> Void
     let exportJSON: () -> Void
+    @State private var pendingUnstar: UUID?
 
     var body: some View {
         VStack(alignment: .leading, spacing: FalconTheme.Space.regular) {
@@ -15,12 +16,23 @@ struct DecisionHeader: View {
             controls
             metrics
         }.padding(.horizontal, FalconTheme.Space.section).padding(.vertical, FalconTheme.Space.medium).background(
-            FalconTheme.reader)
+            FalconTheme.reader
+        ).confirmationDialog(
+            "Remove this saved decision?",
+            isPresented: Binding(get: { pendingUnstar != nil }, set: { if !$0 { pendingUnstar = nil } }),
+            titleVisibility: .visible, presenting: pendingUnstar
+        ) { id in
+            Button("Remove star and delete", role: .destructive) { Task { await model.toggleStar(id: id) } }
+        } message: { _ in
+            Text("This decision is older than seven days. Removing its star also removes its saved evidence.")
+        }
     }
 
     private var identity: some View {
         HStack(spacing: FalconTheme.Space.regular) {
-            SourceAvatar(name: detail.summary.sourceName, size: FalconTheme.Layout.detailAvatar)
+            SourceAvatar(
+                iconID: model.sources.first { $0.id == detail.summary.sourceID }?.iconID,
+                size: FalconTheme.Layout.detailAvatar)
             VStack(alignment: .leading, spacing: FalconTheme.Space.small) {
                 HStack(spacing: FalconTheme.Space.compact) {
                     Text(detail.summary.sourceName).font(FalconTheme.title).tracking(FalconTheme.titleTracking)
@@ -77,6 +89,21 @@ struct DecisionHeader: View {
                 Label("Replay", systemImage: "play.circle")
             }.menuStyle(.borderlessButton).fixedSize().padding(.horizontal, FalconTheme.Space.compact)
             Spacer(minLength: 0)
+            Button {
+                if detail.summary.isStarred, detail.summary.expiresAt <= Date() {
+                    pendingUnstar = detail.id
+                } else {
+                    Task { await model.toggleStar(id: detail.id) }
+                }
+            } label: {
+                Image(systemName: detail.summary.isStarred ? "star.fill" : "star").foregroundStyle(
+                    detail.summary.isStarred ? FalconTheme.warning : FalconTheme.secondary)
+            }.disabled(model.isUpdatingStar || model.isTriaging).keyboardShortcut("s", modifiers: [.command, .shift])
+                .help(
+                    detail.summary.isStarred
+                        ? "Remove star · return to seven-day retention" : "Star · keep indefinitely"
+                ).accessibilityLabel(detail.summary.isStarred ? "Remove star" : "Star decision").accessibilityValue(
+                    detail.summary.isStarred ? "Kept indefinitely" : "Not starred")
             Button {
                 copyJSON()
             } label: {

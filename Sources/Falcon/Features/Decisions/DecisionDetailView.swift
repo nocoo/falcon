@@ -65,7 +65,7 @@ struct DecisionDetailView: View {
                     description: Text("The complete input becomes visible when the request body has been received.")
                 ).frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            reviewBar
+            DecisionReviewBar(model: model, record: detail.summary)
         }
     }
 
@@ -168,35 +168,6 @@ struct DecisionDetailView: View {
         guard let data else { return "No data recorded for this stage." }
         return String(data: data, encoding: .utf8)
             ?? "This body is not valid UTF-8. Original bytes (Base64):\n\n\(data.base64EncodedString())"
-    }
-
-    private var reviewBar: some View {
-        HStack(spacing: FalconTheme.Space.regular) {
-            Image(systemName: model.reviewState == .flagged ? "flag" : "checkmark.circle").foregroundStyle(
-                FalconTheme.secondary)
-            Picker(
-                "Review",
-                selection: Binding(
-                    get: { model.reviewState },
-                    set: { value in
-                        model.editReview(value)
-                        Task { await model.saveReview() }
-                    })
-            ) {
-                Text("Unreviewed").tag(ReviewState.unreviewed)
-                Text("Reviewed").tag(ReviewState.reviewed)
-                Text("Needs attention").tag(ReviewState.flagged)
-            }.labelsHidden().frame(width: 140)
-            Divider().frame(height: 18).padding(.horizontal, FalconTheme.Space.small)
-            TextField("Add a review note…", text: Binding(get: { model.note }, set: model.editNote)).textFieldStyle(
-                .plain
-            ).font(FalconTheme.detail).onSubmit { Task { await model.saveReview() } }
-            if model.noteIsDirty {
-                Button("Save") { Task { await model.saveReview() } }.buttonStyle(FalconButtonStyle(compact: true))
-            }
-        }.padding(.horizontal, FalconTheme.Space.section).frame(height: FalconTheme.Layout.reviewBarHeight).background(
-            FalconTheme.surface
-        ).overlay(alignment: .top) { Rectangle().fill(FalconTheme.line).frame(height: FalconTheme.hairline) }
     }
 
     private func copyRaw() {

@@ -81,17 +81,20 @@ struct UsageView: View {
                                     BarMark(x: .value("Time", bucket.date), y: .value("Requests", bucket.failures))
                                         .foregroundStyle(by: .value("Kind", "Failed"))
                                 }
-                            }.chartForegroundStyleScale(range: [FalconTheme.accent, FalconTheme.warning])
-                                .chartXSelection(value: $selectedDate).chartXAxis {
-                                    AxisMarks(values: .automatic(desiredCount: 8)) { _ in
-                                        AxisGridLine()
-                                        AxisValueLabel(
-                                            format: model.hours == 168
-                                                ? .dateTime.month(.abbreviated).day() : .dateTime.hour().minute())
-                                    }
-                                }.chartXScale(range: .plotDimension(padding: 16)).chartYAxis {
-                                    AxisMarks(position: .leading)
-                                }.frame(height: 236)
+                            }.chartForegroundStyleScale(
+                                range: model.usageShowsTokens
+                                    ? [FalconTheme.Candy.blue, FalconTheme.Candy.green]
+                                    : [FalconTheme.Candy.blue, FalconTheme.Candy.pink]
+                            ).chartXSelection(value: $selectedDate).chartXAxis {
+                                AxisMarks(values: .automatic(desiredCount: 8)) { _ in
+                                    AxisGridLine()
+                                    AxisValueLabel(
+                                        format: model.hours == 168
+                                            ? .dateTime.month(.abbreviated).day() : .dateTime.hour().minute())
+                                }
+                            }.chartXScale(range: .plotDimension(padding: 16)).chartYAxis {
+                                AxisMarks(position: .leading)
+                            }.frame(height: 236)
                             Text("Select a bar to inspect its decisions.").font(FalconTheme.footnote).foregroundStyle(
                                 FalconTheme.secondary)
                             if usage.totalTokens == nil {
@@ -115,7 +118,7 @@ struct UsageView: View {
                                     model.page = .decisions
                                 } label: {
                                     HStack(spacing: FalconTheme.Space.regular) {
-                                        SourceAvatar(name: source.name)
+                                        SourceAvatar(iconID: model.sources.first { $0.id == source.id }?.iconID)
                                         VStack(alignment: .leading, spacing: FalconTheme.Space.compact) {
                                             HStack {
                                                 Text(source.name).font(FalconTheme.body)
@@ -124,7 +127,7 @@ struct UsageView: View {
                                             }
                                             GeometryReader { geometry in
                                                 Capsule().fill(FalconTheme.inset)
-                                                Capsule().fill(FalconTheme.accent).frame(
+                                                Capsule().fill(FalconTheme.Candy.blue).frame(
                                                     width: geometry.size.width * Double(source.requests)
                                                         / Double(max(1, usage.requests)))
                                             }.frame(height: 5)

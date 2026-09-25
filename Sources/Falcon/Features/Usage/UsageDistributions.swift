@@ -17,7 +17,7 @@ struct ProbabilityDistribution: View {
                 Text(subtitle).font(FalconTheme.detail).foregroundStyle(FalconTheme.secondary)
                 Chart(buckets) { bucket in
                     BarMark(x: .value("Probability band", bucket.index), y: .value("Questions", bucket.count))
-                        .foregroundStyle(FalconTheme.accent.gradient).cornerRadius(3).accessibilityLabel(
+                        .foregroundStyle(FalconTheme.Candy.blue.gradient).cornerRadius(3).accessibilityLabel(
                             "\(Int(bucket.lowerBound * 100)) to \(Int(bucket.upperBound * 100)) percent"
                         ).accessibilityValue("\(bucket.count) questions")
                 }.chartXScale(domain: -1...10).chartXSelection(value: $selectedBand).chartXAxis {

@@ -80,10 +80,10 @@ struct SettingsView: View {
                         Text("History & storage").font(FalconTheme.sectionTitle)
                         HStack {
                             VStack(alignment: .leading, spacing: FalconTheme.Space.compact) {
-                                Text("Seven rolling days").font(FalconTheme.sectionTitle)
+                                Text("Seven days, or keep a star").font(FalconTheme.sectionTitle)
                                 Text(
-                                    "Full inputs and responses stay on this Mac for 168 hours. "
-                                        + "Every new request still calls Jev."
+                                    "Unstarred decisions stay for 168 hours. "
+                                        + "Starred decisions keep their full inputs and responses indefinitely."
                                 ).font(FalconTheme.detail).foregroundStyle(FalconTheme.secondary).lineSpacing(
                                     FalconTheme.Space.small)
                             }
@@ -133,7 +133,8 @@ struct SettingsView: View {
             }
         } message: {
             Text(
-                "This removes recorded requests, responses, usage, and review notes. Sources and connections are kept.")
+                "This removes all decisions, including starred records, responses, usage, and review notes. "
+                    + "Sources and connections are kept.")
         }
     }
 }

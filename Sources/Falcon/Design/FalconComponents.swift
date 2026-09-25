@@ -22,14 +22,14 @@ private struct FalconButtonBody: View {
     var body: some View {
         configuration.label.font(FalconTheme.label).foregroundStyle(
             prominent
-                ? FalconTheme.onAccent
+                ? FalconTheme.onAction
                 : configuration.role == .destructive
                     ? FalconTheme.danger : selected ? FalconTheme.accent : FalconTheme.ink
         ).padding(.horizontal, compact ? FalconTheme.Space.compact : FalconTheme.Space.regular).frame(
             height: compact ? FalconTheme.Layout.compactControlHeight : FalconTheme.Layout.controlHeight
         ).background(
             prominent
-                ? FalconTheme.accent : selected || (hovered && enabled) ? FalconTheme.accentWash : FalconTheme.surface,
+                ? FalconTheme.action : selected || (hovered && enabled) ? FalconTheme.accentWash : FalconTheme.surface,
             in: RoundedRectangle(cornerRadius: FalconTheme.Radius.control)
         ).overlay(
             RoundedRectangle(cornerRadius: FalconTheme.Radius.control).strokeBorder(
@@ -84,17 +84,6 @@ struct FalconMark: View {
                 width: size, height: size
             ).accessibilityHidden(true)
         }
-    }
-}
-
-struct SourceAvatar: View {
-    let name: String
-    var size: CGFloat = FalconTheme.Layout.avatar
-    var body: some View {
-        Text(String(name.prefix(1)).uppercased()).font(.system(size: size * 0.44, weight: .semibold, design: .rounded))
-            .foregroundStyle(FalconTheme.accent).frame(width: size, height: size).background(
-                FalconTheme.accentWash, in: RoundedRectangle(cornerRadius: size * 0.3)
-            ).accessibilityHidden(true)
     }
 }
 

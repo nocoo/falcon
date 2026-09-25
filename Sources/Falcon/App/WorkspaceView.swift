@@ -45,8 +45,9 @@ struct WorkspaceView: View {
                 toolbar
             }.toolbarBackground(FalconTheme.canvas, for: .windowToolbar).animation(
                 reduceMotion ? nil : FalconTheme.motion, value: model.focusReview
-            ).onChange(of: model.page) { _, _ in
+            ).onChange(of: model.page) { _, page in
                 model.pauseReplay()
+                if page != .decisions { model.starredOnly = false }
                 Task { await model.refresh(reset: true) }
             }.onChange(of: model.hours) { _, _ in
                 model.timeRange = nil
@@ -54,6 +55,9 @@ struct WorkspaceView: View {
             }.onChange(of: model.sourceFilters) { _, _ in Task { await model.refresh(reset: true) } }.onChange(
                 of: model.statusFilter
             ) { _, _ in Task { await model.refresh(reset: true) } }.onChange(of: model.reviewFilter) { _, _ in
+                Task { await model.refresh(reset: true) }
+            }.onChange(of: model.starredOnly) { _, _ in
+                model.timeRange = nil
                 Task { await model.refresh(reset: true) }
             }.task(id: model.search) {
                 do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
@@ -133,7 +137,7 @@ struct WorkspaceView: View {
                 }
                 Text("127.0.0.1:\(String(runtime.port))").font(FalconTheme.monoSmall).foregroundStyle(
                     FalconTheme.secondary)
-                Text("7-day local history").font(FalconTheme.footnote).foregroundStyle(FalconTheme.secondary)
+                Text("7 days · stars stay").font(FalconTheme.footnote).foregroundStyle(FalconTheme.secondary)
             }.padding(FalconTheme.Space.regular).frame(maxWidth: .infinity, alignment: .leading).background(
                 FalconTheme.reader, in: RoundedRectangle(cornerRadius: FalconTheme.Radius.control)
             ).overlay(

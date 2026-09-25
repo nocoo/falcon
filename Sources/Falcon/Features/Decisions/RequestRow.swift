@@ -3,6 +3,7 @@ import SwiftUI
 
 struct RequestRow: View {
     let record: RequestSummary
+    let iconID: String?
     let preview: RequestPreview?
     let selected: Bool
     @State private var hovered = false
@@ -11,11 +12,17 @@ struct RequestRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: FalconTheme.Space.micro) {
             HStack(spacing: FalconTheme.Space.tight) {
-                statusMark
-                Text(record.sourceName).font(FalconTheme.label.weight(.semibold)).lineLimit(1)
+                SourceAvatar(iconID: iconID, size: FalconTheme.Layout.requestIcon, framed: false)
+                Text(record.sourceName).font(
+                    FalconTheme.label.weight(record.reviewState == .unreviewed ? .semibold : .medium)
+                ).lineLimit(1)
                 Spacer(minLength: FalconTheme.Space.tight)
+                if record.isStarred {
+                    Image(systemName: "star.fill").font(FalconTheme.caption).foregroundStyle(FalconTheme.warning)
+                        .accessibilityLabel("Starred · kept indefinitely")
+                }
                 if record.reviewState == .flagged {
-                    Image(systemName: "flag.fill").font(FalconTheme.caption).foregroundStyle(FalconTheme.warning)
+                    Image(systemName: "flag.fill").font(FalconTheme.caption).foregroundStyle(FalconTheme.flag)
                         .accessibilityLabel("Needs attention")
                 }
                 Text(record.receivedAt, format: .dateTime.hour().minute().second()).font(FalconTheme.monoSmall)
@@ -25,6 +32,7 @@ struct RequestRow: View {
             Text(context).font(FalconTheme.detail).lineLimit(1).help(context).frame(
                 maxWidth: .infinity, alignment: .leading)
             HStack(spacing: FalconTheme.Space.small) {
+                statusMark
                 if record.status == .succeeded, let question = preview?.questionID, let decision = preview?.decision {
                     (Text(question).foregroundColor(FalconTheme.secondary)
                         + Text(" → ").foregroundColor(FalconTheme.tertiary)
