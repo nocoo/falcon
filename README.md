@@ -2,24 +2,79 @@
 
 **让本机 Agent 的 Jev 决策看得见。**
 
-Falcon 是规划中的 macOS 原生应用：向本机提供 TypeSafe / Jev HTTP 与 MCP 代理，以独立内部 key 区分调用来源，集中管理上游连接，并提供最近 7 天的决策观察与用量可视化。
+Falcon 是 macOS 原生 Jev HTTP / MCP 代理与七天决策观察应用。每个来源使用独立本地 key，可以映射同一个或不同的上游。SwiftUI、AppKit、Swift Charts 与 Swift 服务运行在同一进程中。
 
-核心体验是从一条请求直接看清：**谁来决策、提供了什么上下文和选项、Jev 返回了什么、用了多少资源**。技术方向是 SwiftUI + Swift，保持小体积、单进程和原生交互。
+宽幅工作区同时展示 state、定义、问题、选项和决策；支持来源与时间筛选、全文检索、review 备注、真实阶段回放、延迟与 token 统计、JSON / CSV 导出。七天缓存用于历史留存，每次新请求仍然调用 Jev。
 
-> 当前阶段：基础设计与大空间回看、动画回放增量均已通过独立 Codex 审阅，待用户审阅方案。仓库尚无可运行应用、构建配置或自动化测试；设计中的指标均是验收目标，不是已完成的性能或质量结论。
+## 运行
 
-## 📖 设计入口
+需要 macOS 15+、Xcode 与 XcodeGen。当前验证工具链为 Xcode 27 / Swift 6.4；运行时不依赖 Python 或 Node。
 
-| 文档 | 内容 |
-| --- | --- |
-| [文档目录](docs/README.md) | 阅读顺序与设计状态 |
-| [01 产品与范围](docs/01-product.md) | 用户场景、边界和需要确认的选择 |
-| [02 架构与数据](docs/02-architecture.md) | Swift 选型、生命周期、持久化、7 天留存 |
-| [03 HTTP、MCP 与 Jev](docs/03-protocol.md) | 认证、协议、结果语义与错误契约 |
-| [04 界面与动效](docs/04-interface.md) | 信息架构、视觉 token、交互与可访问性 |
-| [05 交付与验证](docs/05-delivery.md) | 分层实现、原子提交与质量验收 |
-| [06 调研证据](docs/06-research.md) | 官方文档、SDK 检查和参考项目 |
-| [07 独立审阅](docs/07-design-review.md) | 基础与回放增量审阅、10 项发现闭环及精确 PASS 版本 |
-| [08 回看与回放](docs/08-review-playback.md) | 大空间详情、来源时间线、动画回放与真实收发时点 |
+```sh
+scripts/build-app.sh Release
+open build/Build/Products/Release/Falcon.app
+```
 
-Agent 项目约束见 [AGENTS.md](AGENTS.md)。事故与改进记录见 [Retrospective.md](Retrospective.md)。
+脚本默认构建本机架构，产物位于 `build/Build/Products/Release/Falcon.app`。当前是本地开发构建，尚未签名公证或发布。
+
+1. 在 **Connections** 保存 Jev key、HTTPS API root 和默认模型。官方 root 是 `https://api.typesafe.ai`。
+2. 在 **Sources** 创建来源并选择 connection，复制仅显示一次的本地 key。
+3. 将 Agent 的 API root 指向 `http://127.0.0.1:19823`，Bearer token 使用该来源的本地 key。
+4. 发起决策后，在 **Decisions** 回看；**Focus review** 可收起导航与列表，**Usage** 可点击图表钻取。
+
+关闭窗口后服务继续在菜单栏运行。Quit 退出应用；登录启动默认关闭。修改端口后需同步更新客户端配置。
+
+无需上游凭据即可查看合成数据：
+
+```sh
+open build/Build/Products/Release/Falcon.app --args --preview --dark
+```
+
+Preview 使用独立临时数据库，不监听端口、不访问 Keychain、不调用上游。退出后校验测试 marker 并清理。
+
+## 接入
+
+HTTP 兼容 TypeSafe 官方 SDK 的 `/v1/systemone` 路径。以下示例从环境变量读取已经配置的来源 key：
+
+```sh
+curl http://127.0.0.1:19823/v1/systemone \
+  -H "Authorization: Bearer $FALCON_SOURCE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"jev-latest","state":"Review an isolated change","questions":{"execution":{"type":"choice","instructions":"Choose how to proceed.","criteria":{"local":"Enough context for a bounded task.","inspect":"Important evidence is missing."}}}}'
+```
+
+MCP 使用 Streamable HTTP、JSON response 和 `jev_decide` 工具；客户端须支持固定 Authorization header：
+
+```json
+{
+  "mcpServers": {
+    "falcon": {
+      "url": "http://127.0.0.1:19823/mcp",
+      "headers": {"Authorization": "Bearer YOUR_SOURCE_KEY"}
+    }
+  }
+}
+```
+
+上游 key 存在 Falcon 专属 Keychain 项中；本地 key 只持久化摘要。请求和响应在本机保留 168 小时，默认明文存储于当前用户的 Application Support/Falcon，导出文件由用户管理。回放不会再次请求 Jev，也不表示 Agent 已执行了决策。
+
+## 开发验证
+
+```sh
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+swift test --enable-code-coverage
+scripts/check-sdk.sh
+swiftlint lint --strict
+xcrun swift-format lint --strict --recursive Sources Tests
+git diff --check
+```
+
+测试使用临时 SQLite、内存凭据与真实 loopback fixture。SDK 检查通过 `uv` 运行锁定的官方 `typesafe-sdk==0.7.1`，只在开发期使用。默认 Swift 测试不执行该 opt-in Python 用例。
+
+完整四项覆盖率与自动提交门禁尚未达标；真实 Keychain 拒绝访问、生产 Jev、完整无障碍矩阵和大数据性能仍有验证边界。已执行证据与预算见 [交付与验证](docs/05-delivery.md)。
+
+## 文档
+
+[设计目录](docs/README.md) · [架构与数据](docs/02-architecture.md) · [HTTP / MCP 契约](docs/03-protocol.md) · [界面设计](docs/04-interface.md) · [回看与回放](docs/08-review-playback.md) · [独立设计审阅](docs/07-design-review.md)
+
+Agent 项目约束见 [AGENTS.md](AGENTS.md)，事故记录见 [Retrospective.md](Retrospective.md)。

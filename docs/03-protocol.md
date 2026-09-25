@@ -18,7 +18,9 @@
 
 首版支持这三种题型，不猜测未知题型。局部验证不应发明官方未声明的 token 限额或固定题数。严格校验已知必需字段、已知字段的类型和大小边界；未知顶层字段及 question 附加字段作为 JSON 原样保留并透传，由上游决定是否支持。官方 SDK 的 `extra_body` 与原始 question 字典扩展不能被本地静默丢弃或先行 422。未知字段不具有 Falcon 路由、鉴权或 profile 覆写权限。
 
-响应成功校验：question ID 集合一致、type 匹配；Choice winner 属于 criteria，probability key 集合一致，值有限且在 [0,1]，总和容差 0.02；confidence 在 [0,1]；Noul 在 [0,1]；Score 的 legend / probabilities 等级对应请求，score 在合法范围。容差仅用于接纳文档示例中的舍入，不重归一化、不修改返回值；非法响应存原文并标记 invalid_response，返回本地 502。usage 缺失或不完整则保留 nullable 并提示协议异常，不制造 token。
+数值保留原始数字文本，避免 `Double` 或 `Decimal` 往返改变大整数、长小数与极小值。字符串的转义和 Unicode 校验复用 Foundation；决策 JSON 拒绝重复键、无效 UTF-8 与超过 512 层的结构。MCP 的协议处理仍由官方 SDK 负责，工具参数与结构化结果单独保真封装，避免经过 SDK 的 Int/Double 转换。Token 从数值文本精确转换为 Int；概率图表使用浮点投影，不改原文。决策指纹按字段排序并规范化十进制数；超出 Int 指数范围的数值保留原拼写，不合并近似值。
+
+响应成功校验：question ID 集合一致、type 匹配；Choice winner 属于 criteria，probability key 集合一致，值有限且在 [0,1]，总和容差 0.02；confidence 在 [0,1]；Noul 在 [0,1]；Score 的 legend / probabilities 等级对应请求，score 在合法范围。容差仅用于接纳文档示例中的舍入，不重归一化、不修改返回值；非法响应存原文并标记 invalid_response，返回本地 502。usage 缺失、不完整或超出 Swift Int 可表示范围时保留 nullable，不制造 token。统计求和使用溢出检查；不可表示的总量显示不可用，原始响应仍完整保留。
 
 ## HTTP 表面
 
@@ -122,6 +124,6 @@ with TypeSafeClient(
     print(result.choices["execution"].choice)
 ```
 
-`typesafe-sdk==0.7.1` 的离线 MockTransport 已验证 base URL 拼接、内部 key 格式接受和三类响应解析；真实 HTTP、MCP、URLSession 与上游一致性尚待实施验证，见 [05](05-delivery.md)。
+`typesafe-sdk==0.7.1` 的离线探针及后续真实 loopback 集成已验证 base URL、内部 key、三类响应和扩展字段；官方 MCP 客户端也已运行完整初始化与调用序列。生产 Jev 与真实 Keychain 仍未调用，见 [05](05-delivery.md)。
 
 [下一篇：界面与动效](04-interface.md) · [目录](README.md)

@@ -1,6 +1,6 @@
 # 06 · 调研证据
 
-核对日期：2026-09-25。以下区分读取到的事实、离线探针结果与尚未运行的验证。未接触真实上游凭据、未修改 Keychain、证书或系统 ACL。
+核对日期：2026-09-25。以下区分官方资料、最初的离线探针与后续实现验证。未接触真实上游凭据、未修改 Keychain、证书或系统 ACL。
 
 ## TypeSafe 官方资料
 
@@ -44,10 +44,18 @@
 | [StatelessHTTPServerTransport](https://github.com/modelcontextprotocol/swift-sdk/blob/0.12.1/Sources/MCP/Base/Transports/HTTPServer/StatelessHTTPServerTransport.swift) | 已读源码：JSON response、无 SSE/session、GET/DELETE 405、notification 202；waiter 以 RPC id 索引，因此文档要求每 HTTP 请求隔离实例 |
 | [MCP Server](https://github.com/modelcontextprotocol/swift-sdk/blob/0.12.1/Sources/MCP/Server/Server.swift) | 独立审阅后补查：Configuration.default 为 strict=false；strict 的初始化状态属于实例。设计明确逐 POST 版本支持校验，不宣称保存跨 POST 协商状态 |
 | [MCP transport specification](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports) | Origin 校验、loopback、认证、Accept、协议头、GET 405 合法；连接断开不等价取消 |
-| [Hummingbird](https://github.com/hummingbird-project/hummingbird) | 已读 README：SwiftNIO HTTP server、loopback 绑定、路由与生命周期；尚未构建 Falcon 适配 |
-| [GRDB](https://github.com/groue/GRDB.swift) | 已读 Package.swift，系统 SQLite、Swift API；尚未确定并锁定与其他依赖兼容的发布版本 |
+| [Hummingbird 2.27.0](https://github.com/hummingbird-project/hummingbird/tree/2.27.0) | 已锁定依赖并编译；Falcon 使用真实 loopback server 测试绑定、路由、正文上限和生命周期 |
+| [GRDB 7.11.1](https://github.com/groue/GRDB.swift/tree/v7.11.1) | 已锁定并与其他依赖共同构建；临时 SQLite 验证事务、留存、统计和并发容量 |
 
-不能把官方 MCP SDK 的 NetworkTransport 当 HTTP server parser，也不能把 HTTPClientTransport 当 server。无状态 MCP 在实际 agent 客户端的初始化、并发、授权 header 设置与每请求实例模式尚需实施期验证。
+不能把官方 MCP SDK 的 NetworkTransport 当 HTTP server parser，也不能把 HTTPClientTransport 当 server。正式 MCP Swift 客户端已通过跨 POST 初始化、list/call、授权 header 与并发相同 RPC id 的集成测试；尚未逐一验证所有第三方 Agent 客户端。
+
+## 后续实现验证
+
+- Swift Package 锁定 Hummingbird 2.27.0、MCP 0.12.1、GRDB 7.11.1；已在 Xcode 27 / Swift 6.4 共同构建。
+- `swift test --enable-code-coverage` 运行 Core 与真实 loopback 集成测试。官方 Python 用例默认跳过，由 `scripts/check-sdk.sh` 单独执行。
+- SDK 检查使用官方 `typesafe-sdk==0.7.1`，连接真实 Falcon HTTP listener 和合成上游，验证三种题型、扩展字段、返回及用量；没有调用生产 Jev。
+- `--preview` 使用隔离数据库和合成历史生成原生界面，已检查浅/深色、Focus、小窗口、空状态、回放和统计页面。
+- Release 构建已验证依赖链接与 bundle 产物；当前构建体积及完整验证边界见 [05](05-delivery.md)。
 
 ## 原生 UI 参考
 
@@ -62,6 +70,6 @@
 
 从 nmem 查到《开发流程：编号文档》（ID `400e2be9-d4a2-4dae-83bb-01ce038567be`）：编号文件名使用小写英文连字符，README 建立入口，列明确切改动位置、原子提交与质量计划，不写工时估算。当前文档树据此初始化。
 
-初始 Falcon 仓库只有 LICENSE，main 工作区干净；没有可继承的 app target、依赖、CI 或既有测试。当前 docs 所写的质量与性能全部是计划，只有本文件明确标为“已执行”的调研探针属于执行证据。
+初始 Falcon 仓库只有 LICENSE，没有可继承的 app target、依赖、CI 或测试。用户随后授权实现；当前实现和执行证据见 [05](05-delivery.md)，尚未测量的性能预算仍是目标。
 
 [目录](README.md) · [返回项目入口](../README.md)

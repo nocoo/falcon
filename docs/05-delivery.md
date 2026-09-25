@@ -1,18 +1,18 @@
 # 05 · 交付与验证
 
-状态：实施计划，不是实施授权。本轮只做文档审阅与提交。
+状态：用户已授权实施，首版已建立原生应用、代理、持久化、来源管理、统计和回放。以下区分当前实现、已运行检查和仍待验证的目标。
 
 ## 分层交付
 
-每层都保留上一层的可运行产品。协议实验放在测试 fixture，不提交一个依赖临时 Python daemon 的过渡应用。具体文件路径是规划，尚不存在。
+每层都保留上一层的可运行产品。协议实验放在测试 fixture，不提交一个依赖临时 Python daemon 的过渡应用。下表对应当前仓库文件，性能与完整质量门禁仍按后文单独验收。
 
-| 层 | 交付内容 | 主要拟新增文件 | 退出条件 / 原子提交 |
+| 层 | 当前实现 | 主要文件 | 状态 |
 | --- | --- | --- | --- |
-| 0 当前 | 产品、架构、协议、视觉、验收、证据与独立审阅 | README、AGENTS、docs | 文档一致、来源可核实、review 无未解决阻断项；`docs: define falcon design` |
-| 1 可用闭环 | 真原生窗口、一个来源/上游的正常管理、HTTP → Jev fixture → SQLite → 列表与详情；并在隔离 fixture 中完成 MCP 架构验证 | `Falcon.xcodeproj`、`Package.swift`、`Sources/Falcon/App/`、`Sources/FalconCore/{DecisionService,JevClient,DecisionStore}.swift`、`Tests/FalconCoreTests/`、`Tests/FalconIntegrationTests/` | 真实 HTTP、持久化和 UI 闭环；标准 MCP 客户端跨 POST 的 initialize → initialized → list/call、同 id 并发隔离、disconnect 清理全部通过，缺一不得进入第 2 层；`feat: add native decision proxy` |
-| 2 完整接入 | 多来源/profile、轮换/撤销、官方 MCP SDK、官方 Python SDK互操作 | `Sources/FalconCore/{SourceStore,CredentialStore,ProxyServer,MCPAdapter}.swift`、`Tests/FalconIntegrationTests/` | 同 id 并发来源隔离、认证、MCP 初始化与三类结果通过；`feat: add source keys and mcp` |
-| 3 完整观察 | 七天清理、来源时间线、宽详情与 Focus review、review、统计、只读历史回放、JSON/CSV 导出 | `Sources/FalconCore/{RetentionPolicy,UsageQueries}.swift`、`Sources/Falcon/Features/{Decisions,Usage,Sources,Connections}/`、`Sources/Falcon/Features/Decisions/ReplayViewModel.swift` | 端到端回看/回放、零出站调用、阶段时点/返回耗时、到期缓存清理及分页/容量边界通过；`feat: add decision review and usage` |
-| 4 完成度 | 统一 token、材质、动效、浅深色、无障碍、性能与正式打包 | `Sources/Falcon/Design/`、`Tests/FalconUITests/`、`scripts/`、`docs/evidence/` | 真实截图和交互审阅、资源预算实测、质量 gate 证据；按独立变更继续原子提交 |
+| 0 设计 | 产品、架构、协议、视觉、回放与独立审阅 | `docs/01` 至 `docs/08` | 两次独立设计审阅 PASS，精确版本见 [07](07-design-review.md) |
+| 1 可用闭环 | 原生窗口、HTTP/MCP → 合成 Jev → SQLite → 列表/详情 | `Sources/Falcon/App/`、`Sources/FalconCore/Proxy/`、`Persistence/DecisionStore.swift` | 已实现；真实 loopback 集成测试覆盖正式 MCP 初始化与调用序列 |
+| 2 完整接入 | 多来源与多上游、来源 key 轮换/撤销、配置快照、官方 SDK 互操作 | `Sources/FalconCore/Configuration/`、`Tests/FalconIntegrationTests/ProxyIntegrationTests.swift`、`scripts/check-sdk.sh` | 已实现；真实 Keychain 与生产 API 仍需独立验证 |
+| 3 完整观察 | 七天清理、宽幅详情、Focus review、统计、review、回放与导出 | `Sources/FalconCore/Presentation/`、`Sources/Falcon/Features/` | 已实现；大数据性能与完整人工旅程仍待验收 |
+| 4 原生完成度 | 统一颜色/字体、细纹理、浅深色、加载、动效与本地打包 | `Sources/Falcon/Design/FalconTheme.swift`、`scripts/build-app.sh`、`project.yml` | 已有合成数据截图与本地 Release 构建；完整 VoiceOver/性能矩阵及签名公证未完成 |
 
 UI 主题、大空间 overview 与输入/问题/结果同时可见从第 1 层生效，第 4 层负责全状态精修；不能先交窄详情或互斥 tab 再整套替换。阶段时间事实从第 1 层记录，第 3 层的历史回放直接读取已留存字段。认证、前置审计写入、体积/并发上限、七天隐藏查询和测试隔离也必须在第一条生产请求之前生效；第 3 层扩展并验证其完整管理体验。
 
@@ -40,17 +40,45 @@ UI 主题、大空间 overview 与输入/问题/结果同时可见从第 1 层�
 
 | 维度 | 目标 | 当前状态 |
 | --- | --- | --- |
-| L1 | UT statements/branches/functions/lines 各 ≥95%；严格类型检查、check-only lint/format 零错误零警告；index snapshot pre-commit 阻断 | planned：无实现、无 hook；Swift/LLVM 的 region 不直接冒充 statement/branch，缺失指标要明确记录并找到可证明测量方案 |
-| L2 | 100% 已拥有 endpoint/method 真实本地 HTTP，MCP 互操作与 SQLite 集成 | planned：本轮只有官方 SDK MockTransport 探针，不算 Falcon L2 |
-| L3 | 原生关键旅程、截图矩阵、键盘/无障碍验证 | planned：没有 App、没有截图执行结果 |
-| G2 | gitleaks + 支持 Package.resolved 的依赖漏洞扫描，工具缺失阻断 | planned：没有锁文件、gate 或扫描执行证据 |
-| D1 | 每次运行独立目录/端口/凭据 namespace，fixture/reset/cleanup 前核验 marker | planned：当前仅合成离线 SDK 探针，无生产数据访问 |
+| L1 | UT statements/branches/functions/lines 各 ≥95%；严格类型检查、check-only lint/format 零错误零警告；index snapshot pre-commit 阻断 | 测试与严格 lint/format 已有执行入口。四项覆盖率未达标；LLVM branch 为 0/0，不作为测量，region 不冒充 statement。没有安装提交 hook，详细审计保存在 nmem |
+| L2 | 100% 所拥有 endpoint/method 真实本地 HTTP，MCP 互操作与 SQLite 集成 | 已有真实 loopback tests、官方 MCP 客户端及 opt-in Python SDK 检查；外部磁盘耗尽/WAL 写入故障、跨进程锁与真实 Keychain 拒绝访问未注入 |
+| L3 | 原生关键旅程、截图矩阵、键盘/无障碍验证 | 已检查浅/深色、Focus、小窗口、空状态、回放和 Usage 合成截图；尚无自动化 UI journey suite、完整 VoiceOver 与真实休眠矩阵 |
+| G2 | gitleaks + 支持 Package.resolved 的依赖漏洞扫描，工具缺失阻断 | Package.resolved 已锁定依赖；没有自动扫描/推送 gate 的通过证据 |
+| D1 | 每次运行独立目录/端口/凭据 namespace，fixture/reset/cleanup 前核验 marker | 存储及传输测试采用每次独立目录、系统分配端口、内存凭据；数据库写入和清理使用 run UUID marker；Preview 同样隔离 |
 
 目标 pre-commit <30 秒，pre-push <3 分钟；这些是预算，不构成跳过检查的理由。UI 纯视图可交 L3，但 ViewModel、认证、统计和保留策略在 UT 范围内。不能为四项 95% 移除难测业务、隐藏告警或排除错误路径。
 
-测试使用系统分配的 loopback 临时端口、独立数据库目录，设置 `_test_marker(env=test, run_id=...)`，cleanup 检查目录归属与 marker。CredentialStore 使用测试内存实现；确需验证 Keychain 时只使用测试 namespace，并单独授权真实系统交互。测试不能读取日常 Falcon 配置或调用上游。
+测试使用系统分配的 loopback 临时端口、独立数据库目录，设置 `_test_marker(run_id=...)`，cleanup 检查目录归属与 marker。CredentialStore 使用测试内存实现；确需验证 Keychain 时只使用测试 namespace，并单独授权真实系统交互。测试不能读取日常 Falcon 配置或调用上游。
 
-当前唯一现成仓库命令是 `git diff --check` 与 `git status --short`；实现后从真实 manifest/scripts 录入构建、测试和 lint 命令，不能在文档先编造可执行脚本。
+当前检查命令：
+
+```sh
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+swift test --enable-code-coverage
+scripts/check-sdk.sh
+swiftlint lint --strict
+xcrun swift-format lint --strict --recursive Sources Tests
+scripts/build-app.sh Release
+git diff --check
+```
+
+完整 Swift 测试与 opt-in Python SDK 需分别记录。后者会覆盖 SwiftPM coverage 输出，统计全量覆盖率前先保存完整测试报告。AppRuntime 位于应用 target，不能将整个 `Sources/Falcon` 宣称为纯 View 的 UT 豁免。
+
+## 本次运行证据
+
+执行日期为 2026-09-25，机器为 Apple M5 Max，macOS 27.0（26A428），Xcode 27 / Swift 6.4，SwiftLint 0.65.1。以下测试与 Release 对应源码版本 `bddbf9b`，使用临时数据库、内存凭据和合成上游。
+
+| 检查 | 实际结果 |
+| --- | --- |
+| 完整 Swift 测试 | Core 34 项、Integration 18 项通过；默认跳过 1 项 opt-in Python SDK 用例。命令退出 0，复用构建缓存共 14.72 秒 |
+| 官方 Python SDK | `typesafe-sdk==0.7.1` 经真实 Falcon loopback 完成 1 项互操作测试，退出 0；含准备与构建共 17.65 秒 |
+| 严格静态检查 | SwiftLint strict 与 swift-format strict 均退出 0，无 lint/format findings；Swift 6 完整并发检查随构建完成 |
+| 原生界面 | Release 合成数据检查浅色、深色、Usage、Focus、回放、小窗口和空状态；7 个 App 捕获进程均退出 0 并生成截图，部分快速退出出现系统 InputMethodKit 诊断，保留在运行日志中 |
+| Release 打包 | arm64 bundle 13,855,472 bytes（13.21 MiB），压缩 ZIP 5,515,997 bytes（5.26 MiB）；47.57 秒构建成功，Xcode 有一条未使用 AppIntents 的 metadata 提示 |
+
+上述 53 项实际通过的测试不等于完整 L1 达标。全量 Swift 套件对 FalconCore 的行覆盖率为 92.12%（3672/3986），函数覆盖率为 88.30%（619/701）；statement 无测量值，branch 输出 0/0 不可用。这是 Core 与 Integration 共同执行的结果，不是单独 UT 四项达标证明。完整审计保存在 nmem `6dq-audit-github.com-nocoo-falcon-l1`。
+
+Release 已核验无 LLVM coverage sections、无打包进入 App 的 lint 配置；SwiftPM 测试继续显式采集覆盖率。体积仅指当前本机 arm64 开发构建，不包含 dSYM，也不是 universal 或已公证的分发包。
 
 ## 小体积与性能验收预算
 
@@ -69,7 +97,7 @@ UI 主题、大空间 overview 与输入/问题/结果同时可见从第 1 层�
 
 测试集应包含短请求、1 MiB 长请求、多题和高选项数。存储预算、7 天量和最大 payload 共同约束可留存量，不能承诺 10 万条每条均为最大请求。超过体积或耗时预算需报告实测差距与原因，由用户评估，不删掉必需安全或审计能力来达标。
 
-## 本轮文档 review 流程
+## 已执行的设计 review 流程
 
 1. 提交完整设计，记录 commit SHA；验证链接、示例 JSON/代码语法、文档一致性。
 2. 启动独立 Codex，只读审阅该 SHA：产品覆盖、协议事实、可行性、认证隔离、七天数据生命周期、UI 可执行性、体积、质量证据。
@@ -77,6 +105,6 @@ UI 主题、大空间 overview 与输入/问题/结果同时可见从第 1 层�
 4. 主控修订并原子提交；将确切新 SHA 送同一 reviewer 复审，直到阻断项清零或诚实报告外部阻碍。
 5. 保存中文审阅记录、审阅范围、发现及处理、最终判定；完成后关闭受控 pane，向用户报告设计结论和仍需选择的产品项。
 
-审阅通过仅表示文档可作为下一阶段依据，不等于应用已构建、性能已达标、用户已授权实现。
+设计审阅通过仅归属于对应文档版本。随后用户明确授权了实施；应用实现、运行验证与性能证据单独记录，不能从文档 PASS 推导。
 
 [下一篇：调研证据](06-research.md) · [目录](README.md)

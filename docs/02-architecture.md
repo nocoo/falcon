@@ -1,6 +1,6 @@
 # 02 · 架构与数据
 
-状态：推荐方案；运行时 SDK 与留存语义待用户确认，见 [01](01-product.md)。
+状态：首版实现架构。运行时使用 Swift HTTP 客户端，七天仅留存，见 [01](01-product.md)。性能预算与待补证据见 [05](05-delivery.md)。
 
 ## 一个应用进程，两个入口，一条决策管线
 
@@ -27,27 +27,27 @@ HTTP 和 MCP 只负责协议映射；业务管线不依赖 SwiftUI。UI 直接�
 
 ## 技术选型及理由
 
-| 层 | 建议 | 理由与边界 |
+| 层 | 实现 | 理由与边界 |
 | --- | --- | --- |
 | UI | SwiftUI、Observation、Swift Charts；必要时 AppKit | 原生窗口、表格、图表和可访问性；MVVM 分离展示与业务 |
-| 上游调用 | Foundation URLSession + Codable | 官方公开 HTTP 接口仅一条推理路径；不内置 Python / Node；官方 SDK作互操作基准 |
-| HTTP server | Hummingbird 2.x | 已检查文档与类型入口，复用成熟 HTTP framing、请求体限制和生命周期；不手写 Network.framework HTTP 解析器 |
+| 上游调用 | Foundation URLSession + 保真 JSON 值 | 官方公开 HTTP 接口仅一条推理路径；数值文本不经浮点往返，不内置 Python / Node；官方 SDK作互操作基准 |
+| HTTP server | Hummingbird 2.27.0 | 已检查文档与类型入口，复用成熟 HTTP framing、请求体限制和生命周期；不手写 Network.framework HTTP 解析器 |
 | MCP | 官方 Swift SDK 0.12.1 的 `StatelessHTTPServerTransport` | 已核实 tag 中存在；JSON 请求响应即可满足 Jev，不需要 SSE 推送和 session 存储 |
-| 持久化 | GRDB + 系统 SQLite，WAL | 事务、查询、迁移和观察机制降低手写 C API 管理成本；不打包第二份数据库引擎 |
+| 持久化 | GRDB 7.11.1 + 系统 SQLite，WAL | 事务与查询降低手写 C API 管理成本；不打包第二份数据库引擎，不提供旧 schema 迁移 |
 | 凭据 | Security.framework / Keychain；CryptoKit 摘要 | 上游密钥只在 Falcon 自有 namespace；内部 key 数据库仅保存 SHA-256 摘要 |
 | 并发 | Swift concurrency、actor、结构化任务 | ViewModel 在 MainActor；网络、数据库、正文解析均不阻塞主线程 |
 | 构建 | Xcode app target + 本地 Swift package | 正常签名与资源打包；SPM pin 依赖，Release 开启优化与 dead stripping |
 
-初始只有三项直接 Swift 包依赖：Hummingbird、MCP、GRDB。传递依赖和最终二进制体积必须实测，不能用“三个包”代替体积证据。UI 不引入 WebView、第三方动画框架、自定义字体或大型纹理包。实现前锁定可共同构建的正式版本，不能依赖浮动 main；本轮未做编译证明。
+初始只有三项直接 Swift 包依赖：Hummingbird、MCP、GRDB。传递依赖和最终二进制体积必须实测，不能用“三个包”代替体积证据。UI 不引入 WebView、第三方动画框架、自定义字体或大型纹理包。正式版本已由 Package.swift 与 Package.resolved 锁定，并完成共同编译；体积测量见 [05](05-delivery.md)。
 
 ## 运行生命周期
 
 - 第一次启动先配置上游与来源；未配置时服务状态为 `Needs setup`，不宣称 ready。
-- 服务绑定建议 `127.0.0.1:19823`，端口可在设置修改；端口未经占用检测，实施时必须检测，冲突显示实际错误，不能静默换端口。首版只支持 IPv4 数字地址，接入配置不使用可能解析到 IPv6 的 localhost。
+- 服务默认绑定 `127.0.0.1:19823`，端口可在设置修改；bind 冲突显示实际错误并支持重试，不静默换端口。首版只支持 IPv4 数字地址，接入配置不使用可能解析到 IPv6 的 localhost。
 - 窗口关闭后主进程和 MenuBarExtra 保持运行；Dock / 菜单栏可重新打开同一主窗口。Quit 明确停止服务。登录启动可选、默认关闭。
 - Pause 停止接收新的推理请求，返回 503；已有任务在原截止时间内完成。Quit 最多等待 5 秒，再取消本地任务并记为 interrupted / unknown；取消不保证上游未计费。
 - 睡眠、断网、凭据不可用、端口冲突和磁盘错误分别展示，不合并成“Offline”。睡醒后先做留存清理，再重新接收推理。
-- 启动先恢复数据库、清理过期记录；把未完成记录标成 interrupted，不自动重试。禁止两个进程同时服务同一数据库；启动第二实例只激活已有窗口。
+- 启动先恢复数据库、清理过期记录；把未完成记录标成 interrupted，不自动重试。禁止两个进程同时服务同一数据库；通常由 LaunchServices 复用已打开应用，强制启动第二进程时显示冲突并拒绝服务。
 
 ## 请求生命周期与一致性
 
@@ -56,7 +56,7 @@ HTTP 和 MCP 只负责协议映射；业务管线不依赖 SwiftUI。UI 直接�
 3. 在全局存储 admission actor 中原子预留本次完整审计空间，再事务写入 received/effective request 与 `accepted` 记录。预留或事务失败则返回本地 507，不发送上游。
 4. 标记 `in_flight`，通过唯一 JevClient 发出一次调用。全程最多 30 秒，不自动 retry。
 5. 接收并校验响应，单事务写入终态、response、题目投影与 usage，再将结果返回调用方。
-6. 通过数据库观察驱动 UI；列表只读取摘要，选中后读取正文。列表更新最多每 250 ms 合并一次，不延迟协议响应。
+6. 前台 ViewModel 每秒刷新列表摘要，选中后读取正文；后台暂停展示和回放，服务继续运行。刷新不延迟协议响应；阅读旧记录时保留位置并提示新到达。
 
 终态分为 `succeeded`、`rejected`、`upstream_error`、`transport_error`、`timed_out`、`cancelled`、`interrupted`、`invalid_response`。`accepted/in_flight` 是非终态；本地校验拒绝不算上游失败。鉴权成功但 JSON 无效的请求保留有界原文及拒绝原因；未鉴权流量只做有界诊断计数，不保存正文，也不归属任意来源。
 
@@ -104,7 +104,7 @@ body_received_ms 随 received/effective request 的 accepted 事务落盘，后�
 - `new_reservation` 包含两份请求体、最大 4 MiB response、由已验证题目数量/字段长度算出的投影与索引上界、SQLite 页对齐/分裂余量，以及这些页写入 DB 和 WAL 的双份增长预算。计算公式与最大合法输入压力 fixture 同时实现并验证，不把 JSON 字节数直接当磁盘增长。无法证明本次上界就拒绝，不先转发。请求完成/失败/取消后，在落盘结束并重新采样文件大小时释放预留；按 request ID 只释放一次。已消耗部分继续计入预留会保守降低可用量，但不得过早释放正在提交的空间。
 - 达到预算先清理过期记录、checkpoint，并用建库时启用的 incremental auto-vacuum 逐批回收空闲页；仍不足返回 507，不提前删未满 7 天的数据，不静默只留摘要。存储不足时拒绝计数只放有界内存，不继续写满数据库。UI 显示容量与拒绝状态。外部进程耗尽磁盘仍可能导致已预留写入失败，按前述审计故障路径处理，预留不等于操作系统磁盘保证。
 - HTTP 请求体上限 1 MiB，上游响应上限 4 MiB；最多 8 个全局、每来源 2 个推理在途；超限立即拒绝，不设置无限队列。全部是 Falcon 本地保护值，不冒充 TypeSafe 限额。
-- 系统时钟跳变会影响墙钟留存；耗时一律使用单调时钟。前跳不恢复已删除数据；后跳可能推迟物理到期，UI 的时间范围以当前 UTC 计算并显示检测到的时钟变化。
+- 系统时钟跳变会影响墙钟留存；耗时一律使用单调时钟。前跳不恢复已删除数据；后跳可能推迟物理到期，UI 的时间范围以当前 UTC 计算。当前没有系统时钟跳变提示。
 
 手动清空停止接收、等待在途排空或取消后，在事务中删除历史与 review、清空 UI 缓存并 checkpoint；结束后恢复服务。不能在删除后让迟到回调把旧记录重新写回。用户导出的文件不受自动七天清理管理，导出时明确这一点。
 
@@ -124,6 +124,6 @@ body_received_ms 随 received/effective request 的 accepted 事务落盘，后�
 | 决策分布 | 只对同题型、同 instructions/criteria 内容指纹的题分组，避免同名 question ID 语义混淆 |
 | 金额 | 首版不显示伪精确费用；官方账单未接入，只展示 token。后续有明确费率与版本才做“估算” |
 
-时间序列按 UTC 固定桶计算、本地格式化，夏令时重复小时附 UTC offset。无样本显示破折号，缺失 usage 不补零。手动清空会同步影响所有统计。
+时间序列按 UTC 固定桶计算、本地格式化，界面标注显示时区；夏令时重复小时的完整视觉矩阵仍待验证。无样本显示破折号，缺失 usage 不补零。手动清空会同步影响所有统计。
 
 [下一篇：协议](03-protocol.md) · [目录](README.md)
