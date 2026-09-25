@@ -6,7 +6,7 @@ import Testing
 
 @testable import FalconCore
 
-private struct ProxyFixture: Sendable {
+struct ProxyFixture: Sendable {
     let store: DecisionStore
     let configuration: ConfigurationManager
     let service: DecisionService
@@ -18,9 +18,13 @@ private struct ProxyFixture: Sendable {
     var base: URL { URL(string: "http://127.0.0.1:\(port)")! }
 }
 
-private actor UpstreamCalls {
+actor UpstreamCalls {
     private(set) var count = 0
-    func next() { count += 1 }
+    private(set) var bodies: [Data] = []
+    func next(_ body: Data) {
+        count += 1
+        bodies.append(body)
+    }
 }
 
 private actor BoundPort {
@@ -50,7 +54,7 @@ private struct SyntheticUpstream: Sendable {
     let calls: UpstreamCalls
 
     func reply(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-        await calls.next()
+        await calls.next(request.httpBody ?? Data())
         if ignoreCancellation {
             let hold = Task.detached { try await Task.sleep(for: upstreamDelay) }
             try await hold.value
@@ -83,6 +87,7 @@ private struct SyntheticUpstream: Sendable {
         let body = try JSONValue.object([
             "model": .string("jev-synthetic"), "answers": .object(answers),
             "usage": .object(["input_tokens": .number(10), "output_tokens": .number(2)]),
+            "echo": root["state"] ?? .null,
         ]).data()
         return (
             body,
@@ -121,7 +126,7 @@ private struct SyntheticUpstream: Sendable {
     }
 }
 
-private func withFixture(
+func withFixture(
     upstreamDelay: Duration = .milliseconds(40), ignoreCancellation: Bool = false, deadline: Duration = .seconds(30),
     oversizedResponse: Bool = false, upstreamStatus: Int = 200, budgetBytes: Int64 = FalconLimits.storageBytes,
     _ work: (ProxyFixture) async throws -> Void
@@ -154,13 +159,13 @@ private func withFixture(
     if let workError { throw workError }
 }
 
-private struct LoopbackReply: Sendable {
+struct LoopbackReply: Sendable {
     let status: Int
     let body: Data
     let response: HTTPURLResponse
 }
 
-private func send(
+func send(
     _ fixture: ProxyFixture, path: String, method: String = "POST", body: Data? = nil, token: String?,
     headers: [String: String] = [:]
 ) async throws -> LoopbackReply {

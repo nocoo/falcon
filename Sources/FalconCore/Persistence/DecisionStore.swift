@@ -713,7 +713,7 @@ public actor DecisionStore {
             var semantics: [String: JSONValue] = ["type": .string(type)]
             if let instructions = definition["instructions"] { semantics["instructions"] = instructions }
             if let criteria = definition["criteria"] { semantics["criteria"] = criteria }
-            let fingerprint = Data(SHA256.hash(data: try JSONValue.object(semantics).data()))
+            let fingerprint = Data(SHA256.hash(data: try JSONValue.object(semantics).data(canonicalNumbers: true)))
             return QuestionProjection(
                 id: id, type: type, fingerprint: fingerprint, result: selected,
                 confidence: answer?["confidence"]?.numberValue, topProbability: probabilities.first,

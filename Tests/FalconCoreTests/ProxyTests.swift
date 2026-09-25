@@ -86,6 +86,27 @@ import Testing
     }
 }
 
+@Test func jevUsageRetainsExactIntegerCounts() throws {
+    let request = try JevRequest(
+        .object([
+            "state": .string("synthetic"), "model": .string("jev-latest"),
+            "questions": .object(["n": .object(["type": .string("noul"), "instructions": .string("decide")])]),
+        ]))
+    let counts: [(String, Int?)] = [
+        ("9007199254740993", 9_007_199_254_740_993), ("9223372036854775807", Int.max), ("9223372036854775808", nil),
+        ("9007199254740993.1", nil), ("42.00", 42), ("42e0", 42),
+    ]
+    for (literal, expected) in counts {
+        let raw = """
+            {"model":"jev-latest","answers":{"n":{"type":"noul","noul":0.5}},
+            "usage":{"input_tokens":\(literal),"output_tokens":\(literal)}}
+            """
+        let response = try JevResponse(JSONValue.decode(Data(raw.utf8)), request: request)
+        #expect(response.inputTokens == expected)
+        #expect(response.outputTokens == expected)
+    }
+}
+
 @Test func jevClientForwardsOnlyFixedHeadersOnce() async throws {
     let calls = RequestCounter()
     let endpoint = URL(string: "https://fixture.invalid/v1/systemone")!

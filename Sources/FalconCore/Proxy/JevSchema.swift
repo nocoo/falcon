@@ -117,8 +117,8 @@ public struct JevResponse: Sendable {
     }
 
     private static func tokenCount(_ value: JSONValue?) -> Int? {
-        guard let number = value?.numberValue, number.isFinite, number >= 0 else { return nil }
-        return Int(exactly: number)
+        guard let number = value?.integerValue, number >= 0 else { return nil }
+        return number
     }
 
     private static func invalid() -> FalconError {

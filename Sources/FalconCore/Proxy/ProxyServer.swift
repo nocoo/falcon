@@ -142,19 +142,22 @@ public actor ProxyServer {
         let transport = StatelessHTTPServerTransport()
         let server = Server(name: "Falcon", version: "1", capabilities: .init(tools: .init()), configuration: .default)
         let delivery = MCPDelivery()
+        let envelope = try? MCPEnvelope(body)
         await server.withMethodHandler(ListTools.self) { _ in try ListTools.Result(tools: [JevMCPTool.tool()]) }
         await server.withMethodHandler(CallTool.self) { params in
-            guard params.name == "jev_decide", let arguments = params.arguments else {
+            guard params.name == "jev_decide", let argumentData = envelope?.arguments else {
                 throw MCPError.invalidParams("Unknown tool or missing arguments")
             }
-            let argumentData = try JSONEncoder().encode(Value.object(arguments))
             let reply = await self.service.submit(
                 token: token, body: argumentData, receivedRequest: body, transport: .mcp,
                 metadata: Self.metadata(request.headers), receivedAt: receivedAt, receivedInstant: started)
-            if let id = reply.requestID, let instant = reply.receivedInstant {
-                await delivery.set(id: id, instant: instant)
+            let payload = Self.toolPayload(reply)
+            await delivery.set(reply: reply, payload: payload)
+            guard let text = String(data: try payload.data(), encoding: .utf8) else {
+                throw MCPError.internalError("Could not encode tool response")
             }
-            return try Self.toolResult(reply)
+            return CallTool.Result(
+                content: [.text(text: text, annotations: nil, _meta: nil)], isError: reply.status >= 400)
         }
         do { try await server.start(transport: transport) } catch { return Self.failure(500, "mcp_unavailable") }
         let timeout = Task {
@@ -165,27 +168,29 @@ public actor ProxyServer {
         headers["MCP-Protocol-Version"] = version
         if let origin = request.headers[.origin] { headers["Origin"] = origin }
         let result = await transport.handleRequest(
-            MCP.HTTPRequest(method: "POST", headers: headers, body: body, path: "/mcp"))
+            MCP.HTTPRequest(method: "POST", headers: headers, body: envelope?.request ?? body, path: "/mcp"))
         timeout.cancel()
         await server.stop()
         await transport.disconnect()
         var responseHeaders = result.headers
         responseHeaders.removeValue(forKey: "Mcp-Session-Id")
         let record = await delivery.value()
+        let responseBody: Data
+        do { responseBody = try await delivery.responseBody(result.bodyData ?? Data()) } catch {
+            return Self.failure(500, "mcp_encoding_failed")
+        }
         return Self.response(
-            result.statusCode, body: result.bodyData ?? Data(), headers: responseHeaders, delivery: record,
-            service: service)
+            result.statusCode, body: responseBody, headers: responseHeaders, delivery: record, service: service)
     }
 
-    private static func toolResult(_ reply: ProxyReply) throws -> CallTool.Result {
-        let result: JSONValue
+    private static func toolPayload(_ reply: ProxyReply) -> JSONValue {
         if reply.status >= 400 {
             let origin = reply.error == nil ? "upstream" : "falcon"
             let error =
                 reply.error
                 ?? FalconError(
                     "upstream_http_\(reply.status)", "Upstream returned HTTP \(reply.status)", status: reply.status)
-            result = .object([
+            return .object([
                 "request_id": .string(reply.requestID?.uuidString ?? ""),
                 "error": .object([
                     "origin": .string(origin), "code": .string(error.code), "message": .string(error.message),
@@ -193,17 +198,11 @@ public actor ProxyServer {
                 ]),
             ])
         } else {
-            result = .object([
+            return .object([
                 "request_id": .string(reply.requestID?.uuidString ?? ""),
                 "response": (try? JSONValue.decode(reply.body)) ?? .null,
             ])
         }
-        guard let text = String(data: try result.data(), encoding: .utf8) else {
-            throw FalconError("invalid_response", "MCP result is not UTF-8", status: 502)
-        }
-        return try CallTool.Result(
-            content: [.text(text: text, annotations: nil, _meta: nil)], structuredContent: Value(result),
-            isError: reply.status >= 400)
     }
 
     private static func metadata(_ headers: HTTPFields) -> [String: String] {
@@ -285,17 +284,12 @@ extension ProxyServer {
 
 }
 
-private actor MCPDelivery {
-    private var record: (UUID, ContinuousClock.Instant)?
-    func set(id: UUID, instant: ContinuousClock.Instant) { record = (id, instant) }
-    func value() -> (UUID, ContinuousClock.Instant)? { record }
-}
-
 enum JevMCPTool {
     static func tool() throws -> Tool {
         Tool(
             name: "jev_decide", description: "Ask Jev for a typed decision. Model output is not execution permission.",
-            inputSchema: try Value(inputSchema()), outputSchema: try Value(outputSchema()))
+            inputSchema: try JSONDecoder().decode(Value.self, from: inputSchema().data()),
+            outputSchema: try JSONDecoder().decode(Value.self, from: outputSchema().data()))
     }
 
     private static func inputSchema() -> JSONValue {
