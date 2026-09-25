@@ -47,14 +47,14 @@ struct RequestListView: View {
                         }
                     }.scrollTargetLayout().padding(.horizontal, FalconTheme.Space.tight).padding(
                         .bottom, FalconTheme.Space.tight)
-                }.scrollPosition(id: $scrollPosition, anchor: .top).focusable().focused($focusedRegion, equals: .list)
-                    .onScrollGeometryChange(for: Bool.self) { geometry in
-                        geometry.contentOffset.y + geometry.contentInsets.top <= 0
-                    } action: { _, atTop in
-                        isAtTop = atTop
-                    }.onKeyPress(.upArrow) { navigate(forward: false) }.onKeyPress(.downArrow) {
-                        navigate(forward: true)
-                    }.onChange(of: model.selectedID) { _, id in if let id { proxy.scrollTo(id) } }.onChange(
+                }.scrollPosition(id: $scrollPosition, anchor: .top).focusable().focusEffectDisabled().focused(
+                    $focusedRegion, equals: .list
+                ).onScrollGeometryChange(for: Bool.self) { geometry in
+                    geometry.contentOffset.y + geometry.contentInsets.top <= 0
+                } action: { _, atTop in
+                    isAtTop = atTop
+                }.onKeyPress(.upArrow) { navigate(forward: false) }.onKeyPress(.downArrow) { navigate(forward: true) }
+                    .onChange(of: model.selectedID) { _, id in if let id { proxy.scrollTo(id) } }.onChange(
                         of: model.requests.first?.id
                     ) { _, current in if isAtTop, current != nil { proxy.scrollTo("activity-top", anchor: .top) } }
                     .onChange(of: model.newArrivalCount) { previous, current in
