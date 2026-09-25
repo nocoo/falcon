@@ -65,6 +65,27 @@ import Testing
     }
 }
 
+@Test func jevUsageTokenCountsRejectUnrepresentableNumbers() throws {
+    let request = try JevRequest(
+        .object([
+            "state": .string("synthetic"), "model": .string("jev-latest"),
+            "questions": .object(["n": .object(["type": .string("noul"), "instructions": .string("decide")])]),
+        ]))
+    let counts: [(Double, Int?)] = [
+        (Double(Int.max), nil), (.greatestFiniteMagnitude, nil), (-1, nil), (1.5, nil), (42, 42),
+    ]
+    for (number, expected) in counts {
+        let response = try JevResponse(
+            .object([
+                "model": .string("jev-latest"),
+                "answers": .object(["n": .object(["type": .string("noul"), "noul": .number(0.5)])]),
+                "usage": .object(["input_tokens": .number(number), "output_tokens": .number(number)]),
+            ]), request: request)
+        #expect(response.inputTokens == expected)
+        #expect(response.outputTokens == expected)
+    }
+}
+
 @Test func jevClientForwardsOnlyFixedHeadersOnce() async throws {
     let calls = RequestCounter()
     let endpoint = URL(string: "https://fixture.invalid/v1/systemone")!

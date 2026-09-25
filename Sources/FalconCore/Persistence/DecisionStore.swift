@@ -779,8 +779,8 @@ private struct RequestUsageAccumulator {
         result.requests += 1
         result.questions += summary.questionCount
         if summary.status.isTerminal { addTerminal(summary) }
-        result.inputTokens += summary.inputTokens ?? 0
-        result.outputTokens += summary.outputTokens ?? 0
+        result.inputTokens = TokenCount.adding(result.inputTokens, summary.inputTokens ?? 0)
+        result.outputTokens = TokenCount.adding(result.outputTokens, summary.outputTokens ?? 0)
         if summary.inputTokens == nil || summary.outputTokens == nil { result.unknownUsage += 1 }
         let date = Date(
             timeIntervalSince1970: floor(summary.receivedAt.timeIntervalSince1970 / result.bucketSeconds)
@@ -788,14 +788,14 @@ private struct RequestUsageAccumulator {
         var bucket = buckets[date] ?? UsageBucket(date: date, requests: 0, failures: 0)
         bucket.requests += 1
         if summary.status.isFailure { bucket.failures += 1 }
-        bucket.inputTokens += summary.inputTokens ?? 0
-        bucket.outputTokens += summary.outputTokens ?? 0
+        bucket.inputTokens = TokenCount.adding(bucket.inputTokens, summary.inputTokens ?? 0)
+        bucket.outputTokens = TokenCount.adding(bucket.outputTokens, summary.outputTokens ?? 0)
         buckets[date] = bucket
         var source =
             sources[summary.sourceID] ?? SourceUsage(id: summary.sourceID, name: summary.sourceName, requests: 0)
         source.requests += 1
-        source.inputTokens += summary.inputTokens ?? 0
-        source.outputTokens += summary.outputTokens ?? 0
+        source.inputTokens = TokenCount.adding(source.inputTokens, summary.inputTokens ?? 0)
+        source.outputTokens = TokenCount.adding(source.outputTokens, summary.outputTokens ?? 0)
         source.lastReceivedAt = max(source.lastReceivedAt ?? summary.receivedAt, summary.receivedAt)
         sources[summary.sourceID] = source
         models[summary.resolvedModel ?? summary.requestedModel, default: 0] += 1

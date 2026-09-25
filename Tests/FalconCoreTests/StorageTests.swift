@@ -77,6 +77,33 @@ private func persist(_ detail: RequestDetail, in store: DecisionStore) async thr
     try await store.release(requestID: detail.id)
 }
 
+@Test func storageUsagePreservesUnrepresentableTokenTotals() async throws {
+    let fixture = try StorageFixture()
+    let sourceID = UUID()
+    let receivedAt = Date()
+    for input in [Int.max - 1, 1] {
+        var detail = sampleDetail(receivedAt: receivedAt, status: .succeeded, sourceID: sourceID)
+        detail.summary.inputTokens = input
+        detail.summary.outputTokens = 1
+        try await persist(detail, in: fixture.store)
+    }
+    let combined = try await fixture.store.usage()
+    #expect(combined.inputTokens == Int.max && combined.outputTokens == 2)
+    #expect(combined.totalTokens == nil)
+    #expect(combined.sources.first?.totalTokens == nil)
+    var extra = sampleDetail(receivedAt: receivedAt, status: .succeeded, sourceID: sourceID)
+    extra.summary.inputTokens = 1
+    extra.summary.outputTokens = 1
+    try await persist(extra, in: fixture.store)
+    let overflowed = try await fixture.store.usage()
+    #expect(overflowed.requests == 3 && overflowed.unknownUsage == 0)
+    #expect(overflowed.inputTokens == nil && overflowed.outputTokens == 3)
+    #expect(overflowed.sources.first?.inputTokens == nil && overflowed.sources.first?.outputTokens == 3)
+    #expect(overflowed.buckets.first?.inputTokens == nil && overflowed.buckets.first?.outputTokens == 3)
+    #expect(try await fixture.store.detail(id: extra.id)?.summary.inputTokens == 1)
+    try await fixture.finish()
+}
+
 @Test func storageRetentionAndLateCallbacks() async throws {
     let fixture = try StorageFixture()
     let store = fixture.store
@@ -373,8 +400,9 @@ private func persist(_ detail: RequestDetail, in store: DecisionStore) async thr
     #expect(usage.bucketSeconds == 300 && usage.buckets.count == 12)
     #expect(usage.buckets.map(\.requests).reduce(0, +) == 3)
     #expect(usage.buckets.map(\.failures).reduce(0, +) == 1)
-    #expect(usage.buckets.map(\.inputTokens).reduce(0, +) == 10)
-    #expect(usage.buckets.map(\.outputTokens).reduce(0, +) == 10)
+    #expect(usage.buckets.allSatisfy { $0.inputTokens != nil && $0.outputTokens != nil })
+    #expect(usage.buckets.compactMap(\.inputTokens).reduce(0, +) == 10)
+    #expect(usage.buckets.compactMap(\.outputTokens).reduce(0, +) == 10)
     #expect(usage.buckets.filter { $0.requests == 0 }.count == 9)
     let hourly = try await store.usage(filter: DecisionFilter(since: since.addingTimeInterval(-3_600), until: until))
     #expect(hourly.bucketSeconds == 3_600 && hourly.buckets.count == 2)
