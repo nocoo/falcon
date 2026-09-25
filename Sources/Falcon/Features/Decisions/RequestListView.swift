@@ -88,9 +88,7 @@ struct RequestListView: View {
             }
             if !model.sourceFilters.isEmpty || model.hasEvidenceFilter {
                 HStack {
-                    Pill(
-                        text: model.sourceFilters.isEmpty ? "Selected evidence" : "\(model.sourceFilters.count) sources"
-                    )
+                    Pill(text: sourceFilterTitle).lineLimit(1).help(sourceFilterTitle)
                     Spacer()
                     Button {
                         model.sourceFilters = []
@@ -150,6 +148,15 @@ struct RequestListView: View {
                 }
             }.padding(FalconTheme.Space.sheet).frame(width: 420)
         }
+    }
+
+    private var sourceFilterTitle: String {
+        if model.sourceFilters.count == 1,
+            let source = model.sources.first(where: { model.sourceFilters.contains($0.id) })
+        {
+            return source.name
+        }
+        return model.sourceFilters.isEmpty ? "Selected evidence" : "\(model.sourceFilters.count) sources"
     }
 }
 

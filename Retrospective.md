@@ -4,6 +4,12 @@
 
 稳定项目约束维护在 [AGENTS.md](AGENTS.md)，架构与设计维护在 [docs](docs/README.md)。
 
+## 2026-09-25: Connection checks hid subsequent sources
+
+- The owner reported that live agent decisions were absent from the interface after connection setup. Read-only inspection confirmed successful requests in the active app's history. A regression reproduced a visibility defect: the connection check left the workspace filtered to its archived temporary source, so later agent requests remained hidden.
+- Connection checks now select their recorded result while keeping all sources visible. A single active source filter displays its name. The regression inserts a subsequent request from another source and verifies that it appears without changing the selected check.
+- Stored API evidence and visible UI evidence are separate checks. Validate the post-setup arrival flow as well as the connection check itself.
+
 ## 2026-09-25：独立审阅的启动与布局检查
 
 - **经过**：第一次独立 Codex 审阅进程启动成功，但实际推理返回 `service_tier is not supported`，没有产生审阅结论。设置审阅 pane 时，按外层布局推断 resize 的作用范围，短暂把主控列调得过窄，随后恢复为左侧三分之一。

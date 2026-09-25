@@ -328,7 +328,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
             archived.archived = true
             try await configuration.saveSource(archived)
             clearEvidenceFilters()
-            sourceFilters = [issued.source.id]
+            sourceFilters = []
             statusFilter = nil
             reviewFilter = nil
             search = ""
