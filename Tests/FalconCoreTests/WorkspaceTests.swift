@@ -263,8 +263,12 @@ private struct WorkspaceFixture {
     let profile = try await configuration.saveProfile(
         UpstreamProfile(name: "Synthetic", baseURL: "https://synthetic.example.test"), apiKey: "synthetic-upstream")
     let response = Data(
-        #"{"model":"jev-fixture","answers":{"input_kind":{"type":"choice","choice":"synthetic","probabilities":{"synthetic":0.99,"real":0.01},"confidence":0.92}},"usage":{"input_tokens":4,"output_tokens":2}}"#
-            .utf8)
+        #"""
+        {"model":"jev-fixture","answers":{
+          "input_kind":{"type":"choice","choice":"synthetic",
+            "probabilities":{"synthetic":0.99,"real":0.01},"confidence":0.92}
+        },"usage":{"input_tokens":4,"output_tokens":2}}
+        """#.utf8)
     let client = JevClient { request in
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer synthetic-upstream")
         let input = try JSONValue.decode(#require(request.httpBody))

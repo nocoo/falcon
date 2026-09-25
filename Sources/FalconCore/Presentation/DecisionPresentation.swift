@@ -87,9 +87,10 @@ public enum DecisionFormat {
             let safe = formula || ["\t", "\r", "\n"].contains { value.hasPrefix($0) } ? "'" + value : value
             return "\"" + safe.replacingOccurrences(of: "\"", with: "\"\"") + "\""
         }
-        var lines = [
-            "request_id,received_at,source,transport,status,model,questions,processing_ms,return_ms,input_tokens,output_tokens,review"
-        ]
+        let header =
+            "request_id,received_at,source,transport,status,model,questions,"
+            + "processing_ms,return_ms,input_tokens,output_tokens,review"
+        var lines = [header]
         lines += records.map { record in
             [
                 record.id.uuidString, record.receivedAt.ISO8601Format(), record.sourceName, record.transport.rawValue,

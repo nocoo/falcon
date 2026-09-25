@@ -141,28 +141,7 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
             keys = currentKeys
             storageBytes = bytes
             if let snapshot { usage = snapshot }
-            let loadedIDs = Set(requests.map(\.id))
-            let arrivals = fetched.filter {
-                !loadedIDs.contains($0.id) && $0.receivedAt >= (requests.first?.receivedAt ?? .distantFuture)
-            }
-            let holdPosition = !reset && !requests.isEmpty && (timeline != nil || selectedID != requests.first?.id)
-            if holdPosition && !arrivals.isEmpty {
-                newArrivalCount = arrivals.count
-                let updates = Dictionary(uniqueKeysWithValues: fetched.map { ($0.id, $0) })
-                requests = requests.map { updates[$0.id] ?? $0 }
-            } else if reset || requests.count <= 100 {
-                newArrivalCount = 0
-                requests = fetched
-                hasMore = fetched.count == 100
-            } else {
-                let newIDs = Set(fetched.map(\.id))
-                requests =
-                    fetched
-                    + requests.filter {
-                        !newIDs.contains($0.id) && $0.expiresAt > Date()
-                            && $0.receivedAt >= (query.since ?? .distantPast)
-                    }
-            }
+            mergeRequests(fetched, query: query, reset: reset)
             if selectedID == nil, let first = requests.first {
                 await select(first.id)
             } else if reset, let selectedID, !requests.contains(where: { $0.id == selectedID }) {
@@ -174,6 +153,30 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
                 await loadDetail(detail.id)
             }
         } catch { if revision == refreshRevision { errorMessage = error.localizedDescription } }
+    }
+
+    private func mergeRequests(_ fetched: [RequestSummary], query: DecisionFilter, reset: Bool) {
+        let loadedIDs = Set(requests.map(\.id))
+        let arrivals = fetched.filter {
+            !loadedIDs.contains($0.id) && $0.receivedAt >= (requests.first?.receivedAt ?? .distantFuture)
+        }
+        let holdPosition = !reset && !requests.isEmpty && (timeline != nil || selectedID != requests.first?.id)
+        if holdPosition && !arrivals.isEmpty {
+            newArrivalCount = arrivals.count
+            let updates = Dictionary(uniqueKeysWithValues: fetched.map { ($0.id, $0) })
+            requests = requests.map { updates[$0.id] ?? $0 }
+        } else if reset || requests.count <= 100 {
+            newArrivalCount = 0
+            requests = fetched
+            hasMore = fetched.count == 100
+        } else {
+            let newIDs = Set(fetched.map(\.id))
+            requests =
+                fetched
+                + requests.filter {
+                    !newIDs.contains($0.id) && $0.expiresAt > Date() && $0.receivedAt >= (query.since ?? .distantPast)
+                }
+        }
     }
 
     public func loadMore() async {
@@ -307,17 +310,16 @@ public enum WorkspacePage: String, CaseIterable, Sendable {
                 throw FalconError("profile_missing", "The connection is no longer available.")
             }
             let issued = try await configuration.createSource(name: "Falcon connection check", profileID: profileID)
+            let question: JSONValue = .object([
+                "type": .string("choice"), "instructions": .string("Classify this fixed input."),
+                "criteria": .object([
+                    "synthetic": .string("An explicitly synthetic check."), "real": .string("A real task."),
+                ]),
+            ])
             let input = try JSONValue.object([
                 "model": .string(profile.defaultModel),
                 "state": .object(["purpose": .string("Synthetic connection check"), "synthetic": .bool(true)]),
-                "questions": .object([
-                    "input_kind": .object([
-                        "type": .string("choice"), "instructions": .string("Classify this fixed input."),
-                        "criteria": .object([
-                            "synthetic": .string("An explicitly synthetic check."), "real": .string("A real task."),
-                        ]),
-                    ])
-                ]),
+                "questions": .object(["input_kind": question]),
             ]).data()
             let reply = await service.submit(
                 token: issued.token, body: input, transport: .app, metadata: ["intent": "connection_check"])

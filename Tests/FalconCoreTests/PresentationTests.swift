@@ -30,11 +30,19 @@ private func sampleRecord() -> RequestSummary {
 
 @Test func presentationNeverThresholdsNoulOrInventsConfidence() throws {
     let request = Data(
-        #"{"state":{"task":"Review"},"questions":{"risk":{"type":"noul","instructions":["Is this risky?"]},"mode":{"type":"choice","instructions":"Choose","criteria":{"local":null,"delegate":"Independent"}}}}"#
-            .utf8)
+        #"""
+        {"state":{"task":"Review"},"questions":{
+          "risk":{"type":"noul","instructions":["Is this risky?"]},
+          "mode":{"type":"choice","instructions":"Choose","criteria":{"local":null,"delegate":"Independent"}}
+        }}
+        """#.utf8)
     let response = Data(
-        #"{"answers":{"risk":{"type":"noul","noul":0.6},"mode":{"type":"choice","choice":"local","probabilities":{"local":0.8,"delegate":0.2},"confidence":0.5}}}"#
-            .utf8)
+        #"""
+        {"answers":{
+          "risk":{"type":"noul","noul":0.6},
+          "mode":{"type":"choice","choice":"local","probabilities":{"local":0.8,"delegate":0.2},"confidence":0.5}
+        }}
+        """#.utf8)
     let detail = RequestDetail(summary: sampleRecord(), effectiveRequest: request, upstreamResponse: response)
     let presentation = DecisionPresentation(detail: detail)
     let risk = try #require(presentation.questions.first { $0.id == "risk" })
@@ -57,11 +65,19 @@ private func sampleRecord() -> RequestSummary {
 
 @Test func scorePresentationPreservesOrdinalLevelsAndExtensions() throws {
     let request = Data(
-        #"{"define":{"extra":"preserved"},"state":"fixture","questions":{"rank":{"type":"score","instructions":["Rate","risk"],"criteria":["low","medium","high"]},"yes":{"type":"noul","instructions":"Safe?"}}}"#
-            .utf8)
+        #"""
+        {"define":{"extra":"preserved"},"state":"fixture","questions":{
+          "rank":{"type":"score","instructions":["Rate","risk"],"criteria":["low","medium","high"]},
+          "yes":{"type":"noul","instructions":"Safe?"}
+        }}
+        """#.utf8)
     let response = Data(
-        #"{"answers":{"rank":{"type":"score","score":1.7,"confidence":0.4,"probabilities":{"0":0.1,"1":0.1,"2":0.8}},"yes":{"type":"noul","noul":0.2,"confidence":0.8,"choice":"yes"}}}"#
-            .utf8)
+        #"""
+        {"answers":{
+          "rank":{"type":"score","score":1.7,"confidence":0.4,"probabilities":{"0":0.1,"1":0.1,"2":0.8}},
+          "yes":{"type":"noul","noul":0.2,"confidence":0.8,"choice":"yes"}
+        }}
+        """#.utf8)
     var detail = RequestDetail(
         summary: sampleRecord(), receivedRequest: request, effectiveRequest: request, upstreamResponse: response)
     let display = DecisionPresentation(detail: detail)

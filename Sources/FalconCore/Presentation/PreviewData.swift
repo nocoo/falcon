@@ -32,7 +32,7 @@ public enum PreviewData {
                   "questions": {
                     "execution_mode": {
                       "type": "choice",
-                      "instructions": "Choose the most effective way to complete this task, given the scope and available evidence.",
+                      "instructions": "Choose how to complete this task, given the scope and available evidence.",
                       "criteria": {
                         "local": "One bounded task with enough context to complete directly.",
                         "delegate": "Independent subtasks would benefit from parallel investigation.",
@@ -51,7 +51,10 @@ public enum PreviewData {
                     "needs_review": {
                       "type": "noul",
                       "instructions": "Does this change require additional human review?",
-                      "criteria": {"true": "Material uncertainty remains.", "false": "The scope and evidence are sufficient."}
+                      "criteria": {
+                        "true": "Material uncertainty remains.",
+                        "false": "The scope and evidence are sufficient."
+                      }
                     }
                   }
                 }
@@ -60,8 +63,14 @@ public enum PreviewData {
             Data(
                 #"""
                 {"model":"jev-1.13.0","answers":{
-                  "execution_mode":{"type":"choice","choice":"local","probabilities":{"local":0.86,"delegate":0.11,"ask_user":0.03},"confidence":0.72},
-                  "next_step":{"type":"choice","choice":"proceed","probabilities":{"proceed":0.78,"inspect_first":0.18,"simplify":0.04},"confidence":0.59},
+                  "execution_mode":{
+                    "type":"choice","choice":"local",
+                    "probabilities":{"local":0.86,"delegate":0.11,"ask_user":0.03},"confidence":0.72
+                  },
+                  "next_step":{
+                    "type":"choice","choice":"proceed",
+                    "probabilities":{"proceed":0.78,"inspect_first":0.18,"simplify":0.04},"confidence":0.59
+                  },
                   "needs_review":{"type":"noul","noul":0.12}
                 },"usage":{"input_tokens":824,"output_tokens":76}}
                 """#.utf8))
