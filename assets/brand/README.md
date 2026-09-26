@@ -25,10 +25,10 @@ Settings footer and Dock. `Sources/Falcon/Resources/FalconMark.png`
 and its 2x variant retain the entire transparent canvas and original colors.
 Small in-app marks have no background tile or extra mask. The menu bar uses
 an optically simplified monochrome tracing of the approved logo, with a large
-eye, cheek cutout and open hooked beak. The v0.1.3 candidate rounds the left and
+eye, cheek cutout and open hooked beak. The v0.1.3 template rounds the left and
 lower contour into a bird head and increases artwork scale by 10%.
 The editable SVG, transparent master and light/dark size review are archived in
-[menu/2026-09-26-02](menu/2026-09-26-02/), pending owner approval before packaging.
+[menu/2026-09-26-02](menu/2026-09-26-02/), approved by the owner for v0.1.3.
 The v0.1.2 tracing and previous generated centered profile
 remains in its original archive, but is no longer an input to the exporter.
 The exporter preserves the full composition instead of cropping to ink bounds.

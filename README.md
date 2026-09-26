@@ -19,10 +19,10 @@ open build/Build/Products/Release/Falcon.app
 
 脚本仅构建 arm64（Apple Silicon），产物位于 `build/Build/Products/Release/Falcon.app`。这是本地开发构建。
 
-v0.1.2 是供个人使用的 macOS 15+、Apple Silicon 专用 DMG，不支持 Intel Mac，采用自己账户的 Apple Development 签名，未经过 Apple 公证。从 [GitHub Releases](https://github.com/nocoo/falcon/releases) 下载 DMG 和同名 `.sha256`，在下载目录执行：
+v0.1.3 是供个人使用的 macOS 15+、Apple Silicon 专用 DMG，不支持 Intel Mac，采用自己账户的 Apple Development 签名，未经过 Apple 公证。从 [GitHub Releases](https://github.com/nocoo/falcon/releases) 下载 DMG 和同名 `.sha256`，在下载目录执行：
 
 ```sh
-shasum -a 256 -c Falcon-0.1.2-arm64.dmg.sha256
+shasum -a 256 -c Falcon-0.1.3-arm64.dmg.sha256
 ```
 
 打开 DMG，将 Falcon 拖入 Applications。若确认下载可信且校验通过，但 macOS 因未公证阻止打开，可仅移除 Falcon 的下载隔离属性：

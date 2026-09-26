@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.3 — 2026-09-26
+
+- Enlarge the menu-bar artwork by 10% while retaining the native 18-point template size.
+- Round the bird head silhouette to remove the straight left and bottom crop, preserving the eye and hooked beak.
+
 ## v0.1.2 — 2026-09-26
 
 - Ship only arm64 for Apple Silicon Macs; remove Intel from native builds and DMG packaging.

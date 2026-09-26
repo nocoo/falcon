@@ -1,4 +1,4 @@
-# Rounded Falcon menu candidate
+# Rounded Falcon menu template
 
 Owner-requested refinement of `../2026-09-26-01/template.svg` for v0.1.3.
 The left and lower outline now form a rounded bird head, without the former
@@ -14,4 +14,4 @@ uniformly enlarged old silhouette. Native resources remain 18/36 pixels.
 `review.png`, comparing the previous and candidate masks in both appearances,
 with enlarged and menu-size specimens. No image model was used.
 
-Status: awaiting owner visual approval before packaging v0.1.3.
+Status: visually approved by the owner on 2026-09-26 for v0.1.3 packaging.
