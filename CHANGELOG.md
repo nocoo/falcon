@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.5 — 2026-09-26
+
+- Balance the sidebar brand typography and remove excess logo layout whitespace.
+- Move Settings into the Manage navigation group.
+- Refresh success, failure and chart colors; use consistent red failure indicators.
+- Add a bright running indicator with a gentle breathing glow, respecting motion, transparency, contrast and scene activity preferences.
+- Retain arm64-only packaging with LZMA compression and the larger menu icon.
+
 ## v0.1.4 — 2026-09-26
 
 - Reduce unused menu-icon padding, increasing the visible bird head by approximately 15.4% without changing its silhouette.
