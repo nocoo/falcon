@@ -14,17 +14,18 @@ enum FalconTheme {
     static let action = adaptive("action", light: 0x006D96, dark: 0x007DA9)
     static let onAction = Color.white
     static let accentWash = adaptive("accentWash", light: 0xDCF3FC, dark: 0x173C4E)
-    static let success = adaptive("success", light: 0x397023, dark: 0xACDE70)
-    static let warning = adaptive("warning", light: 0x806100, dark: 0xFFE26A)
+    static let success = adaptive("success", light: 0x007C46, dark: 0x38E8A1)
+    static let warning = adaptive("warning", light: 0x996000, dark: 0xFFD43B)
     static let flag = adaptive("flag", light: 0xBD7A1F, dark: 0xFFCC66)
-    static let danger = adaptive("danger", light: 0xAF3657, dark: 0xFF9AAF)
+    static let danger = adaptive("danger", light: 0xCF1943, dark: 0xFF5574)
+    static let live = adaptive("live", light: 0x00D68A, dark: 0x38F5AD)
     static let line = adaptive("line", light: 0xDCE7ED, dark: 0x31434F)
 
     enum Candy {
         static let blue = adaptive("candy.blue", light: 0x57C7EF, dark: 0x63CEF2)
-        static let green = adaptive("candy.green", light: 0xA6D96A, dark: 0xB3E57A)
+        static let green = adaptive("candy.green", light: 0x26D995, dark: 0x38E8A1)
         static let yellow = adaptive("candy.yellow", light: 0xFFE16B, dark: 0xFFE889)
-        static let pink = adaptive("candy.pink", light: 0xF684A4, dark: 0xFF9AAF)
+        static let pink = adaptive("candy.pink", light: 0xFF5574, dark: 0xFF718B)
         static let white = adaptive("candy.white", light: 0xFFFFFF, dark: 0xEDF7FA)
     }
 
@@ -59,7 +60,7 @@ enum FalconTheme {
         static let defaultWidth: CGFloat = 1600
         static let defaultHeight: CGFloat = 1000
         static let compactHeight: CGFloat = 720
-        static let brandHeight: CGFloat = 84
+        static let brandHeight: CGFloat = 72
         static let navigationHeight: CGFloat = 36
         static let controlHeight: CGFloat = 32
         static let compactControlHeight: CGFloat = 28
@@ -67,6 +68,8 @@ enum FalconTheme {
         static let rangeSwitchWidth: CGFloat = 220
         static let reviewBarHeight: CGFloat = 48
         static let brandMark: CGFloat = 44
+        static let brandMarkWidth: CGFloat = 32
+        static let statusLight: CGFloat = 7
         static let emptyMark: CGFloat = 64
         static let menuMark: CGFloat = 18
         static let avatar: CGFloat = 28
@@ -95,7 +98,7 @@ enum FalconTheme {
     static let footnote = Font.system(size: 11)
     static let title = Font.system(size: 22, weight: .semibold)
     static let sectionTitle = Font.system(size: 15, weight: .semibold)
-    static let brand = Font.system(size: 21, weight: .semibold, design: .rounded)
+    static let brand = Font.system(size: 18, weight: .semibold, design: .rounded)
     static let metric = Font.system(size: 28, weight: .medium, design: .rounded)
     static let resultValue = Font.system(size: 24, weight: .medium, design: .rounded)
     static let compactValue = Font.system(size: 18, weight: .medium, design: .rounded)

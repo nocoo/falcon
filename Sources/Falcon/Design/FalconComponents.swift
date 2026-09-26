@@ -76,6 +76,38 @@ struct Pill: View {
     }
 }
 
+struct StatusLight: View {
+    let isRunning: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var contrast
+    @Environment(\.scenePhase) private var scenePhase
+
+    var body: some View {
+        Group {
+            if isRunning && !reduceMotion && scenePhase == .active {
+                light.phaseAnimator([false, true]) { content, expanded in
+                    content.shadow(
+                        color: glow.opacity(expanded ? 0.65 : 0.2),
+                        radius: expanded ? FalconTheme.Space.compact : FalconTheme.Space.small
+                    ).scaleEffect(expanded ? 1.08 : 1)
+                } animation: { _ in
+                    .easeInOut(duration: 1.8)
+                }
+            } else {
+                light.shadow(color: glow.opacity(0.25), radius: FalconTheme.Space.small)
+            }
+        }.accessibilityHidden(true)
+    }
+
+    private var light: some View {
+        Circle().fill(isRunning ? FalconTheme.live : FalconTheme.tertiary).frame(
+            width: FalconTheme.Layout.statusLight, height: FalconTheme.Layout.statusLight)
+    }
+
+    private var glow: Color { isRunning && !reduceTransparency && contrast != .increased ? FalconTheme.live : .clear }
+}
+
 struct FalconMark: View {
     var size: CGFloat = FalconTheme.Layout.avatar
     var body: some View {

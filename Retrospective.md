@@ -126,3 +126,12 @@ Apple Development signing and the known team succeeded. The same identity then
 appeared locally. An empty identity list is a local-state observation, not proof
 that Xcode account-managed provisioning cannot obtain a signing identity. Use
 the authorized automatic-signing route before asking the owner to restore keys.
+
+## 2026-09-26: Accessibility environment values in visual probes
+
+The temporary status-light probe tried to override SwiftUI's read-only
+`accessibilityReduceMotion` and `accessibilityReduceTransparency` environment
+values. Compilation correctly rejected those overrides. The corrected probe
+compares active and inactive scenes without changing machine accessibility
+settings; reduced-effects branches remain code-reviewed rather than claimed as
+runtime-tested. Check environment mutability before creating synthetic probes.

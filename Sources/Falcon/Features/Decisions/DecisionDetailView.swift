@@ -23,9 +23,9 @@ struct DecisionDetailView: View {
             }
             if let message = detail.summary.errorMessage, model.terminalVisible {
                 Label(message, systemImage: "exclamationmark.circle").font(FalconTheme.detail).foregroundStyle(
-                    FalconTheme.warning
+                    FalconTheme.danger
                 ).padding(FalconTheme.Space.regular).frame(maxWidth: .infinity, alignment: .leading).background(
-                    FalconTheme.warning.opacity(0.07))
+                    FalconTheme.danger.opacity(0.07))
             }
             if rawMode {
                 rawContent

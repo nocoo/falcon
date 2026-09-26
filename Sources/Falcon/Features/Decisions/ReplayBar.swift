@@ -86,7 +86,7 @@ struct SourceTimelineView: View {
                         y: .value("Source", sourceLabel(record))
                     ).lineStyle(StrokeStyle(lineWidth: 5, lineCap: .round)).foregroundStyle(
                         record.status.isFailure
-                            ? FalconTheme.warning : FalconTheme.accent.opacity(record.id == model.selectedID ? 1 : 0.5))
+                            ? FalconTheme.danger : FalconTheme.accent.opacity(record.id == model.selectedID ? 1 : 0.5))
                     if record.timing.terminalMS == nil {
                         PointMark(
                             x: .value(

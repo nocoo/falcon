@@ -110,13 +110,14 @@ struct WorkspaceView: View {
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: FalconTheme.Space.compact) {
-                FalconMark(size: FalconTheme.Layout.brandMark)
+                FalconMark(size: FalconTheme.Layout.brandMark).frame(
+                    width: FalconTheme.Layout.brandMarkWidth, alignment: .leading
+                ).clipped()
                 VStack(alignment: .leading, spacing: FalconTheme.Space.micro) {
-                    HStack(spacing: FalconTheme.Space.small) {
+                    HStack(alignment: .firstTextBaseline, spacing: FalconTheme.Space.tight) {
                         Text("Falcon").font(FalconTheme.brand).tracking(FalconTheme.titleTracking)
                         Text(runtime.versionLabel).font(FalconTheme.monoSmall).foregroundStyle(FalconTheme.secondary)
-                            .padding(.horizontal, FalconTheme.Space.small).padding(.vertical, FalconTheme.Space.micro)
-                            .background(FalconTheme.inset, in: Capsule()).fixedSize()
+                            .fixedSize()
                     }
                     Text("Local decisions").font(FalconTheme.caption).foregroundStyle(FalconTheme.secondary)
                 }
@@ -127,12 +128,11 @@ struct WorkspaceView: View {
             Eyebrow(title: "Manage").padding(.horizontal, FalconTheme.Space.large).padding(
                 .top, FalconTheme.Space.sheet
             ).padding(.bottom, FalconTheme.Space.compact)
-            ForEach([WorkspacePage.sources, .connections], id: \.self) { navigation($0) }
+            ForEach([WorkspacePage.sources, .connections, .settings], id: \.self) { navigation($0) }
             Spacer()
             VStack(alignment: .leading, spacing: FalconTheme.Space.compact) {
                 HStack(spacing: FalconTheme.Space.tight) {
-                    Circle().fill(runtime.isRunning ? FalconTheme.success : FalconTheme.tertiary).frame(
-                        width: 6, height: 6)
+                    StatusLight(isRunning: runtime.isRunning)
                     Text(runtime.statusTitle).font(FalconTheme.caption)
                 }
                 Text("127.0.0.1:\(String(runtime.port))").font(FalconTheme.monoSmall).foregroundStyle(
@@ -144,7 +144,6 @@ struct WorkspaceView: View {
                 RoundedRectangle(cornerRadius: FalconTheme.Radius.control).strokeBorder(
                     FalconTheme.line, lineWidth: FalconTheme.hairline)
             ).padding(FalconTheme.Space.regular)
-            navigation(.settings).padding(.bottom, FalconTheme.Space.medium)
         }.background(FalconTheme.sidebar.overlay(QuietTexture()))
     }
 

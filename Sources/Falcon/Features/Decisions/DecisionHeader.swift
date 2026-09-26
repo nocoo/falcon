@@ -56,7 +56,7 @@ struct DecisionHeader: View {
                     text: model.visibleStatus,
                     color: !model.terminalVisible
                         ? FalconTheme.secondary
-                        : detail.summary.status.isFailure ? FalconTheme.warning : FalconTheme.success,
+                        : detail.summary.status.isFailure ? FalconTheme.danger : FalconTheme.success,
                     symbol: !model.terminalVisible
                         ? "circle.dotted"
                         : detail.summary.status == .succeeded

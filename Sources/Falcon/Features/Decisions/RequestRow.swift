@@ -44,7 +44,7 @@ struct RequestRow: View {
                     }
                 } else {
                     Text(record.status.title).foregroundStyle(
-                        record.status.isFailure ? FalconTheme.warning : FalconTheme.secondary)
+                        record.status.isFailure ? FalconTheme.danger : FalconTheme.secondary)
                 }
                 Spacer(minLength: FalconTheme.Space.tight)
                 Text(DecisionFormat.duration(latency)).monospacedDigit().foregroundStyle(FalconTheme.secondary)
@@ -69,7 +69,7 @@ struct RequestRow: View {
             } else {
                 Image(systemName: record.status.isFailure ? "exclamationmark.circle" : "checkmark.circle").font(
                     FalconTheme.caption
-                ).foregroundStyle(record.status.isFailure ? FalconTheme.warning : FalconTheme.success)
+                ).foregroundStyle(record.status.isFailure ? FalconTheme.danger : FalconTheme.success)
             }
         }.frame(width: FalconTheme.Layout.requestStatusMark, height: FalconTheme.Layout.requestStatusMark)
             .accessibilityLabel(record.status.title).help(record.status.title)
