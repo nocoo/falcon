@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.2 — 2026-09-26
+
+- Ship only arm64 for Apple Silicon Macs; remove Intel from native builds and DMG packaging.
+- Verify that release executables contain exactly the arm64 architecture.
+
 ## v0.1.1 — 2026-09-26
 
 - Preserve the Falcon logo’s off-center head, large eye and hooked beak in the monochrome menu-bar icon.

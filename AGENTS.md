@@ -42,7 +42,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swiftlint lint --strict
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift-format lint --strict --recursive Sources Tests
 ```
 
-The app is at `build/Build/Products/Release/Falcon.app`; the script defaults to the host architecture.
+The app is at `build/Build/Products/Release/Falcon.app`; the script builds only arm64 (Apple Silicon).
 Preview with `open build/Build/Products/Release/Falcon.app --args --preview` uses synthetic data,
 a marked temporary database, and no listener, production credential access, or upstream calls.
 Only the coordinator runs SwiftPM in this checkout during parallel work.
@@ -79,8 +79,8 @@ SwiftLint needs the Xcode `DEVELOPER_DIR` above; do not change global xcode-sele
   strict swift-format, and `git diff --check`. Existing L1/G2/L3 gaps remain
   disclosed; do not describe the release as having passed absent gates.
 - Run `scripts/build-dmg.sh`.
-  It builds Release for arm64 and x86_64 with Xcode automatic signing, verifies both slices
-  and its signature, and creates `build/Falcon-X.Y.Z-universal.dmg` with an
+  It builds Release only for arm64 with Xcode automatic signing, rejects any
+  other executable architecture, verifies its signature, and creates `build/Falcon-X.Y.Z-arm64.dmg` with an
   Applications link and a sibling `.sha256`. It does not notarize. Never
   overwrite published release assets; correct them in a new version.
 - Mount the DMG read-only, verify its app signature, bundle version/build,
@@ -90,7 +90,7 @@ SwiftLint needs the Xcode `DEVELOPER_DIR` above; do not change global xcode-sele
 - Commit explicit paths through normal hooks, push the release commit, create
   and push `vX.Y.Z` at that exact revision, then use `gh release create` with
   the DMG, checksum and `--notes-file`. Check remote tags/releases before any
-  retry. Release notes must include changes, macOS 15+ / universal requirements,
+  retry. Release notes must include changes, macOS 15+ / Apple Silicon requirements,
   actual signing and notarization status, checksum verification, installation,
   and the scoped Gatekeeper workaround below.
 - For a trusted download that macOS blocks because this release is not
