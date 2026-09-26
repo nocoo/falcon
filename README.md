@@ -19,7 +19,7 @@ open build/Build/Products/Release/Falcon.app
 
 脚本默认构建本机架构，产物位于 `build/Build/Products/Release/Falcon.app`。这是本地开发构建。
 
-正式安装包见 [GitHub Releases](https://github.com/nocoo/falcon/releases)。v0.1.1 提供 macOS 15+ 的 Apple Silicon / Intel 通用 DMG，采用 Apple Development 签名，未经过 Apple 公证。下载 DMG 和同名 `.sha256` 后，在下载目录执行：
+v0.1.1 正式安装包正在准备：macOS 15+、Apple Silicon / Intel 通用 DMG，计划沿用 Gecko 的 Apple Development 签名，不做 Apple 公证。当前机器缺少对应签名身份，尚未发布。发布后可从 [GitHub Releases](https://github.com/nocoo/falcon/releases) 下载 DMG 和同名 `.sha256`，在下载目录执行：
 
 ```sh
 shasum -a 256 -c Falcon-0.1.1-universal.dmg.sha256

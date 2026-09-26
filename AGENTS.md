@@ -68,7 +68,11 @@ SwiftLint needs the Xcode `DEVELOPER_DIR` above; do not change global xcode-sele
   its release script, while older installed artifacts may be ad-hoc.
 - The owner selected Gecko’s `Apple Development: nocoo@me.com (7Q9CP6438M)`
   identity (team `93WWLTN9XU`) for the 2026-09-26 release and authorized its
-  narrowly scoped signing use. This release is not notarized.
+  narrowly scoped signing use. Packaging is currently blocked: `codesign`
+  cannot find that identity, and scoped identity discovery reports zero
+  matching identities. Restore the certificate and private key before signing;
+  no signed DMG, tag, GitHub Release or local installation has been completed.
+  The selected distribution route does not include notarization.
 - Select the signing identity explicitly for each release. Certificate signing
   requires owner authorization for the narrowly scoped signing operation;
   never inspect unrelated Keychain contents, modify ACLs, or silently fall back

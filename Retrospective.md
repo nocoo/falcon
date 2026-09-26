@@ -110,3 +110,12 @@ The local `lipo -verify_arch` rejected two architecture arguments with
 advertises multiple architectures, but separate arm64 and x86_64 checks both
 passed. Use one architecture per invocation and test the exact packaging check
 on the real output instead of assuming documented multi-value behavior.
+
+## 2026-09-26: Installed signatures do not prove signing availability
+
+The installed Gecko binary identified the requested Apple Development signer,
+but Falcon signing failed with "no identity found". Scoped code-signing identity
+discovery then reported zero matching identities. No ad-hoc fallback or Keychain
+change was made. An installed signature proves who signed those bytes, not that
+the certificate and private key are currently available. Installation docs were
+corrected to identify the release as pending rather than already downloadable.
