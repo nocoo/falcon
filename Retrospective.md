@@ -105,6 +105,8 @@ overrode the requested architecture list. Set it to `NO` while preserving the
 explicit host-architecture default, rebuild, and require `lipo -verify_arch`
 before packaging. Successful Xcode output alone does not prove universal output.
 
-The first `lipo -verify_arch` invocation placed its variadic architecture list
-before the input path, so lipo consumed the path as another architecture. Put
-the executable path first and run the exact packaging check on the real output.
+The local `lipo -verify_arch` rejected two architecture arguments with
+"requires exactly one input file", even with the input path first. Its help
+advertises multiple architectures, but separate arm64 and x86_64 checks both
+passed. Use one architecture per invocation and test the exact packaging check
+on the real output instead of assuming documented multi-value behavior.

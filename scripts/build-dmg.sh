@@ -15,7 +15,8 @@ fi
 codesign --force --options runtime --sign "$FALCON_CODE_SIGN_IDENTITY" "$app"
 codesign --verify --deep --strict "$app"
 codesign --display --verbose=4 "$app"
-lipo "$app/Contents/MacOS/Falcon" -verify_arch arm64 x86_64
+lipo "$app/Contents/MacOS/Falcon" -verify_arch arm64
+lipo "$app/Contents/MacOS/Falcon" -verify_arch x86_64
 staging=$(mktemp -d "${TMPDIR:-/tmp}/falcon-dmg.XXXXXX")
 trap 'rm -rf "$staging"' EXIT
 ditto "$app" "$staging/Falcon.app"
