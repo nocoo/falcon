@@ -104,3 +104,7 @@ The first universal build still contained only arm64: `ONLY_ACTIVE_ARCH=YES`
 overrode the requested architecture list. Set it to `NO` while preserving the
 explicit host-architecture default, rebuild, and require `lipo -verify_arch`
 before packaging. Successful Xcode output alone does not prove universal output.
+
+The first `lipo -verify_arch` invocation placed its variadic architecture list
+before the input path, so lipo consumed the path as another architecture. Put
+the executable path first and run the exact packaging check on the real output.
