@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.1 — 2026-09-26
+
+- Preserve the Falcon logo’s off-center head, large eye and hooked beak in the monochrome menu-bar icon.
+- Preserve menu artwork framing when exporting native 18/36 px template assets.
+- Add explicit-signing universal macOS DMG packaging, SHA-256 checksums and a documented GitHub release and installation procedure.
+
 ## v0.1.0 — 2026-09-25
 
 Initial local development version.
