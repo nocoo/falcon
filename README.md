@@ -17,7 +17,22 @@ scripts/build-app.sh Release
 open build/Build/Products/Release/Falcon.app
 ```
 
-脚本默认构建本机架构，产物位于 `build/Build/Products/Release/Falcon.app`。当前是本地开发构建，尚未签名公证或发布。
+脚本默认构建本机架构，产物位于 `build/Build/Products/Release/Falcon.app`。这是本地开发构建。
+
+正式安装包见 [GitHub Releases](https://github.com/nocoo/falcon/releases)。v0.1.1 提供 macOS 15+ 的 Apple Silicon / Intel 通用 DMG，采用 Apple Development 签名，未经过 Apple 公证。下载 DMG 和同名 `.sha256` 后，在下载目录执行：
+
+```sh
+shasum -a 256 -c Falcon-0.1.1-universal.dmg.sha256
+```
+
+打开 DMG，将 Falcon 拖入 Applications。若确认下载可信且校验通过，但 macOS 因未公证阻止打开，可仅移除 Falcon 的下载隔离属性：
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Falcon.app
+open /Applications/Falcon.app
+```
+
+此命令不会完成公证，也不能修复损坏的签名。签名及标准发版步骤见 [AGENTS.md](AGENTS.md#standard-macos-release-procedure)。
 
 版本只在 [project.yml](project.yml) 的 `MARKETING_VERSION` 中维护；侧栏、设置、关于面板和服务元信息读取同一构建版本。界面使用 `vX.Y.Z`，HTTP `/health` 与 MCP `serverInfo.version` 返回 `X.Y.Z`。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 

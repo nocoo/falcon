@@ -66,6 +66,9 @@ SwiftLint needs the Xcode `DEVELOPER_DIR` above; do not change global xcode-sele
 - Inspect Gecko and Lyre as references, not proof of distribution trust: Gecko
   uses Apple Development for installed builds; Lyre requires Developer ID in
   its release script, while older installed artifacts may be ad-hoc.
+- The owner selected Gecko’s `Apple Development: nocoo@me.com (7Q9CP6438M)`
+  identity (team `93WWLTN9XU`) for the 2026-09-26 release and authorized its
+  narrowly scoped signing use. This release is not notarized.
 - Select the signing identity explicitly for each release. Certificate signing
   requires owner authorization for the narrowly scoped signing operation;
   never inspect unrelated Keychain contents, modify ACLs, or silently fall back
