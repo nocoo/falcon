@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.4 — 2026-09-26
+
+- Reduce unused menu-icon padding, increasing the visible bird head by approximately 15.4% without changing its silhouette.
+- Use lossless LZMA DMG compression to reduce download size while preserving the signed application bytes.
+
 ## v0.1.3 — 2026-09-26
 
 - Enlarge the menu-bar artwork by 10% while retaining the native 18-point template size.

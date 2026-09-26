@@ -81,7 +81,9 @@ SwiftLint needs the Xcode `DEVELOPER_DIR` above; do not change global xcode-sele
 - Run `scripts/build-dmg.sh`.
   It builds Release only for arm64 with Xcode automatic signing, rejects any
   other executable architecture, verifies its signature, and creates `build/Falcon-X.Y.Z-arm64.dmg` with an
-  Applications link and a sibling `.sha256`. It does not notarize. Never
+  Applications link and a sibling `.sha256`. Use ULMO (LZMA) compression,
+  supported since macOS 10.15 and compatible with our macOS 15 minimum.
+  Compression changes download size, not installed app size. It does not notarize. Never
   overwrite published release assets; correct them in a new version.
 - Mount the DMG read-only, verify its app signature, bundle version/build,
   architectures, and resource contents; compare the packaged executable to

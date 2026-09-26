@@ -1,4 +1,4 @@
-# Reduced-padding Falcon menu candidate
+# Reduced-padding Falcon menu template
 
 Preserves every path from the owner-approved v0.1.3 rounded bird head.
 Only the SVG viewBox changes from `0 0 180 180` to `4 18 156 156`, removing
@@ -14,4 +14,4 @@ above and below the silhouette for antialiasing and separation.
 both appearances. `template.svg` is editable; `template.png` is the exported
 transparent master. No image generation or anatomy changes are involved.
 
-Status: local candidate, awaiting owner review before another release.
+Status: approved by the owner on 2026-09-26 for v0.1.4 release.

@@ -24,7 +24,7 @@ staging=$(mktemp -d "${TMPDIR:-/tmp}/falcon-dmg.XXXXXX")
 trap 'rm -rf "$staging"' EXIT
 ditto "$app" "$staging/Falcon.app"
 ln -s /Applications "$staging/Applications"
-hdiutil create -volname Falcon -srcfolder "$staging" -ov -format UDZO "$dmg"
+hdiutil create -volname Falcon -srcfolder "$staging" -ov -format ULMO "$dmg"
 hdiutil verify "$dmg"
 (cd build && shasum -a 256 "${dmg##*/}" > "${dmg##*/}.sha256")
 echo "Created $dmg (not notarized)."
