@@ -119,3 +119,10 @@ discovery then reported zero matching identities. No ad-hoc fallback or Keychain
 change was made. An installed signature proves who signed those bytes, not that
 the certificate and private key are currently available. Installation docs were
 corrected to identify the release as pending rather than already downloadable.
+
+After the owner clarified that Xcode was signed in and authorized their free
+personal signing route, `xcodebuild -allowProvisioningUpdates` with automatic
+Apple Development signing and the known team succeeded. The same identity then
+appeared locally. An empty identity list is a local-state observation, not proof
+that Xcode account-managed provisioning cannot obtain a signing identity. Use
+the authorized automatic-signing route before asking the owner to restore keys.

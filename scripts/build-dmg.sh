@@ -2,9 +2,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
-: "${FALCON_CODE_SIGN_IDENTITY:?Set the explicitly selected signing identity; use - only for an explicitly authorized ad-hoc release}"
-
-scripts/build-app.sh Release "arm64 x86_64"
+xcodegen generate --quiet
+xcodebuild -project Falcon.xcodeproj -scheme Falcon -configuration Release \
+  -derivedDataPath build ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
+  CODE_SIGN_STYLE=Automatic CODE_SIGN_IDENTITY="Apple Development" \
+  DEVELOPMENT_TEAM=93WWLTN9XU -allowProvisioningUpdates build
 app="build/Build/Products/Release/Falcon.app"
 version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$app/Contents/Info.plist")
 dmg="build/Falcon-${version}-universal.dmg"
@@ -12,7 +14,6 @@ if [[ -e "$dmg" ]]; then
   echo "Refusing to overwrite $dmg" >&2
   exit 1
 fi
-codesign --force --options runtime --sign "$FALCON_CODE_SIGN_IDENTITY" "$app"
 codesign --verify --deep --strict "$app"
 codesign --display --verbose=4 "$app"
 lipo "$app/Contents/MacOS/Falcon" -verify_arch arm64

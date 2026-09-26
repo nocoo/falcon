@@ -66,24 +66,20 @@ SwiftLint needs the Xcode `DEVELOPER_DIR` above; do not change global xcode-sele
 - Inspect Gecko and Lyre as references, not proof of distribution trust: Gecko
   uses Apple Development for installed builds; Lyre requires Developer ID in
   its release script, while older installed artifacts may be ad-hoc.
-- The owner selected Gecko’s `Apple Development: nocoo@me.com (7Q9CP6438M)`
-  identity (team `93WWLTN9XU`) for the 2026-09-26 release and authorized its
-  narrowly scoped signing use. Packaging is currently blocked: `codesign`
-  cannot find that identity, and scoped identity discovery reports zero
-  matching identities. Restore the certificate and private key before signing;
-  no signed DMG, tag, GitHub Release or local installation has been completed.
-  The selected distribution route does not include notarization.
-- Select the signing identity explicitly for each release. Certificate signing
-  requires owner authorization for the narrowly scoped signing operation;
-  never inspect unrelated Keychain contents, modify ACLs, or silently fall back
-  to ad-hoc. Apple Development and ad-hoc builds are not notarized Developer ID
-  distributions. Verify the actual artifact rather than the intended setting.
+- Use the owner's free Apple Development signing through Xcode automatic
+  signing, team `93WWLTN9XU`. The owner authorized this personal-use signing
+  route on 2026-09-26, including Xcode's account-managed provisioning.
+  `xcodebuild -allowProvisioningUpdates` obtained the identity when direct
+  codesign initially found none. Do not treat an empty local identity list as
+  proof that the signed-in Xcode account cannot sign. No Developer ID or
+  notarization is claimed; never silently switch to ad-hoc, inspect unrelated
+  Keychain contents, or modify ACLs.
 - Run full Swift tests with coverage, preserve the actual `codecov` directory
   before the SDK-only run, then run `scripts/check-sdk.sh`, strict SwiftLint,
   strict swift-format, and `git diff --check`. Existing L1/G2/L3 gaps remain
   disclosed; do not describe the release as having passed absent gates.
-- Run `FALCON_CODE_SIGN_IDENTITY='<selected identity>' scripts/build-dmg.sh`.
-  It builds Release for arm64 and x86_64, signs the app, verifies both slices
+- Run `scripts/build-dmg.sh`.
+  It builds Release for arm64 and x86_64 with Xcode automatic signing, verifies both slices
   and its signature, and creates `build/Falcon-X.Y.Z-universal.dmg` with an
   Applications link and a sibling `.sha256`. It does not notarize. Never
   overwrite published release assets; correct them in a new version.
