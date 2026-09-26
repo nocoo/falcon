@@ -90,3 +90,17 @@
 
 - During this task, the first Herdr Codex worker also inherited an unsupported service tier. Resuming that worker with `-c service_tier=default` made its first real model turn succeed. Keep the override local to the worker, and inspect the first completed tool action before treating an idle/ready process as functioning delegation.
 - CoreSVG separately rejected compact arc commands in the Manifest Hermes SVG. The checked-in original stays unchanged; a 512 px transparent master from the existing Sharp/librsvg toolchain supplies the native downsizing step. Require a clean resource-generation log and inspect every bundled icon.
+
+## 2026-09-26: Resolve coverage output before SDK verification
+
+The release preparation assumed SwiftPM's conventional architecture-specific
+coverage path. This checkout writes to `.build/out/Products/Debug/codecov`;
+the copy failed while the separately launched SDK check continued and replaced
+the coverage report. Re-run the complete suite and preserve its actual output.
+Resolve the directory first and chain the copy and SDK invocation with success
+checks so a missing archive cannot silently lose full-suite evidence.
+
+The first universal build still contained only arm64: `ONLY_ACTIVE_ARCH=YES`
+overrode the requested architecture list. Set it to `NO` while preserving the
+explicit host-architecture default, rebuild, and require `lipo -verify_arch`
+before packaging. Successful Xcode output alone does not prove universal output.

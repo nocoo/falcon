@@ -57,6 +57,61 @@ SwiftLint needs the Xcode `DEVELOPER_DIR` above; do not change global xcode-sele
 - Unbundled SwiftPM executables identify themselves as development builds instead of claiming a release version.
 - Maintain root [CHANGELOG.md](CHANGELOG.md), rebuild with `scripts/build-app.sh`, and verify the actual bundle and runtime metadata when changing the product version.
 
+## Standard macOS release procedure
+
+- Follow `system0-github-versioning`; `project.yml` remains the version authority.
+  Compare the previous release (or initial development version for the first
+  release), update `MARKETING_VERSION`, increment `CURRENT_PROJECT_VERSION`,
+  regenerate the Xcode project, and write the root changelog.
+- Inspect Gecko and Lyre as references, not proof of distribution trust: Gecko
+  uses Apple Development for installed builds; Lyre requires Developer ID in
+  its release script, while older installed artifacts may be ad-hoc.
+- Select the signing identity explicitly for each release. Certificate signing
+  requires owner authorization for the narrowly scoped signing operation;
+  never inspect unrelated Keychain contents, modify ACLs, or silently fall back
+  to ad-hoc. Apple Development and ad-hoc builds are not notarized Developer ID
+  distributions. Verify the actual artifact rather than the intended setting.
+- Run full Swift tests with coverage, preserve the actual `codecov` directory
+  before the SDK-only run, then run `scripts/check-sdk.sh`, strict SwiftLint,
+  strict swift-format, and `git diff --check`. Existing L1/G2/L3 gaps remain
+  disclosed; do not describe the release as having passed absent gates.
+- Run `FALCON_CODE_SIGN_IDENTITY='<selected identity>' scripts/build-dmg.sh`.
+  It builds Release for arm64 and x86_64, signs the app, verifies both slices
+  and its signature, and creates `build/Falcon-X.Y.Z-universal.dmg` with an
+  Applications link and a sibling `.sha256`. It does not notarize. Never
+  overwrite published release assets; correct them in a new version.
+- Mount the DMG read-only, verify its app signature, bundle version/build,
+  architectures, and resource contents; compare the packaged executable to
+  the built app, then detach. Inspect the menu symbol at actual 18-point size
+  in both appearances, including its template behavior and off-center framing.
+- Commit explicit paths through normal hooks, push the release commit, create
+  and push `vX.Y.Z` at that exact revision, then use `gh release create` with
+  the DMG, checksum and `--notes-file`. Check remote tags/releases before any
+  retry. Release notes must include changes, macOS 15+ / universal requirements,
+  actual signing and notarization status, checksum verification, installation,
+  and the scoped Gatekeeper workaround below.
+- For a trusted download that macOS blocks because this release is not
+  notarized, document these exact commands after copying the app to Applications:
+
+  ```sh
+  xattr -dr com.apple.quarantine /Applications/Falcon.app
+  open /Applications/Falcon.app
+  ```
+
+  Explain that this removes download quarantine only for Falcon; it neither
+  notarizes the app nor repairs an invalid signature. Never recommend global
+  Gatekeeper disabling, recursive changes to Applications, or re-signing a
+  damaged download. Verify the downloaded SHA-256 before using this workaround.
+- Verify the published tag SHA, asset names/sizes and downloaded checksums.
+  Inspect Actions for that exact revision, with a five-minute follow-up if CI
+  is pending. This repository currently has no Actions workflow; report CI as
+  unavailable, not green.
+- After authorized publication, quit an existing Falcon cleanly, install the
+  verified DMG app at `/Applications/Falcon.app`, verify the installed signature
+  and version, and open it without `--preview`. Preserve user configuration and
+  history. Verify the running executable path; never claim a build-tree preview
+  is the installed release.
+
 ## Implemented modules
 
 - `FalconCore/Domain`: bounded JSON values, source/request models and usage snapshots.
@@ -120,5 +175,5 @@ Tests must not use daily-development data, production data, or real upstream cre
 - Stage explicit paths and commit each complete logical change atomically.
 - Report what was actually inspected and tested, including unavailable evidence.
 - Review records identify the exact content revision and disposition of findings.
-- Implementation is authorized; publication and release remain outside this task.
+- Implementation and atomic commits are authorized. The owner explicitly authorized the 2026-09-26 GitHub DMG release and local installation; future publication still requires task authorization.
 - Record actual incidents in [Retrospective.md](Retrospective.md); do not invent incidents.
