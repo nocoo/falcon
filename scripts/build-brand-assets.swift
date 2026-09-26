@@ -54,7 +54,7 @@ try png(foreground, pixels: 64).write(to: resources.appendingPathComponent("Falc
 try png(foreground, pixels: 128).write(to: resources.appendingPathComponent("FalconMark@2x.png"), options: .atomic)
 
 func menuTemplate() throws -> NSImage {
-    let artwork = try load("assets/brand/menu/2026-09-26-01/template.svg")
+    let artwork = try load("assets/brand/menu/2026-09-26-02/template.svg")
     let source = try NSBitmapImageRep(data: png(artwork, pixels: 720))
     guard let source, let sourceImage = source.cgImage,
         let mask = NSBitmapImageRep(
@@ -86,11 +86,11 @@ func menuTemplate() throws -> NSImage {
 }
 
 let menu = try menuTemplate()
-try png(menu, pixels: 18, inset: 1 / 18).write(to: resources.appendingPathComponent("FalconMenu.png"), options: .atomic)
-try png(menu, pixels: 36, inset: 1 / 18).write(
+try png(menu, pixels: 18, inset: 1 / 90).write(to: resources.appendingPathComponent("FalconMenu.png"), options: .atomic)
+try png(menu, pixels: 36, inset: 1 / 90).write(
     to: resources.appendingPathComponent("FalconMenu@2x.png"), options: .atomic)
-try png(menu, pixels: 512, inset: 1 / 18).write(
-    to: root.appendingPathComponent("assets/brand/menu/2026-09-26-01/template.png"), options: .atomic)
+try png(menu, pixels: 512, inset: 1 / 90).write(
+    to: root.appendingPathComponent("assets/brand/menu/2026-09-26-02/template.png"), options: .atomic)
 
 let harnessDirectory = root.appendingPathComponent("assets/harness/originals", isDirectory: true)
 for url in try FileManager.default.contentsOfDirectory(at: harnessDirectory, includingPropertiesForKeys: nil)

@@ -24,10 +24,12 @@ The native app uses the approved identity in its sidebar, empty state,
 Settings footer and Dock. `Sources/Falcon/Resources/FalconMark.png`
 and its 2x variant retain the entire transparent canvas and original colors.
 Small in-app marks have no background tile or extra mask. The menu bar uses
-an optically simplified monochrome tracing of the approved logo: the head enters
-from the lower left, with a large eye, cheek cutout and open hooked beak.
+an optically simplified monochrome tracing of the approved logo, with a large
+eye, cheek cutout and open hooked beak. The v0.1.3 candidate rounds the left and
+lower contour into a bird head and increases artwork scale by 10%.
 The editable SVG, transparent master and light/dark size review are archived in
-[menu/2026-09-26-01](menu/2026-09-26-01/). The previous generated centered profile
+[menu/2026-09-26-02](menu/2026-09-26-02/), pending owner approval before packaging.
+The v0.1.2 tracing and previous generated centered profile
 remains in its original archive, but is no longer an input to the exporter.
 The exporter preserves the full composition instead of cropping to ink bounds.
 `FalconMenu.png` and its 2x variant provide the native template with transparent
