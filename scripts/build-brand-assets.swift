@@ -54,8 +54,8 @@ try png(foreground, pixels: 64).write(to: resources.appendingPathComponent("Falc
 try png(foreground, pixels: 128).write(to: resources.appendingPathComponent("FalconMark@2x.png"), options: .atomic)
 
 func menuTemplate() throws -> NSImage {
-    let raw = root.appendingPathComponent("assets/brand/menu/2026-09-25-01/raw.png")
-    let source = try NSBitmapImageRep(data: Data(contentsOf: raw))
+    let artwork = try load("assets/brand/menu/2026-09-26-01/template.svg")
+    let source = try NSBitmapImageRep(data: png(artwork, pixels: 720))
     guard let source, let sourceImage = source.cgImage,
         let mask = NSBitmapImageRep(
             bitmapDataPlanes: nil, pixelsWide: source.pixelsWide, pixelsHigh: source.pixelsHigh, bitsPerSample: 8,
@@ -68,25 +68,21 @@ func menuTemplate() throws -> NSImage {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue)
     else { throw BrandAssetError.bitmapUnavailable }
     context.draw(sourceImage, in: CGRect(x: 0, y: 0, width: source.pixelsWide, height: source.pixelsHigh))
-    var bounds = CGRect.null
     for y in 0..<source.pixelsHigh {
         for x in 0..<source.pixelsWide {
             let offset = y * mask.bytesPerRow + x * 4
             let luminance =
                 (Double(pixels[offset]) * 0.2126 + Double(pixels[offset + 1]) * 0.7152 + Double(pixels[offset + 2])
                     * 0.0722) / 255
-            let alpha = min(1, max(0, (0.96 - luminance) / 0.88))
+            let alpha = (1 - luminance) * Double(pixels[offset + 3]) / 255
             pixels[offset] = 0
             pixels[offset + 1] = 0
             pixels[offset + 2] = 0
             pixels[offset + 3] = UInt8((alpha * 255).rounded())
-            if alpha > 0.05 { bounds = bounds.union(CGRect(x: x, y: y, width: 1, height: 1)) }
         }
     }
-    guard !bounds.isNull, let cropped = mask.cgImage?.cropping(to: bounds) else {
-        throw BrandAssetError.bitmapUnavailable
-    }
-    return NSImage(cgImage: cropped, size: bounds.size)
+    guard let template = mask.cgImage else { throw BrandAssetError.bitmapUnavailable }
+    return NSImage(cgImage: template, size: artwork.size)
 }
 
 let menu = try menuTemplate()
@@ -94,7 +90,7 @@ try png(menu, pixels: 18, inset: 1 / 18).write(to: resources.appendingPathCompon
 try png(menu, pixels: 36, inset: 1 / 18).write(
     to: resources.appendingPathComponent("FalconMenu@2x.png"), options: .atomic)
 try png(menu, pixels: 512, inset: 1 / 18).write(
-    to: root.appendingPathComponent("assets/brand/menu/2026-09-25-01/template.png"), options: .atomic)
+    to: root.appendingPathComponent("assets/brand/menu/2026-09-26-01/template.png"), options: .atomic)
 
 let harnessDirectory = root.appendingPathComponent("assets/harness/originals", isDirectory: true)
 for url in try FileManager.default.contentsOfDirectory(at: harnessDirectory, includingPropertiesForKeys: nil)

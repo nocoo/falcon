@@ -24,9 +24,12 @@ The native app uses the approved identity in its sidebar, empty state,
 Settings footer and Dock. `Sources/Falcon/Resources/FalconMark.png`
 and its 2x variant retain the entire transparent canvas and original colors.
 Small in-app marks have no background tile or extra mask. The menu bar uses
-a separate generated falcon profile designed for a monochrome 18-point status symbol.
-Its untouched GPT Image output, exact prompt, request, provenance and derived
-master are archived in [menu/2026-09-25-01](menu/2026-09-25-01/).
+an optically simplified monochrome tracing of the approved logo: the head enters
+from the lower left, with a large eye, cheek cutout and open hooked beak.
+The editable SVG, transparent master and light/dark size review are archived in
+[menu/2026-09-26-01](menu/2026-09-26-01/). The previous generated centered profile
+remains in its original archive, but is no longer an input to the exporter.
+The exporter preserves the full composition instead of cropping to ink bounds.
 `FalconMenu.png` and its 2x variant provide the native template with transparent
 negative space. `FalconAssets` sets the image's logical size and template flag
 before passing it to `MenuBarExtra`.
