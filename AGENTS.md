@@ -62,6 +62,10 @@ SwiftLint needs the Xcode `DEVELOPER_DIR` above; do not change global xcode-sele
 
 ## Standard macOS release procedure
 
+- Every published version must include an arm64 DMG and its SHA-256 checksum
+  as assets on the matching GitHub Release. A tag, source archive, local build
+  or app-only upload does not complete a release. The owner reaffirmed this
+  requirement on 2026-09-29.
 - Follow `system0-github-versioning`; `project.yml` remains the version authority.
   Compare the previous release (or initial development version for the first
   release), update `MARKETING_VERSION`, increment `CURRENT_PROJECT_VERSION`,

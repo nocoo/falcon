@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.6 — 2026-09-29
+
+- Restore the Finder application icon by explicitly declaring it in the packaged Info.plist.
+- Adopt the approved Falcon presentation with the cliffside leaf texture for the macOS icon and README.
+- Check packaged icon metadata and resource bytes in both app and DMG builds.
+- Require a DMG and SHA-256 checksum on every GitHub Release.
+
 ## v0.1.5 — 2026-09-26
 
 - Balance the sidebar brand typography and remove excess logo layout whitespace.
