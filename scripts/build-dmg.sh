@@ -8,6 +8,7 @@ xcodebuild -project Falcon.xcodeproj -scheme Falcon -configuration Release \
   CODE_SIGN_STYLE=Automatic CODE_SIGN_IDENTITY="Apple Development" \
   DEVELOPMENT_TEAM=93WWLTN9XU -allowProvisioningUpdates build
 app="build/Build/Products/Release/Falcon.app"
+scripts/check-app-icon.sh "$app"
 version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$app/Contents/Info.plist")
 dmg="build/Falcon-${version}-arm64.dmg"
 if [[ -e "$dmg" ]]; then

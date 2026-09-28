@@ -4,6 +4,19 @@
 
 稳定项目约束维护在 [AGENTS.md](AGENTS.md)，架构与设计维护在 [docs](docs/README.md)。
 
+## 2026-09-29: Finder received no application icon declaration
+
+The installed v0.1.5 app contained Falcon.icns but its final Info.plist omitted
+CFBundleIconFile. The project declared INFOPLIST_KEY_CFBundleIconFile and earlier
+brand documentation treated that build setting as evidence of a working Finder
+icon. Xcode's generated plist did not include it, so the packaged resource was
+not selected. Resource presence and build success were insufficient checks.
+
+Supply the icon key through an explicit input plist and inspect the actual
+output. Both app and DMG build entrypoints now check the final declaration and
+compare the packaged ICNS against the source. Verify the system-resolved icon
+as well as the bundle before claiming an installed icon is correct.
+
 ## 2026-09-25: Immediate restart could leave the proxy offline
 
 - Native restart verification found Falcon running without a listener. An isolated HTTP fixture reproduced `Address already in use` when rebinding immediately after a completed request; restarting after the TCP wait interval had hidden this failure.

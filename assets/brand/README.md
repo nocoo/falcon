@@ -1,7 +1,8 @@
 # Falcon identity
 
-The first independent Logo is the owner-approved faceted bird head from Hexly
-study `2026-09-25-03`, finishing `02`.
+The transparent identity is the owner-approved faceted bird head from Hexly
+study `2026-09-25-03`, finishing `02`. The presentation uses Hexly's textured
+icon package `icons/falcon/v1.0.0`, adopted locally on 2026-09-29.
 
 ![Falcon](icon-rounded.png)
 
@@ -10,7 +11,17 @@ study `2026-09-25-03`, finishing `02`.
 - `icon.png`: square presentation for large promotional surfaces.
 - `icon-rounded.png`: rounded presentation for README and social use.
 - Transparent SHA-256: `f3fedf54cd8415a607d41727c9126c4eddb282c8c1dc11abab44c2d51ab9af68`.
+- Square SHA-256: `0e1d69bfab499b56f43f7752668028d7a45e44f634111780299ff34fb3104456`.
+- Rounded SHA-256: `42453656d0d43cc3e8c890d07b9752f1169c9c94dddf7c6729d438d1f35f3546`.
+- Presentation source: [versioned manifest](https://h.no.mt/icons/falcon/v1.0.0/manifest.json).
 - Complete source, prompt, variants and usage: https://hexly.ai/projects/falcon#brand
+
+Both presentation masters retain their exact 2048-square source bytes. The
+approved cliffside leaf texture is composed at 70% opacity over `#f0f0e9`, with
+the original bird's position and colors preserved. This adoption changes the
+README and macOS application icon. The unchanged transparent identity remains
+the source for in-app marks; the independently approved menu template remains
+the source for the monochrome status item.
 
 Azure OpenAI `gpt-image-2.5-sunburst` generated the source. The owner approved its
 exact bytes. White-matte extraction and separate presentation layers are recorded
@@ -42,8 +53,12 @@ before passing it to `MenuBarExtra`.
 `Sources/Falcon/Resources/Falcon.icns` contains the ten standard macOS icon
 representations. Each places the approved rounded presentation at 824/1024
 of the canvas width, centered on transparency, preserving the whole tile.
-`CFBundleIconFile` selects this icon in the packaged app. SwiftPM and Xcode
-load their own resource bundles through `FalconAssets`.
+`Config/Info.plist` explicitly supplies `CFBundleIconFile`; Xcode merges it with
+generated bundle metadata. A build setting named `INFOPLIST_KEY_CFBundleIconFile`
+did not emit that key in the installed v0.1.5 bundle. Both app and DMG build
+scripts now reject a bundle without the icon declaration or with different
+ICNS bytes. SwiftPM and Xcode load their own resource bundles through
+`FalconAssets`.
 
 Regenerate these derivatives from the repository root with the native toolchain:
 

@@ -6,3 +6,4 @@ xcodegen generate --quiet
 xcodebuild -project Falcon.xcodeproj -scheme Falcon -configuration "${1:-Debug}" \
   -derivedDataPath build ARCHS=arm64 ONLY_ACTIVE_ARCH=NO \
   CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=NO build
+scripts/check-app-icon.sh "build/Build/Products/${1:-Debug}/Falcon.app"

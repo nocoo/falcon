@@ -43,6 +43,9 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun swift-format lint
 ```
 
 The app is at `build/Build/Products/Release/Falcon.app`; the script builds only arm64 (Apple Silicon).
+`Config/Info.plist` supplies the native icon declaration. Both packaging scripts
+run `scripts/check-app-icon.sh` against the built bundle; an Xcode build-setting
+value alone does not prove Finder receives `CFBundleIconFile`.
 Preview with `open build/Build/Products/Release/Falcon.app --args --preview` uses synthetic data,
 a marked temporary database, and no listener, production credential access, or upstream calls.
 Only the coordinator runs SwiftPM in this checkout during parallel work.
