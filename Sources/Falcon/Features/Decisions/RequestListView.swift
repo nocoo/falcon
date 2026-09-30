@@ -101,7 +101,7 @@ struct RequestListView: View {
             Button("Remove star and delete", role: .destructive) { Task { await model.toggleStar(id: id) } }
         } message: { _ in
             Text("This decision is older than seven days. Removing its star also removes its saved evidence.")
-        }
+        }.onAppear { if model.isPreview, CommandLine.arguments.contains("--range-editor") { showRange = true } }
     }
 
     private var header: some View {
@@ -232,15 +232,16 @@ struct RequestListView: View {
             DatePicker("From", selection: $rangeStart, displayedComponents: [.date, .hourAndMinute])
             DatePicker("Until", selection: $rangeEnd, displayedComponents: [.date, .hourAndMinute])
             HStack {
-                Button("Cancel", role: .cancel) { showRange = false }
                 Spacer()
+                Button("Cancel", role: .cancel) { showRange = false }.keyboardShortcut(.cancelAction)
                 Button("Show decisions") {
                     model.timeRange = DateInterval(start: rangeStart, end: rangeEnd)
                     showRange = false
                     Task { await model.refresh(reset: true) }
                 }.keyboardShortcut(.defaultAction).disabled(rangeStart >= rangeEnd)
-            }
-        }.padding(FalconTheme.Space.sheet).frame(width: FalconTheme.Layout.sheetWidth)
+            }.buttonStyle(FalconButtonStyle())
+        }.padding(FalconTheme.Space.sheet).frame(width: FalconTheme.Layout.sheetWidth).background(FalconTheme.canvas)
+            .foregroundStyle(FalconTheme.ink)
     }
 
     private var rangeTitle: String {

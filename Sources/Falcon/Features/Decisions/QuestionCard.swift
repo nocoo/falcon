@@ -23,8 +23,10 @@ struct QuestionCard: View {
                     Spacer(minLength: FalconTheme.Space.small)
                     Pill(text: question.type.capitalized, color: FalconTheme.secondary)
                 }
-                Text(question.instructions.displayText).font(FalconTheme.body).lineSpacing(FalconTheme.Space.small)
-                    .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                if question.instructions != .null {
+                    Text(question.instructions.displayText).font(FalconTheme.body).lineSpacing(FalconTheme.Space.small)
+                        .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                }
                 if question.type == "noul" {
                     noulResult
                 } else {

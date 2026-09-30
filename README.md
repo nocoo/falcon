@@ -53,7 +53,16 @@ Preview 使用独立临时数据库，不监听端口、不读取真实凭据文
 
 ## 接入
 
-HTTP 兼容 TypeSafe 官方 SDK 的 `/v1/systemone` 路径。以下示例从环境变量读取已经配置的来源 key：
+本地 HTTP 使用 TypeSafe 的 API 路径、JSON 请求/响应和 Bearer 认证。官方 SDK 无需替换；只将 `base_url` 改为 `http://127.0.0.1:19823`，`api_key` 改为 Sources 创建的本地 key，不向 Agent 提供上游 key。Sources 页面并列列出推理、模型发现与 MCP，并提供 SDK / MCP 配置模板。
+
+| 接口 | 官方 SDK / 格式 |
+| --- | --- |
+| `POST /v1/systemone` | `client.system_one(...)`；三类问题及上游完整响应 |
+| `GET /v1/models` | `client.models.list()`；`{"models":[{"name":"...","description":"...","release_date":"YYYY-MM-DD"}]}` |
+
+模型和别名从当前来源绑定的上游返回，不在 Falcon 硬编码；模型查询不产生决策记录或 token 统计。SDK 也支持 `TYPESAFE_BASE_URL` 与 `TYPESAFE_API_KEY` 环境变量。SDK 默认重试可能重复推理，建议显式设置 `RetryPolicy(max_retries=0)` 和 `timeout=35`；这两项是运行建议，不是额外认证要求。完整示例见 [协议说明](docs/03-protocol.md#官方-python-sdk接入示例)。
+
+以下示例从环境变量读取已经配置的来源 key：
 
 ```sh
 curl http://127.0.0.1:19823/v1/systemone \

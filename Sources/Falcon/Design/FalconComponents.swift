@@ -129,7 +129,8 @@ struct PageHeading<Actions: View>: View {
             VStack(alignment: .leading, spacing: FalconTheme.Space.compact) {
                 Text(title).font(FalconTheme.title).tracking(FalconTheme.titleTracking).accessibilityAddTraits(
                     .isHeader)
-                Text(subtitle).font(FalconTheme.detail).foregroundStyle(FalconTheme.secondary)
+                Text(subtitle).font(FalconTheme.detail).foregroundStyle(FalconTheme.secondary).fixedSize(
+                    horizontal: false, vertical: true)
             }
             Spacer(minLength: FalconTheme.Space.medium)
             actions.fixedSize()

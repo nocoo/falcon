@@ -4,8 +4,7 @@ import SwiftUI
 struct ConnectionsView: View {
     @Bindable var model: WorkspaceModel
     let service: DecisionService?
-    @State private var editing: UpstreamProfile?
-    @State private var showingEditor = false
+    @State private var editor: ConnectionEditorPresentation?
     @State private var checking: UpstreamProfile?
     @State private var confirmTest = false
     @State private var isTesting = false
@@ -15,8 +14,7 @@ struct ConnectionsView: View {
             VStack(alignment: .leading, spacing: FalconTheme.Space.section) {
                 PageHeading(title: "Connections", subtitle: "Manage Jev endpoints and credentials in one place.") {
                     Button {
-                        editing = nil
-                        showingEditor = true
+                        editor = ConnectionEditorPresentation(profile: nil)
                     } label: {
                         Label("Add connection", systemImage: "plus")
                     }.buttonStyle(FalconButtonStyle(prominent: true)).disabled(model.isPreview)
@@ -31,8 +29,8 @@ struct ConnectionsView: View {
                                 "Add your TypeSafe API key, then create a local key for each agent. "
                                     + "Several sources can share this connection."
                             ).foregroundStyle(FalconTheme.secondary).lineSpacing(FalconTheme.Space.small)
-                            Button("Add connection") { showingEditor = true }.buttonStyle(
-                                FalconButtonStyle(prominent: true))
+                            Button("Add connection") { editor = ConnectionEditorPresentation(profile: nil) }
+                                .buttonStyle(FalconButtonStyle(prominent: true))
                         }.frame(maxWidth: 540, alignment: .leading)
                     }
                 }
@@ -52,9 +50,8 @@ struct ConnectionsView: View {
                                         text: profile.enabled ? "Enabled" : "Disabled",
                                         color: profile.enabled ? FalconTheme.success : FalconTheme.tertiary)
                                 }
-                                Text(profile.baseURL + "/v1/systemone").font(FalconTheme.mono).foregroundStyle(
-                                    FalconTheme.secondary
-                                ).textSelection(.enabled)
+                                Text(profile.baseURL).font(FalconTheme.mono).foregroundStyle(FalconTheme.secondary)
+                                    .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
                                 HStack(spacing: FalconTheme.Space.medium) {
                                     Label(profile.defaultModel, systemImage: "cpu")
                                     Label(
@@ -69,10 +66,9 @@ struct ConnectionsView: View {
                                 confirmTest = true
                             }.buttonStyle(FalconButtonStyle()).disabled(
                                 model.isPreview || !profile.enabled || isTesting || service == nil)
-                            Button("Edit") {
-                                editing = profile
-                                showingEditor = true
-                            }.buttonStyle(FalconButtonStyle()).disabled(model.isPreview)
+                            Button("Edit") { editor = ConnectionEditorPresentation(profile: profile) }.buttonStyle(
+                                FalconButtonStyle()
+                            ).disabled(model.isPreview)
                         }
                     }
                 }
@@ -82,7 +78,7 @@ struct ConnectionsView: View {
                 ).font(FalconTheme.detail).foregroundStyle(FalconTheme.secondary)
             }.padding(FalconTheme.Space.page).frame(maxWidth: FalconTheme.Layout.managementWidth, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
-        }.sheet(isPresented: $showingEditor) { ConnectionEditor(model: model, profile: editing) }.confirmationDialog(
+        }.sheet(item: $editor) { ConnectionEditor(model: model, profile: $0.profile) }.confirmationDialog(
             "Send a test decision?", isPresented: $confirmTest, titleVisibility: .visible
         ) {
             Button("Send test decision") {
@@ -97,8 +93,18 @@ struct ConnectionsView: View {
             Text(
                 "Falcon sends one fixed synthetic input to \(checking?.name ?? "this connection"). This uses your upstream account and may incur usage. The complete result is recorded in Decisions."
             )
+        }.onAppear {
+            if model.isPreview, CommandLine.arguments.contains("--connection-editor") {
+                editor = ConnectionEditorPresentation(
+                    profile: CommandLine.arguments.contains("--edit-connection") ? model.profiles.first : nil)
+            }
         }
     }
+}
+
+private struct ConnectionEditorPresentation: Identifiable {
+    let id = UUID()
+    let profile: UpstreamProfile?
 }
 
 private struct ConnectionEditor: View {
@@ -117,16 +123,22 @@ private struct ConnectionEditor: View {
         VStack(alignment: .leading, spacing: FalconTheme.Space.section) {
             Text(profile == nil ? "Add connection" : "Edit connection").font(FalconTheme.title).tracking(
                 FalconTheme.titleTracking)
-            Form {
+            VStack(alignment: .leading, spacing: FalconTheme.Space.regular) {
+                Text("Name").font(FalconTheme.label)
                 TextField("Name", text: $name)
+                Text("HTTPS API root").font(FalconTheme.label)
                 TextField("Base API", text: $baseURL)
+                Text("Default model · MCP only").font(FalconTheme.label)
                 TextField("Default model", text: $defaultModel)
+                Text(profile == nil ? "Upstream API key" : "Replace upstream API key").font(FalconTheme.label)
                 SecureField(profile == nil ? "API key" : "Replace API key", text: $key)
                 Toggle("Enabled", isOn: $enabled)
             }.textFieldStyle(.roundedBorder)
-            Text("Endpoint: \(baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/")))/v1/systemone").font(
-                FalconTheme.monoSmall
-            ).foregroundStyle(FalconTheme.secondary).textSelection(.enabled)
+            VStack(alignment: .leading, spacing: FalconTheme.Space.compact) {
+                Text("POST \(baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/")))/v1/systemone")
+                Text("GET \(baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/")))/v1/models")
+            }.font(FalconTheme.monoSmall).foregroundStyle(FalconTheme.secondary).textSelection(.enabled).fixedSize(
+                horizontal: false, vertical: true)
             Text(
                 profile == nil
                     ? "The API key is saved locally in ~/.config/falcon/credentials.json."

@@ -140,7 +140,10 @@ import SwiftUI
         }
         do { try await Task.sleep(for: .seconds(2)) } catch { return }
         do {
-            let capturingSheet = CommandLine.arguments.contains("--source-editor")
+            let capturingSheet =
+                CommandLine.arguments.contains("--source-editor")
+                || CommandLine.arguments.contains("--connection-editor")
+                || CommandLine.arguments.contains("--source-key") || CommandLine.arguments.contains("--range-editor")
             guard
                 let window = NSApp.windows.first(where: { capturingSheet ? $0.sheetParent != nil : $0.canBecomeMain }),
                 let content = window.contentView?.superview
