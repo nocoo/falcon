@@ -35,7 +35,7 @@ public struct ProxyReply: Sendable {
 
 public actor DecisionService {
     let store: DecisionStore
-    private let configuration: ConfigurationManager
+    let configuration: ConfigurationManager
     let client: JevClient
     let deadline: Duration
     var paused = false

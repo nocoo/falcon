@@ -147,6 +147,7 @@ SwiftLint needs the Xcode `DEVELOPER_DIR` above; do not change global xcode-sele
 - Never forward local credentials upstream, or upstream credentials downstream.
 - Do not access Keychain, inspect unrelated credentials, or alter machine ACLs/certificates.
 - Preserve Jev request and response semantics. Never invent reasoning or infer agent execution.
+- Keep TypeSafe SDK HTTP interoperability for `/v1/systemone` and `/v1/models` with only the API root and source key replaced. Model discovery uses the bound upstream credential and returns upstream metadata without creating decision history or usage. Preserve official optional/null question fields and allowlisted request-ID/retry headers; never forward local keys upstream.
 - Keep input, question definitions, and results visible together in the primary review workspace.
 - Historical replay is local and read-only; never call Jev, invent per-question timing, or bypass unstarred expiry with the playback clock.
 - Do not implement result reuse unless the owner explicitly chooses it.

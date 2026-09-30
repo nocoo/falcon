@@ -18,7 +18,7 @@ extension DecisionService {
         return nil
     }
 
-    func sendUpstream(_ body: Data, snapshot: ExecutionSnapshot, id: UUID, since instant: ContinuousClock.Instant)
+    func sendUpstream(_ body: Data?, snapshot: ExecutionSnapshot, id: UUID, since instant: ContinuousClock.Instant)
         async throws -> JevHTTPResult
     {
         let remaining = deadline - instant.duration(to: ContinuousClock().now)
@@ -27,7 +27,10 @@ extension DecisionService {
         }
         let client = self.client
         let attempt = Task {
-            try await Self.withDeadline(remaining) { try await client.send(body, snapshot: snapshot) }
+            try await Self.withDeadline(remaining) {
+                if let body { return try await client.send(body, snapshot: snapshot) }
+                return try await client.listModels(snapshot: snapshot)
+            }
         }
         upstreamTasks[id] = attempt
         defer { upstreamTasks[id] = nil }
@@ -77,15 +80,18 @@ extension DecisionService {
     static func upstreamHeaders(_ response: JevHTTPResult) -> [String: String] {
         var headers = ["Content-Type": response.contentType ?? "application/json"]
         if let retryAfter = response.retryAfter { headers["Retry-After"] = retryAfter }
+        if let retryAfterMS = response.retryAfterMS { headers["retry-after-ms"] = retryAfterMS }
+        if let requestID = response.requestID { headers["x-typesafe-request-id"] = requestID }
         if !(200...299).contains(response.status) { headers["X-Falcon-Error-Origin"] = "upstream" }
         return headers
     }
 
-    static func errorReply(_ error: FalconError, id: UUID, instant: ContinuousClock.Instant) -> ProxyReply {
-        let errorFields: [String: JSONValue] = [
+    static func errorReply(_ error: FalconError, id: UUID?, instant: ContinuousClock.Instant?) -> ProxyReply {
+        var errorFields: [String: JSONValue] = [
             "origin": .string("falcon"), "code": .string(error.code), "message": .string(error.message),
-            "request_id": .string(id.uuidString), "outcome_unknown": .bool(error.outcomeUnknown),
+            "outcome_unknown": .bool(error.outcomeUnknown),
         ]
+        if let id { errorFields["request_id"] = .string(id.uuidString) }
         let object: JSONValue = .object(["error": .object(errorFields)])
         return ProxyReply(
             status: error.status, body: (try? object.data()) ?? Data(), headers: ["Content-Type": "application/json"],

@@ -148,3 +148,9 @@ values. Compilation correctly rejected those overrides. The corrected probe
 compares active and inactive scenes without changing machine accessibility
 settings; reduced-effects branches remain code-reviewed rather than claimed as
 runtime-tested. Check environment mutability before creating synthetic probes.
+
+## 2026-09-30 — TypeSafe contract verification gaps
+
+The existing SDK fixture always supplied question instructions and exercised only inference. That left local validation stricter than the official OpenAPI and SDK: optional/null instructions and partial Noul criteria were rejected, while model discovery was absent. The compatibility investigation compared the actual upstream schema and pinned SDK source instead of treating one successful fixture as full API parity. New regressions cover optional fields, model discovery, authentication and safe diagnostic headers. Future protocol changes must compare every public SDK resource and boundary shape, not only the application's common request.
+
+The first coverage-preservation command assumed SwiftPM's traditional architecture-specific output path. This toolchain stores coverage in `.build/out/Products/Debug/codecov`; the copy failed before the SDK run and was corrected using the actual directory. Discover the generated coverage location before preservation rather than hardcoding a toolchain-specific path.

@@ -82,10 +82,12 @@ public actor ProxyServer {
         if let origin = request.headers[.origin], origin != "http://\(expectedHost)" {
             return Self.failure(403, "invalid_origin")
         }
-        guard let authorization = request.headers[.authorization], authorization.hasPrefix("Bearer "),
-            !authorization.dropFirst(7).isEmpty
+        let authorization = request.headers[.authorization]?.split(
+            separator: " ", maxSplits: 1, omittingEmptySubsequences: false)
+        guard let authorization, authorization.count == 2, authorization[0].lowercased() == "bearer",
+            !authorization[1].isEmpty
         else { return Self.failure(401, "unauthorized") }
-        let token = String(authorization.dropFirst(7))
+        let token = String(authorization[1])
         do { _ = try await configuration.authenticate(token: token) } catch {
             if (error as? FalconError)?.status == 403 { return Self.failure(403, "source_disabled") }
             return Self.failure(401, "unauthorized")
@@ -108,6 +110,7 @@ public actor ProxyServer {
                 ]).data()) ?? Data()
             return Self.response(status.state == .ready ? 200 : 503, body: body)
         }
+        if path == "/v1/models" { return await models(request, token: token, started: started) }
         guard path == "/v1/systemone" || path == "/mcp" else { return Self.failure(404, "not_found") }
         guard request.method == .post else { return Self.methodNotAllowed("POST") }
         let contentType = request.headers[.contentType]?.lowercased() ?? ""
@@ -135,6 +138,14 @@ public actor ProxyServer {
         }
         let reply = await service.submit(
             token: token, body: body, metadata: metadata, receivedAt: receivedAt, receivedInstant: started)
+        return Self.response(reply, service: service)
+    }
+
+    private func models(_ request: Hummingbird.Request, token: String, started: ContinuousClock.Instant) async
+        -> Hummingbird.Response
+    {
+        guard request.method == .get else { return Self.methodNotAllowed("GET") }
+        let reply = await service.listModels(token: token, receivedInstant: started)
         return Self.response(reply, service: service)
     }
 
@@ -229,13 +240,15 @@ public actor ProxyServer {
             "outcome_unknown": .bool(false),
         ]
         let object: JSONValue = .object(["error": .object(errorFields)])
-        return response(status, body: (try? object.data()) ?? Data())
+        return response(
+            status, body: (try? object.data()) ?? Data(), headers: status == 401 ? ["WWW-Authenticate": "Bearer"] : [:])
     }
 
     private static func response(_ reply: ProxyReply, service: DecisionService) -> Hummingbird.Response {
         var headers = reply.headers
         if let id = reply.requestID { headers["X-Falcon-Request-ID"] = id.uuidString }
         if reply.error?.code == "falcon_busy" { headers["Retry-After"] = "1" }
+        if reply.status == 401, reply.error != nil { headers["WWW-Authenticate"] = "Bearer" }
         return response(
             reply.status, body: reply.body, headers: headers,
             delivery: reply.requestID.flatMap { id in reply.receivedInstant.map { (id, $0) } }, service: service)
@@ -307,35 +320,28 @@ enum JevMCPTool {
         ])
         let variants: [JSONValue] = [
             .object([
-                "type": .string("object"),
-                "required": .array([.string("type"), .string("instructions"), .string("criteria")]),
+                "type": .string("object"), "required": .array([.string("type"), .string("criteria")]),
                 "properties": .object([
-                    "type": .object(["const": .string("choice")]), "instructions": structured,
-                    "criteria": .object([
-                        "type": .string("object"), "minProperties": .number(2), "maxProperties": .number(255),
-                        "additionalProperties": description,
-                    ]),
+                    "type": .object(["const": .string("choice")]), "instructions": description,
+                    "criteria": .object(["type": .string("object"), "additionalProperties": description]),
                 ]), "additionalProperties": .bool(true),
             ]),
             .object([
-                "type": .string("object"), "required": .array([.string("type"), .string("instructions")]),
+                "type": .string("object"), "required": .array([.string("type")]),
                 "properties": .object([
-                    "type": .object(["const": .string("noul")]), "instructions": structured,
+                    "type": .object(["const": .string("noul")]), "instructions": description,
                     "criteria": .object([
-                        "type": .string("object"), "required": .array([.string("true"), .string("false")]),
+                        "type": .array([.string("object"), .string("null")]),
                         "properties": .object(["true": description, "false": description]),
-                        "additionalProperties": .bool(false),
+                        "additionalProperties": .bool(true),
                     ]),
                 ]), "additionalProperties": .bool(true),
             ]),
             .object([
-                "type": .string("object"),
-                "required": .array([.string("type"), .string("instructions"), .string("criteria")]),
+                "type": .string("object"), "required": .array([.string("type"), .string("criteria")]),
                 "properties": .object([
-                    "type": .object(["const": .string("score")]), "instructions": structured,
-                    "criteria": .object([
-                        "type": .string("array"), "minItems": .number(2), "maxItems": .number(10), "items": description,
-                    ]),
+                    "type": .object(["const": .string("score")]), "instructions": description,
+                    "criteria": .object(["type": .string("array"), "minItems": .number(1), "items": structured]),
                 ]), "additionalProperties": .bool(true),
             ]),
         ]

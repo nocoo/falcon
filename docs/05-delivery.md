@@ -131,3 +131,11 @@ Release 构建、SwiftLint strict、swift-format strict、Markdown 本地链接�
 设计审阅通过仅归属于对应文档版本。随后用户明确授权了实施；应用实现、运行验证与性能证据单独记录，不能从文档 PASS 推导。
 
 [下一篇：调研证据](06-research.md) · [目录](README.md)
+
+### 2026-09-30 TypeSafe HTTP contract verification
+
+本轮基线为 `bb1a55b`（v0.1.6）。本地 HTTP 对齐官方 `/v1/systemone` 与 `/v1/models`，保留来源 Bearer 认证和独立上游凭据；补齐可选/null instructions、Noul criteria、官方 request ID 和毫秒重试头。模型发现不写决策历史。当前上游公开 OpenAPI 与锁定的 `typesafe-sdk==0.7.1` 均已核对；说明文档与 schema 不一致的数量限制交由上游裁决。
+
+完整 `swift test --enable-code-coverage` 退出 0：Core 59 项、Integration 25 项通过，默认跳过 1 项 opt-in SDK。完整 coverage 已先保存到本次独立验证目录，随后 `UV_OFFLINE=1 scripts/check-sdk.sh` 退出 0，官方 SDK 对真实 loopback 完成模型列表、三类推理、可选字段和无效 key 异常。测试均使用合成上游、隔离 SQLite 与内存凭据，不调用付费推理。
+
+Core 全套行覆盖率 94.09%（4264/4532）、函数覆盖率 89.60%（715/798）；statement 无测量，branch 为 0/0，region 不代替 statement。仍未达到完整 L1。严格 SwiftLint 与 swift-format 无 findings，Markdown 本地链接和 Git whitespace 检查通过。开发 Release 构建通过，Xcode 保留 AppIntents metadata 提示；loopback 清理有 Hummingbird 的 CancellationError 日志，测试结果仍通过。

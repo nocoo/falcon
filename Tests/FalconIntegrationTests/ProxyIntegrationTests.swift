@@ -21,9 +21,11 @@ struct ProxyFixture: Sendable {
 actor UpstreamCalls {
     private(set) var count = 0
     private(set) var bodies: [Data] = []
-    func next(_ body: Data) {
+    private(set) var requests: [URLRequest] = []
+    func next(_ request: URLRequest) {
         count += 1
-        bodies.append(body)
+        bodies.append(request.httpBody ?? Data())
+        requests.append(request)
     }
 }
 
@@ -54,7 +56,7 @@ private struct SyntheticUpstream: Sendable {
     let calls: UpstreamCalls
 
     func reply(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-        await calls.next(request.httpBody ?? Data())
+        await calls.next(request)
         if ignoreCancellation {
             let hold = Task.detached { try await Task.sleep(for: upstreamDelay) }
             try await hold.value
@@ -76,8 +78,20 @@ private struct SyntheticUpstream: Sendable {
                     url: request.url!, statusCode: upstreamStatus, httpVersion: nil,
                     headerFields: [
                         "Content-Type": "application/json", "Retry-After": "2", "Set-Cookie": "secret=synthetic",
-                        "Authorization": "Bearer synthetic",
+                        "Authorization": "Bearer synthetic", "retry-after-ms": "2000",
+                        "x-typesafe-request-id": "synthetic-upstream-request",
                     ])!
+            )
+        }
+        if request.url?.path.hasSuffix("/v1/models") == true {
+            return (
+                Data(
+                    #"""
+                    {"models":[{"name":"jev-synthetic","description":"Synthetic model","release_date":"2026-09-30"}]}
+                    """#.utf8),
+                HTTPURLResponse(
+                    url: request.url!, statusCode: 200, httpVersion: nil,
+                    headerFields: ["Content-Type": "application/json", "x-typesafe-request-id": "synthetic-models"])!
             )
         }
         let root = try JSONValue.decode(request.httpBody ?? Data()).objectValue!
@@ -512,7 +526,7 @@ func officialPythonSDKCallsRealLoopback() async throws {
             .deletingLastPathComponent().appendingPathComponent("scripts/check-sdk-fixture.py")
         process.arguments = [script.path]
         process.environment = [
-            "FALCON_TEST_BASE_URL": fixture.base.absoluteString, "FALCON_TEST_TOKEN": fixture.token,
+            "TYPESAFE_BASE_URL": fixture.base.absoluteString, "TYPESAFE_API_KEY": fixture.token,
             "NO_PROXY": "127.0.0.1", "no_proxy": "127.0.0.1",
         ]
         let output = Pipe()
@@ -526,13 +540,14 @@ func officialPythonSDKCallsRealLoopback() async throws {
         let summary = try #require(await fixture.store.requests().first)
         let detail = try #require(await fixture.store.detail(id: summary.id))
         #expect(summary.status == .succeeded)
-        #expect(summary.questionCount == 3)
+        #expect(summary.questionCount == 6)
+        #expect(try await fixture.store.requests().count == 1)
         for body in [detail.receivedRequest, detail.effectiveRequest] {
             let json = try JSONValue.decode(#require(body))
             #expect(json["extension"]?["kept"]?.boolValue == true)
             #expect(json["questions"]?["n"]?["custom_question"]?["kept"]?.boolValue == true)
         }
-        #expect(await fixture.calls.count == 1)
+        #expect(await fixture.calls.count == 2)
     }
 }
 

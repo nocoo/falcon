@@ -13,31 +13,31 @@ public struct JevRequest: Sendable {
         guard let model, !model.isEmpty, root["model"] == nil || root["model"]?.stringValue != nil else {
             throw FalconError("invalid_model", "Invalid Jev model", status: 422)
         }
-        for (id, question) in questions { try Self.validateQuestion(id: id, question: question) }
+        for question in questions.values { try Self.validateQuestion(question) }
         root["model"] = .string(model)
         self.value = .object(root)
         self.questions = questions
         self.model = model
     }
 
-    private static func validateQuestion(id: String, question: JSONValue) throws {
-        guard !id.isEmpty, let fields = question.objectValue, let type = fields["type"]?.stringValue,
-            let instructions = fields["instructions"], isStructured(instructions)
+    private static func validateQuestion(_ question: JSONValue) throws {
+        guard let fields = question.objectValue, let type = fields["type"]?.stringValue,
+            fields["instructions"].map(Self.isDescription) ?? true
         else { throw FalconError("invalid_question", "Invalid Jev question", status: 422) }
         switch type {
         case "choice":
-            guard let criteria = fields["criteria"]?.objectValue, (2...255).contains(criteria.count),
-                criteria.keys.allSatisfy({ !$0.isEmpty }), criteria.values.allSatisfy(Self.isDescription)
-            else { throw FalconError("invalid_choice", "Invalid Choice criteria", status: 422) }
+            guard let criteria = fields["criteria"]?.objectValue, criteria.values.allSatisfy(Self.isDescription) else {
+                throw FalconError("invalid_choice", "Invalid Choice criteria", status: 422)
+            }
         case "noul":
-            if let criteria = fields["criteria"] {
-                guard let values = criteria.objectValue, Set(values.keys) == ["true", "false"],
-                    values.values.allSatisfy(Self.isDescription)
+            if let criteria = fields["criteria"], criteria != .null {
+                guard let values = criteria.objectValue,
+                    ["true", "false"].allSatisfy({ values[$0].map(Self.isDescription) ?? true })
                 else { throw FalconError("invalid_noul", "Invalid Noul criteria", status: 422) }
             }
         case "score":
-            guard let criteria = fields["criteria"]?.arrayValue, (2...10).contains(criteria.count),
-                criteria.allSatisfy(Self.isDescription)
+            guard let criteria = fields["criteria"]?.arrayValue, !criteria.isEmpty,
+                criteria.allSatisfy(Self.isStructured)
             else { throw FalconError("invalid_score", "Invalid Score criteria", status: 422) }
         default: throw FalconError("unsupported_question", "Unsupported Jev question type", status: 422)
         }

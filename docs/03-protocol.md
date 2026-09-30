@@ -6,17 +6,19 @@
 
 官方推理接口为 `POST https://api.typesafe.ai/v1/systemone`，使用 `Authorization: Bearer <key>`。不是 OpenAI Chat Completions。
 
-请求包含 `state`（string / object / array）、`model`（string）、`questions`（按 question ID 命名的 map）。每题的 `instructions` 可为 string / object / array；不能收窄成纯文本 prompt。Question ID 用于关联响应，不作为模型输入。
+请求包含 `state`（string / object / array）、`model`（string）、`questions`（按 question ID 命名的 map）。每题的 `instructions` 可省略或为 string / object / array / null；不能收窄成纯文本 prompt。Question ID 用于关联响应，不作为模型输入。
 
 | 类型 | 请求 | 响应与展示 |
 | --- | --- | --- |
-| Choice | `type=choice`；criteria 为 option → string/object/array/null，官方最多 255 项 | `choice`、完整 `probabilities`、`confidence`；突出赢家与前两名 margin，但保留零概率选项 |
+| Choice | `type=choice`；criteria 为 option → string/object/array/null；文档说明最多 255 项，业务限制由上游裁决 | `choice`、完整 `probabilities`、`confidence`；突出赢家与前两名 margin，但保留零概率选项 |
 | Noul | `type=noul`；可选 criteria 的 `true/false` 定义 | `noul` 是 yes 概率；没有独立 confidence，不自动阈值化成确定布尔值 |
-| Score | `type=score`；criteria 为有序描述数组，2–10 级 | `score` 为概率加权等级位置，连同 `legend`、`probabilities`、`confidence`；不是通用 0–100 分 |
+| Score | `type=score`；criteria 为非空 string/object/array 描述数组；文档建议 2–10 级，业务限制由上游裁决 | `score` 为概率加权等级位置，连同 `legend`、`probabilities`、`confidence`；不是通用 0–100 分 |
 
 响应根包含实际 `model`、按 question ID 对应的 `answers`、`usage.input_tokens/output_tokens`。显示 requested model 和 resolved model，避免 `jev-latest` 升级后历史混淆。上游错误可包括 401、422、429、529；未记录的其他 HTTP 状态同样需正确转发。
 
 首版支持这三种题型，不猜测未知题型。局部验证不应发明官方未声明的 token 限额或固定题数。严格校验已知必需字段、已知字段的类型和大小边界；未知顶层字段及 question 附加字段作为 JSON 原样保留并透传，由上游决定是否支持。官方 SDK 的 `extra_body` 与原始 question 字典扩展不能被本地静默丢弃或先行 422。未知字段不具有 Falcon 路由、鉴权或 profile 覆写权限。
+
+三类题的 `instructions` 均可省略或为 null。Noul criteria 可省略、为 null、为空对象或只定义 true/false 一侧；已知描述字段严格检查类型，附加字段保留。2026-09-30 官方 OpenAPI 与 Python SDK 0.7.1 在数量限制上比说明文档宽松，Falcon 不添加更严格的选项数量、问题 ID 或选项名称限制。Score 描述项不接受 null。
 
 数值保留原始数字文本，避免 `Double` 或 `Decimal` 往返改变大整数、长小数与极小值。字符串的转义和 Unicode 校验复用 Foundation；决策 JSON 拒绝重复键、无效 UTF-8 与超过 512 层的结构。MCP 的协议处理仍由官方 SDK 负责，工具参数与结构化结果单独保真封装，避免经过 SDK 的 Int/Double 转换。Token 从数值文本精确转换为 Int；概率图表使用浮点投影，不改原文。决策指纹按字段排序并规范化十进制数；超出 Int 指数范围的数值保留原拼写，不合并近似值。
 
@@ -30,16 +32,17 @@
 | --- | --- |
 | `GET /health` | 已认证后返回服务状态、产品版本 `version` 和协议版本 `api_version`；不返回来源列表、凭据、历史正文；ready 200，否则 503 |
 | `POST /v1/systemone` | 接受官方请求体；成功保留上游响应 JSON，不注入额外根字段；`X-Falcon-Request-ID` 关联观察记录 |
+| `GET /v1/models` | 按来源绑定的 profile 取上游模型；保留原状态和 body，格式为 `{"models":[{"name":"...","description":"...","release_date":"YYYY-MM-DD"}]}`；不产生决策记录、token 或推理延迟统计 |
 | `POST /mcp` | MCP Streamable HTTP，见后文 |
 | `GET /mcp`、`DELETE /mcp` | 已认证后 405，`Allow: POST`；首版无 SSE 与 session 删除 |
 
-未知路径 404，已知路径不支持的方法 405；Origin/Host 校验及认证在路由之前。无 CORS，OPTIONS 不开放浏览器跨域。首版不代理 `/v1/models`，不声称支持官方 SDK 的全部资源；只保证 `system_one` 互操作。
+未知路径 404，已知路径不支持的方法 405；Origin/Host 校验及认证在路由之前。无 CORS，OPTIONS 不开放浏览器跨域。HTTP 覆盖当前 TypeSafe OpenAPI 的推理与模型发现两个资源；官方 SDK 只需替换 API root 与 key，业务调用保持不变。Bearer scheme 不区分大小写；缺失、错误、撤销的本地 key 返回 401 与 `WWW-Authenticate: Bearer`。
 
 HTTP 请求的 `model` 必填；官方 SDK会带默认 model。MCP 可省略 model，使用来源绑定 profile 的默认值，再构造完整上游请求。UI 同时保存收到的输入和实际送出的有效请求；不得将本地 metadata 夹入 state。
 
 可选 `X-Falcon-Agent`、`X-Falcon-Project`、`X-Falcon-Run-ID` 仅用于显示与关联，全部视为不可信字符串，计入 4 KiB metadata 上限。不自动读取进程、工作目录、git 仓库或其他本机信息。无论 metadata 自称谁，账目归属只取 key 的 source ID。
 
-请求只转发允许的 JSON 与固定 `Content-Type`、`Accept`、Falcon User-Agent 和上游 Bearer。调用方 headers、Cookies、内部 key、host、caller metadata 不进入上游。响应只转发 content type、Retry-After 等明确允许的非敏感字段；不转发 Set-Cookie、Authorization 或任意调试 headers。
+请求只转发允许的 JSON 与固定 `Content-Type`、`Accept`、Falcon User-Agent 和上游 Bearer。调用方 headers、Cookies、内部 key、host、caller metadata 不进入上游。响应允许 Content-Type、Retry-After、retry-after-ms 和 x-typesafe-request-id；官方 request ID 与本地 X-Falcon-Request-ID 分开。模型查询复用凭据快照、并发配额、暂停/退出、30 秒截止与 4 MiB 响应上限，不参与历史审计；不转发 Set-Cookie、Authorization 或任意调试 headers。
 
 ## 来源与密钥
 
@@ -114,6 +117,8 @@ with TypeSafeClient(
     retry=RetryPolicy(max_retries=0),
     timeout=35,
 ) as client:
+    models = client.models.list()
+    print([model.name for model in models.models])
     result = client.system_one(
         state={"task": "Review a focused documentation change"},
         questions={

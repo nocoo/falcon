@@ -5,11 +5,18 @@ public struct JevHTTPResult: Sendable {
     public let body: Data
     public let contentType: String?
     public let retryAfter: String?
-    public init(status: Int, body: Data, contentType: String? = nil, retryAfter: String? = nil) {
+    public let retryAfterMS: String?
+    public let requestID: String?
+    public init(
+        status: Int, body: Data, contentType: String? = nil, retryAfter: String? = nil, retryAfterMS: String? = nil,
+        requestID: String? = nil
+    ) {
         self.status = status
         self.body = body
         self.contentType = contentType
         self.retryAfter = retryAfter
+        self.retryAfterMS = retryAfterMS
+        self.requestID = requestID
     }
 }
 
@@ -22,12 +29,20 @@ public struct JevClient: Sendable {
     }
 
     public func send(_ body: Data, snapshot: ExecutionSnapshot) async throws -> JevHTTPResult {
-        var request = URLRequest(url: snapshot.endpoint)
-        request.httpMethod = "POST"
+        try await send(body, to: snapshot.endpoint, credential: snapshot.credential)
+    }
+
+    public func listModels(snapshot: ExecutionSnapshot) async throws -> JevHTTPResult {
+        try await send(nil, to: URL(string: snapshot.profile.baseURL + "/v1/models")!, credential: snapshot.credential)
+    }
+
+    private func send(_ body: Data?, to endpoint: URL, credential: String) async throws -> JevHTTPResult {
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = body == nil ? "GET" : "POST"
         request.httpBody = body
         request.timeoutInterval = FalconLimits.timeout
-        request.setValue("Bearer \(snapshot.credential)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(credential)", forHTTPHeaderField: "Authorization")
+        if body != nil { request.setValue("application/json", forHTTPHeaderField: "Content-Type") }
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("Falcon/1", forHTTPHeaderField: "User-Agent")
         let (data, response) = try await transport(request)
@@ -39,7 +54,9 @@ public struct JevClient: Sendable {
         }
         return JevHTTPResult(
             status: response.statusCode, body: data, contentType: response.value(forHTTPHeaderField: "Content-Type"),
-            retryAfter: response.value(forHTTPHeaderField: "Retry-After"))
+            retryAfter: response.value(forHTTPHeaderField: "Retry-After"),
+            retryAfterMS: response.value(forHTTPHeaderField: "retry-after-ms"),
+            requestID: response.value(forHTTPHeaderField: "x-typesafe-request-id"))
     }
 }
 
