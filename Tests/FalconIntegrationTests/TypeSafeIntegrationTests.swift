@@ -117,3 +117,89 @@ import Testing
         #expect(try await fixture.store.requests().isEmpty)
     }
 }
+
+private let modelLifecycleInput = Data(
+    #"{"model":"jev-latest","state":"synthetic","questions":{"n":{"type":"noul"}}}"#.utf8)
+
+private func waitForModelFlights(_ service: DecisionService, count: Int) async throws {
+    for _ in 0..<200 {
+        if await service.status().inFlight == count { return }
+        try await Task.sleep(for: .milliseconds(5))
+    }
+    throw FalconError("test_timeout", "Synthetic model requests did not reach the expected flight count")
+}
+
+@Test func modelDiscoveryAndInferenceShareSourceAndGlobalConcurrencyLimits() async throws {
+    try await withFixture(upstreamDelay: .milliseconds(500)) { fixture in
+        let models = Task { await fixture.service.listModels(token: fixture.token) }
+        let inference = Task { await fixture.service.submit(token: fixture.token, body: modelLifecycleInput) }
+        try await waitForModelFlights(fixture.service, count: 2)
+        let sourceLimit = await fixture.service.listModels(token: fixture.token)
+        #expect(sourceLimit.status == 429)
+        #expect(await models.value.status == 200)
+        #expect(await inference.value.status == 200)
+        #expect(try await fixture.store.requests().count == 1)
+
+        var tokens = [fixture.token]
+        for index in 1..<5 {
+            let source = try await fixture.configuration.createSource(
+                name: "Mixed \(index)", profileID: fixture.profileID)
+            tokens.append(source.token)
+        }
+        let pending = tokens.prefix(4).flatMap { token in
+            [
+                Task { await fixture.service.listModels(token: token) },
+                Task { await fixture.service.submit(token: token, body: modelLifecycleInput) },
+            ]
+        }
+        try await waitForModelFlights(fixture.service, count: 8)
+        let globalLimit = await fixture.service.listModels(token: tokens[4])
+        #expect(globalLimit.status == 429)
+        for task in pending { #expect(await task.value.status == 200) }
+        #expect(await fixture.calls.count == 10)
+        #expect(try await fixture.store.requests().count == 5)
+        #expect(await fixture.service.status().inFlight == 0)
+    }
+}
+
+@Test func modelDiscoveryKeepsInflightCredentialsUntilCompletion() async throws {
+    try await withFixture(upstreamDelay: .milliseconds(300)) { fixture in
+        let original = try #require(await fixture.store.profiles().first)
+        let first = Task { await fixture.service.listModels(token: fixture.token) }
+        try await waitForModelFlights(fixture.service, count: 1)
+        var changed = original
+        changed.baseURL = "https://rotated.invalid/api"
+        _ = try await fixture.configuration.saveProfile(changed, apiKey: "synthetic-rotated-key")
+        #expect(try fixture.vault.read(id: original.credentialID) == "synthetic-upstream-key")
+        let second = await fixture.service.listModels(token: fixture.token)
+        #expect(second.status == 200)
+        #expect(await first.value.status == 200)
+        let requests = await fixture.calls.requests
+        #expect(requests.count == 2)
+        #expect(requests[0].url?.absoluteString == "https://fixture.invalid/v1/models")
+        #expect(requests[0].value(forHTTPHeaderField: "Authorization") == "Bearer synthetic-upstream-key")
+        #expect(requests[1].url?.absoluteString == "https://rotated.invalid/api/v1/models")
+        #expect(requests[1].value(forHTTPHeaderField: "Authorization") == "Bearer synthetic-rotated-key")
+        for _ in 0..<100 {
+            if try fixture.vault.read(id: original.credentialID) == nil { break }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        #expect(try fixture.vault.read(id: original.credentialID) == nil)
+        #expect(try await fixture.store.requests().isEmpty)
+    }
+}
+
+@Test func modelDiscoveryShutdownCancelsAndDrainsWithoutAuditRecords() async throws {
+    try await withFixture(upstreamDelay: .seconds(2)) { fixture in
+        let pending = Task { await fixture.service.listModels(token: fixture.token) }
+        try await waitForModelFlights(fixture.service, count: 1)
+        await fixture.service.shutdown(grace: .zero)
+        let reply = await pending.value
+        #expect(reply.status == 502)
+        #expect(await fixture.service.status().inFlight == 0)
+        #expect(await fixture.calls.count == 1)
+        #expect(try await fixture.store.requests().isEmpty)
+        let stopped = await fixture.service.listModels(token: fixture.token)
+        #expect(stopped.status == 503)
+    }
+}

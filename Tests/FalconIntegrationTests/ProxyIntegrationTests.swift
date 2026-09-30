@@ -15,6 +15,7 @@ struct ProxyFixture: Sendable {
     let profileID: UUID
     let port: Int
     let calls: UpstreamCalls
+    let vault: CredentialVault
     var base: URL { URL(string: "http://127.0.0.1:\(port)")! }
 }
 
@@ -149,7 +150,8 @@ func withFixture(
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent("falcon-proxy-\(runID.uuidString)")
     let store = try DecisionStore(
         path: directory.appendingPathComponent("fixture.sqlite").path, testRunID: runID, budgetBytes: budgetBytes)
-    let configuration = ConfigurationManager(store: store, vault: .memory())
+    let vault = CredentialVault.memory()
+    let configuration = ConfigurationManager(store: store, vault: vault)
     let profile = try await configuration.saveProfile(
         UpstreamProfile(name: "Synthetic", baseURL: "https://fixture.invalid"), apiKey: "synthetic-upstream-key")
     let issued = try await configuration.createSource(name: "First", profileID: profile.id)
@@ -163,7 +165,7 @@ func withFixture(
     let port = try await server.start()
     let fixture = ProxyFixture(
         store: store, configuration: configuration, service: service, server: server, token: issued.token,
-        profileID: profile.id, port: port, calls: calls)
+        profileID: profile.id, port: port, calls: calls, vault: vault)
     var workError: Error?
     do { try await work(fixture) } catch { workError = error }
     await server.shutdown()

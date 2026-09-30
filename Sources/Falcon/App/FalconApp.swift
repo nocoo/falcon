@@ -184,6 +184,10 @@ import SwiftUI
         if CommandLine.arguments.contains("--inactive") { NSApp.deactivate() }
         let arrivalID = CommandLine.arguments.contains("--arrival") ? try await insertCaptureArrival() : nil
         try await Task.sleep(for: .milliseconds(500))
+        if CommandLine.arguments.contains("--replay") {
+            try await waitForReplayCapture()
+            window.contentView?.layoutSubtreeIfNeeded()
+        }
         if let arrivalID {
             guard runtime.workspace?.requests.first?.id == arrivalID, runtime.workspace?.isActive == true else {
                 throw FalconError("capture_arrival", "The visible workspace did not receive the new request.")
@@ -192,6 +196,22 @@ import SwiftUI
         if CommandLine.arguments.contains("--inactive"), NSApp.isActive {
             throw FalconError("capture_inactive", "The preview window did not lose focus.")
         }
+    }
+
+    private func waitForReplayCapture() async throws {
+        guard let workspace = runtime.workspace, workspace.timeline != nil else {
+            throw FalconError("capture_replay", "The synthetic replay timeline is unavailable.")
+        }
+        for _ in 0..<100 {
+            if !workspace.isSelecting, workspace.detail?.id == workspace.selectedID, workspace.inputsVisible,
+                !workspace.resultsVisible
+            {
+                try await Task.sleep(for: .milliseconds(250))
+                return
+            }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        throw FalconError("capture_replay", "The synthetic replay did not settle before the response event.")
     }
 
     private func prepareHistoryCapture() async throws {
