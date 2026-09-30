@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.7 — 2026-09-30
+
+- Support TypeSafe SDK inference and model discovery by replacing only the API root and source key.
+- Forward source-bound model metadata, official request IDs and millisecond retry headers without creating decision history for model queries.
+- Align optional/null question fields and Bearer authentication with the official HTTP contract.
+- Add SDK templates and parallel inference, model-discovery and MCP guidance in Sources.
+- Normalize editor spacing, preserve connection sheet identity and verify synthetic previews in both appearances.
+
 ## v0.1.6 — 2026-09-29
 
 - Restore the Finder application icon by explicitly declaring it in the packaged Info.plist.

@@ -139,3 +139,13 @@ Release 构建、SwiftLint strict、swift-format strict、Markdown 本地链接�
 完整 `swift test --enable-code-coverage` 退出 0：Core 59 项、Integration 25 项通过，默认跳过 1 项 opt-in SDK。完整 coverage 已先保存到本次独立验证目录，随后 `UV_OFFLINE=1 scripts/check-sdk.sh` 退出 0，官方 SDK 对真实 loopback 完成模型列表、三类推理、可选字段和无效 key 异常。测试均使用合成上游、隔离 SQLite 与内存凭据，不调用付费推理。
 
 Core 全套行覆盖率 94.09%（4264/4532）、函数覆盖率 89.60%（715/798）；statement 无测量，branch 为 0/0，region 不代替 statement。仍未达到完整 L1。严格 SwiftLint 与 swift-format 无 findings，Markdown 本地链接和 Git whitespace 检查通过。开发 Release 构建通过，Xcode 保留 AppIntents metadata 提示；loopback 清理有 Hummingbird 的 CancellationError 日志，测试结果仍通过。
+
+### 2026-09-30 independent review follow-up
+
+独立 Codex pane 对 `f7e77a16cd48fb2133616334dba5f06b20340367` 相对 `bb1a55b` 的代码差异给出 Sign Off，没有确认的 P0/P1/P2/P3 缺陷，但指出浅色回放截图矛盾与模型查询专项生命周期证据不足。`57b2f85dbf4c51cfced84c9d7ef9e9fde51dc1ff` 补入模型/推理混合并发、在途 URL/key 整体轮换与旧凭据回收、退出取消不留历史三项隔离回归，并给 preview 回放采集增加选择、输入与结果可见性就绪断言。替换后的浅/深色回放均显示响应前隐藏结果；旧浅色图不作为通过证据。
+
+最终完整套件 Core 59 项、Integration 28 项通过，1 项 opt-in SDK 在全套中跳过，随后单独 SDK 检查通过。完整 coverage 先保存再执行 SDK；Core 行 93.98%（4259/4532）、函数 89.72%（716/798），statement 无测量、branch 0/0。严格 SwiftLint / swift-format、Markdown links、Git whitespace 通过；原生开发与 Apple Development 签名候选构建通过。五个页面、接入说明、创建/编辑来源和连接、一次性 key、时间范围、Focus 与回放均已检查浅/深色合成截图；系统原生确认/错误面板做源码文字与动作核对，不冒称全部弹窗均有截图或自动旅程证据。
+
+候选版本按用户明确要求 Z+1 为 0.1.7（build 8），不是按新增 endpoint 自动改 Y。arm64 DMG 以 ULMO 压缩，已只读挂载核验签名、版本、图标、资源与可执行文件逐字节一致性，菜单符号按 18-point 浅/深色 template 投影核对且源资源未改。签名为 Apple Development，未公证。完整 L1/G2/自动化 L3 和生产推理验证仍未完成。
+
+独立 Codex 最终复审 Sign Off 的精确内容版本为 `57b2f85dbf4c51cfced84c9d7ef9e9fde51dc1ff`，累计范围 `bb1a55b` 至该版本，无需修复的 P0/P1/P2/P3。专项生命周期测试与两张替换回放截图已被复审核对，上轮两项证据缺口关闭。后续 release commit 只包含版本、构建号、changelog、README 和此验证记录；审查签署不冒充完整质量门禁通过或外部 API 验收。
