@@ -145,13 +145,17 @@ struct SourcesView: View {
                 "The current key stops working immediately. Update the agent before its next request. "
                     + "Historical decisions remain available.")
         }.onAppear {
-            if model.isPreview, CommandLine.arguments.contains("--source-key"), let source = model.sources.first {
-                let token = "falcon_" + String(repeating: "0", count: 43)
-                presentedKey = PresentedKey(
-                    value: IssuedSourceKey(
-                        source: source,
-                        key: SourceKey(sourceID: source.id, digest: Data(repeating: 0, count: 32), suffix: "0000"),
-                        token: token))
+            if model.isPreview, CommandLine.arguments.contains("--source-key") {
+                Task { @MainActor in
+                    await model.refresh(reset: true)
+                    guard let source = model.sources.first else { return }
+                    let token = "falcon_" + String(repeating: "0", count: 43)
+                    presentedKey = PresentedKey(
+                        value: IssuedSourceKey(
+                            source: source,
+                            key: SourceKey(sourceID: source.id, digest: Data(repeating: 0, count: 32), suffix: "0000"),
+                            token: token))
+                }
             } else if model.isPreview, CommandLine.arguments.contains("--source-editor") {
                 editor = SourceEditorPresentation(
                     source: CommandLine.arguments.contains("--edit-source") ? model.sources.first : nil)
