@@ -2,6 +2,7 @@
 .swiftpm/
 build/
 DerivedData/
+Falcon.xcodeproj/
 *.xcuserstate
 xcuserdata/
 .DS_Store
