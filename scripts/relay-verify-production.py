@@ -12,6 +12,7 @@ import urllib.request
 from pathlib import Path
 
 DEFAULT_URL = "https://falcon.hexly.ai/api/live"
+USER_AGENT = "falcon-deploy-verify/1.0"
 VERSION_RE = re.compile(
     r'(?m)^\s*MARKETING_VERSION:\s*["\']?([0-9]+\.[0-9]+\.[0-9]+)["\']?\s*$'
 )
@@ -46,6 +47,7 @@ def fetch(url: str) -> dict:
             "Accept": "application/json",
             "Cache-Control": "no-cache",
             "Pragma": "no-cache",
+            "User-Agent": USER_AGENT,
         },
         method="GET",
     )

@@ -97,6 +97,13 @@ class VerifyProductionTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             cache_control = handler.seen_headers.get("cache-control", "")
             self.assertIn("no-cache", cache_control.lower())
+            user_agent = handler.seen_headers.get("user-agent", "")
+            self.assertTrue(user_agent, "User-Agent header required")
+            self.assertFalse(
+                user_agent.lower().startswith("python-urllib/"),
+                f"default urllib User-Agent must not be used: {user_agent!r}",
+            )
+            self.assertEqual(user_agent, "falcon-deploy-verify/1.0")
         finally:
             stop(server)
 
