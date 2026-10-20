@@ -256,3 +256,18 @@ filenames and exited successfully with zero tests. That result was rejected;
 the workflow's explicit per-file entrypoints ran the real helper checks instead.
 Reuse the checked-in CI command and verify the executed test count, not just
 the process exit status.
+
+## 2026-10-20: Inspect partial deployment before retrying
+
+The first production `cf deploy` uploaded the Worker and its two Secrets, then
+returned HTTP 401 before applying the custom domain. A nonzero CLI exit did not
+mean that no remote mutation occurred. After checking authentication and the
+active deployment, `cf workers triggers deploy --prebuilt` completed only the
+missing triggers; it did not rotate credentials or upload another version.
+
+The new hostname then resolved through public DNS while the local resolver still
+cached NXDOMAIN. Initial HTTPS and official SDK acceptance used the public DNS
+answer with normal hostname and certificate verification, not disabled TLS or a
+machine-wide DNS change. Record that override separately and verify ordinary
+resolution after the negative cache expires. A local OAuth bootstrap is not
+evidence that GitHub CD works: the dedicated CI API token remains required.

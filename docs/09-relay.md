@@ -21,8 +21,9 @@
 | Worker TDD | 先失败后通过；四项覆盖率分别至少 95%；strict types、零警告 lint、check-only format | 已通过 61 项测试；语句 99.05%、分支 97.52%、函数 100%、行 99.04%；独立正确性复审的问题已关闭 |
 | App 接入 | 直连和代理配置可用；relay 错误归因及不确定结果真实保留 | 已实现；95 项 Swift 测试及单独官方 SDK 检查通过，独立复审的问题已修复 |
 | 本地 HTTPS | Caddy 域名、隔离测试凭据、模拟上游，不访问生产推理 | 已通过 30 项路由／方法／认证检查及官方 SDK 模型／推理检查；用户于 2026-10-20 确认验收并授权 Y+1 发布 |
-| CI | 固定 SHA 引用 base-ci；Linux Worker 与 macOS 原生检查；无生产测试凭据 | 已配置；必须核验待发布 SHA 的实际运行结果，不能用旧提交的成功替代 |
-| CD | 精确成功 CI 来源；生产环境隔离；部署后版本/SHA/live 验证 | 待验证 |
+| CI | 固定 SHA 引用 base-ci；Linux Worker 与 macOS 原生检查；无生产测试凭据 | `4291fe9` 的八项必要任务全部通过；最终发布 SHA 仍须单独核验 |
+| CD | 精确成功 CI 来源；生产环境隔离；部署后版本/SHA/live 验证 | 本机 OAuth 首次部署完成；GitHub production 仅允许 main，仍缺专用 CI API token，自动部署尚未实跑 |
+| 线上协议 | 正式域名 TLS、live、认证与官方 SDK | 首次部署通过 live、错误 token 401、模型发现与一次零重试真实推理；初次检查使用公共 DNS 地址覆盖本机旧的 NXDOMAIN 缓存，TLS 校验未关闭 |
 | 区域可达性 | 从实际受影响网络验证到 Worker，再验证官方推理 | 待验证 |
 
 Workers 的区域 Placement Hints 不是固定国家或 IP 出口保证。普通单元测试、模拟上游和 `/api/live` 成功都不证明所有目标地区能够推理。
@@ -63,6 +64,8 @@ Worker 覆盖率范围为 `src/**/*.ts`（不含声明文件）。开发 harness
 CI 使用 `nocoo/base-ci@0394178ebcff0418c442d84a84119220f31f8987`（`v2026.9`）。Worker 质量、原生 Swift、Python 辅助脚本与 workflow lint 分开执行；汇总门禁要求相同 SHA 的所有任务成功。CD 暂以 `workflow_dispatch` 触发，输入成功的 main CI run ID 和对应完整 SHA；部署前再次检查 main，部署后核对 live 的状态、版本和 SHA。
 
 生产发布在本地验收确认之后进行。远程 Workflow 运行、正式 Secrets、生产域名/live 和目标区域推理是单独的验收项，不能用本地模拟成功替代。原生 DMG 的个人 Apple Development 签名仍走仓库已有发版流程，不假设 GitHub 托管 runner 能使用本机签名身份。
+
+首次生产部署基于通过 [CI 39369351212](https://github.com/nocoo/falcon/actions/runs/39369351212) 的 `4291fe9ffc20b15b83f79da718907dfa170b3893`。最终发布与部署 revision 以 GitHub Release 证据及线上 live 响应为准。独立 relay token 保留在本机 `~/.config/falcon/relay-token`（0600），供 Connections 导入；本次部署没有修改既有直连 profile、source 映射或历史。CI token 应通过 `~/.config/falcon/cloudflare-api-token`（0600）或 GitHub production 环境 Secret 配置，不得把本机 OAuth 复制到 CI。
 
 ## 参考
 
