@@ -63,6 +63,28 @@ private func sampleRecord() -> RequestSummary {
     #expect(DecisionFormat.probability(0.8) == "80.0%")
 }
 
+@Test func csvPreservesColumnOrderMissingValuesAndResolvedModel() {
+    var record = sampleRecord()
+    record.id = UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1))
+    let header =
+        "request_id,received_at,source,transport,status,model,questions,"
+        + "processing_ms,return_ms,input_tokens,output_tokens,review"
+    let prefix = "\"00000000-0000-0000-0000-000000000001\",\"1970-01-01T00:16:40Z\",\"Fixture\",\"http\",\"succeeded\","
+    let missing = prefix + "\"jev-latest\",\"0\",\"\",\"\",\"\",\"\",\"unreviewed\""
+    #expect(DecisionFormat.csv([]) == header)
+    #expect(DecisionFormat.csv([record]) == header + "\r\n" + missing)
+
+    let original = record
+    record.resolvedModel = "jev-resolved"
+    record.questionCount = 2
+    record.timing = RequestTiming(terminalMS: 12.5, deliveryFinishedMS: 13)
+    record.inputTokens = 7
+    record.outputTokens = 0
+    record.reviewState = .reviewed
+    let populated = prefix + "\"jev-resolved\",\"2\",\"12.5\",\"13.0\",\"7\",\"0\",\"reviewed\""
+    #expect(DecisionFormat.csv([original, record]) == [header, missing, populated].joined(separator: "\r\n"))
+}
+
 @Test func scorePresentationPreservesOrdinalLevelsAndExtensions() throws {
     let request = Data(
         #"""

@@ -92,14 +92,15 @@ public enum DecisionFormat {
             + "processing_ms,return_ms,input_tokens,output_tokens,review"
         var lines = [header]
         lines += records.map { record in
-            [
+            let fields: [String] = [
                 record.id.uuidString, record.receivedAt.ISO8601Format(), record.sourceName, record.transport.rawValue,
                 record.status.rawValue, record.resolvedModel ?? record.requestedModel, String(record.questionCount),
-                record.timing.terminalMS.map(String.init(describing:)) ?? "",
-                record.timing.deliveryFinishedMS.map(String.init(describing:)) ?? "",
-                record.inputTokens.map(String.init) ?? "", record.outputTokens.map(String.init) ?? "",
+                record.timing.terminalMS.map { String(describing: $0) } ?? "",
+                record.timing.deliveryFinishedMS.map { String(describing: $0) } ?? "",
+                record.inputTokens.map { String($0) } ?? "", record.outputTokens.map { String($0) } ?? "",
                 record.reviewState.rawValue,
-            ].map(cell).joined(separator: ",")
+            ]
+            return fields.map(cell).joined(separator: ",")
         }
         return lines.joined(separator: "\r\n")
     }

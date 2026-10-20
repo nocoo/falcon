@@ -215,3 +215,14 @@ from all three consumers now reports the patched version. Verify both the locked
 graph and actual installed resolution rather than trusting an install summary.
 Package metadata is not necessarily exported through Node's public subpaths;
 inspect metadata adjacent to the resolved module instead of assuming otherwise.
+
+## 2026-10-20: Local compiler success is not CI portability
+
+The first macOS CI run could not type-check the CSV export's long inferred
+array/map expression within the compiler limit, although local tests and the
+Release build had succeeded. The export now gives its field array an explicit
+type and separates formatting from construction, avoiding overloaded initializer
+references without changing the CSV contract. A full-row regression checks
+column order, missing values, resolved models and CRLF separators. Keep the
+remote compiler result separate from local build evidence; do not loosen CI or
+change export semantics to hide a type-inference limitation.
