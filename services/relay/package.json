@@ -12,8 +12,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:harness": "node --experimental-strip-types scripts/harness-smoke.ts",
-    "test:http": "bun run build && bun run test:harness",
-    "build": "cf build",
+    "test:http": "bun run build && cf deploy --prebuilt --mode production --dry-run && bun run test:harness",
+    "build": "cf build --mode production",
     "harness": "node --experimental-strip-types scripts/harness.ts",
     "dev": "bun run build && bun run harness"
   },

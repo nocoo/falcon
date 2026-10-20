@@ -6,6 +6,7 @@ Stdlib only. Expects files under .github/, .husky/, and scripts/relay-*.
 
 from __future__ import annotations
 
+import json
 import re
 import unittest
 from pathlib import Path
@@ -112,6 +113,15 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertRegex(ci, r"GIT_SHA=.*GITHUB_SHA")
         self.assertIn("GIT_SHA=", deploy)
         self.assertIn("inputs.exact-sha", deploy)
+
+    def test_ci_checks_production_prebuilt_deployment(self) -> None:
+        scripts = json.loads(read("services/relay/package.json"))["scripts"]
+        self.assertEqual(scripts["build"], "cf build --mode production")
+        self.assertEqual(
+            scripts["test:http"],
+            "bun run build && cf deploy --prebuilt --mode production --dry-run"
+            " && bun run test:harness",
+        )
 
     def test_sdk_check_selects_supported_python_explicitly(self) -> None:
         text = read("scripts/check-sdk.sh")

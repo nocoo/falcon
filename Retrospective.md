@@ -271,3 +271,17 @@ answer with normal hostname and certificate verification, not disabled TLS or a
 machine-wide DNS change. Record that override separately and verify ordinary
 resolution after the negative cache expires. A local OAuth bootstrap is not
 evidence that GitHub CD works: the dedicated CI API token remains required.
+
+## 2026-10-20: Exercise the shared deployment command before publication
+
+The first GitHub deployment (run 39373516093) received both environment Secrets
+but failed before Cloudflare API access. The package built without a recorded
+mode, while the pinned base-ci workflow deploys with `--mode production`.
+Local bootstrap used a different command and therefore did not expose the
+mismatch; successful Secret injection was not token-permission evidence.
+
+A focused contract test and the actual credential-free prebuilt deployment
+reproduced the failure. The shared package build now records production mode,
+and the existing CI HTTP check first runs the same prebuilt deployment command
+with `--dry-run`. Validate build/deploy compatibility through the real shared
+workflow contract, not merely a successful bundle or a different local command.

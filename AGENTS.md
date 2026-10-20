@@ -71,8 +71,10 @@ The service generates Cloudflare binding types before strict typechecking. Its
 build reads the product version from root `project.yml`; `GIT_SHA` takes precedence
 over CI metadata and a lazy local Git fallback. Index-snapshot checks must work
 without a `.git` directory. Never substitute a stale build SHA or independent
-package version. Keep production/test compatibility dates aligned with the
-pinned workerd runtime; any date lag must remain explicit.
+package version. The build records `production` mode to match base-ci deployment;
+`test:http` validates that prebuilt deployment with a credential-free dry run
+before starting the synthetic HTTP harness. Keep production/test compatibility
+dates aligned with the pinned workerd runtime; any date lag must remain explicit.
 
 Install the Worker-only Husky gate with `scripts/relay-bootstrap-hooks.sh` from
 the repository root. If dependencies were installed using a temporary
