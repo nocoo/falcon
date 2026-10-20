@@ -21,10 +21,10 @@ open build/Build/Products/Release/Falcon.app
 
 脚本仅构建 arm64（Apple Silicon），产物位于 `build/Build/Products/Release/Falcon.app`。这是本地开发构建。
 
-v0.1.7 是供个人使用的 macOS 15+、Apple Silicon 专用 DMG，不支持 Intel Mac，采用自己账户的 Apple Development 签名，未经过 Apple 公证。从 [GitHub Releases](https://github.com/nocoo/falcon/releases) 下载 DMG 和同名 `.sha256`，在下载目录执行：
+v0.2.0 是供个人使用的 macOS 15+、Apple Silicon 专用 DMG，不支持 Intel Mac，采用自己账户的 Apple Development 签名，未经过 Apple 公证。从 [GitHub Releases](https://github.com/nocoo/falcon/releases) 下载 DMG 和同名 `.sha256`，在下载目录执行：
 
 ```sh
-shasum -a 256 -c Falcon-0.1.7-arm64.dmg.sha256
+shasum -a 256 -c Falcon-0.2.0-arm64.dmg.sha256
 ```
 
 打开 DMG，将 Falcon 拖入 Applications。若确认下载可信且校验通过，但 macOS 因未公证阻止打开，可仅移除 Falcon 的下载隔离属性：
@@ -103,7 +103,7 @@ Worker 只开放 `POST /v1/systemone`、`GET /v1/models` 和匿名 `GET /api/liv
 
 目标生产域名为 `https://falcon.hexly.ai`，本地验收域名为 `https://falcon.dev.hexly.ai`。本地模拟环境使用独立测试 token 和模拟官方响应，不读取生产凭据。部署与区域可达性仍需分别验证；Cloudflare Worker 并不保证固定国家出口。实现与验收状态见 [Relay 设计](docs/09-relay.md)。
 
-Relay 功能目前属于待发布的开发版本；已发布的 v0.1.7 DMG 不包含新的连接预设。生产域名仍待上线验收。
+Relay 连接预设从 v0.2.0 开始提供。App 发布、Worker 部署和目标区域可达性是独立验收项；实际发布及部署证据见对应 GitHub Release 和 Actions 运行。
 
 ## 开发验证
 

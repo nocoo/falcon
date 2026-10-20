@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.2.0 — 2026-10-20
+
+- Add an independent Cloudflare relay service alongside the native Swift app, with fixed upstream routes, Bearer authentication, bounded requests and an anonymous dependency-aware live endpoint.
+- Support direct and relay connection presets using the existing protected file vault, without automatic fallback, retries or response caching.
+- Preserve official response semantics and distinguish relay errors and uncertain inference outcomes across HTTP, MCP, history and replay.
+- Integrate pinned nocoo/base-ci workflows for Worker and native checks, security scanning and exact-revision production deployment.
+- Enforce Worker coverage thresholds through an isolated index-snapshot pre-commit gate; retain explicit native coverage and UI automation gaps.
+- Stabilize Swift 6.3 builds, persisted-delivery tests and Python SDK interoperability, and pin patched build tooling.
+
 ## v0.1.7 — 2026-09-30
 
 - Support TypeSafe SDK inference and model discovery by replacing only the API root and source key.

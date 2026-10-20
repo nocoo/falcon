@@ -248,3 +248,11 @@ managed interpreter and hid that missing declaration. The shared SDK entrypoint
 now explicitly selects the locally verified Python 3.12.14; a workflow-contract
 regression rejects removing that pin. Pin tool interpreters at their entrypoint
 instead of relying on a developer's cache or the runner's PATH.
+
+## 2026-10-20: Zero discovered tests are not release evidence
+
+A release probe used unittest discovery for the dotted `relay-*.test.py`
+filenames and exited successfully with zero tests. That result was rejected;
+the workflow's explicit per-file entrypoints ran the real helper checks instead.
+Reuse the checked-in CI command and verify the executed test count, not just
+the process exit status.
