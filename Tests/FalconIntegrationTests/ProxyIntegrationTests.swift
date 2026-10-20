@@ -275,6 +275,11 @@ private func waitForFlight(_ service: DecisionService) async throws {
         #expect(status == 200)
         #expect(try JSONValue.decode(raw)["answers"]?.objectValue?.count == 3)
         let id = try #require(UUID(uuidString: response.value(forHTTPHeaderField: "X-Falcon-Request-ID") ?? ""))
+        // Client receipt can precede persistence of the server's write callback.
+        for _ in 0..<200 {
+            if let detail = try await fixture.store.detail(id: id), detail.summary.delivery != .unknown { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
         let detail = try #require(await fixture.store.detail(id: id))
         #expect(detail.summary.status == .succeeded)
         #expect(detail.summary.delivery == .written)

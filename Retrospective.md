@@ -233,3 +233,11 @@ into a SwiftUI Binding setter. Local Swift 6.4 did not reproduce the crash.
 The note and replay setters now use explicit closures, preserving their
 main-actor calls without that conversion. Keep the native target in CI instead
 of hiding compiler failures by testing only the core library.
+
+The next CI run compiled successfully and exposed a pre-existing integration
+test race: receiving the response body on the client does not mean the server
+has persisted its subsequent write callback. The test now waits for the stored
+delivery state with a finite bound before asserting both written status and its
+timestamp. The production callback order stays unchanged: recording delivery
+before the write finishes would manufacture evidence. Never replace a causal
+synchronization requirement with an arbitrary sleep or retry the inference.
