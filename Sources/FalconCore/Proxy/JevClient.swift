@@ -8,29 +8,45 @@ public struct JevHTTPResult: Sendable {
     public let retryAfterMS: String?
     public let requestID: String?
     public let errorOrigin: String?
+    let relayError: FalconError?
+    let downstreamBody: Data
     public init(
         status: Int, body: Data, contentType: String? = nil, retryAfter: String? = nil, retryAfterMS: String? = nil,
         requestID: String? = nil, errorOrigin: String? = nil
     ) {
         self.status = status
         self.body = body
-        self.contentType = contentType
+        let isRelayError = status >= 400 && errorOrigin == "relay"
+        let parsed = isRelayError ? Self.parseRelayError(body, status: status) : nil
+        self.contentType = isRelayError && parsed == nil ? "application/json" : contentType
         self.retryAfter = retryAfter
         self.retryAfterMS = retryAfterMS
         self.requestID = requestID
         self.errorOrigin = errorOrigin == "relay" ? "relay" : nil
+        if isRelayError {
+            relayError =
+                parsed
+                ?? FalconError(
+                    "relay_invalid_error", "Relay returned an invalid error", status: status, outcomeUnknown: true)
+            downstreamBody =
+                parsed == nil
+                ? Data(
+                    #"""
+                    {"error":{"origin":"relay","code":"relay_invalid_error",
+                    "message":"Relay returned an invalid error","outcome_unknown":true}}
+                    """#.utf8) : body
+        } else {
+            relayError = nil
+            downstreamBody = body
+        }
     }
 
-    var relayError: FalconError? {
-        guard status >= 400, errorOrigin == "relay" else { return nil }
+    private static func parseRelayError(_ body: Data, status: Int) -> FalconError? {
         guard let error = try? JSONValue.decode(body)["error"], error["origin"]?.stringValue == "relay",
             let code = error["code"]?.stringValue, !code.isEmpty, code.utf8.count <= 120,
             let message = error["message"]?.stringValue, !message.isEmpty, message.utf8.count <= 512,
             let unknown = error["outcome_unknown"]?.boolValue
-        else {
-            return FalconError(
-                "relay_invalid_error", "Relay returned an invalid error", status: status, outcomeUnknown: true)
-        }
+        else { return nil }
         return FalconError(code, message, status: status, outcomeUnknown: unknown)
     }
 }

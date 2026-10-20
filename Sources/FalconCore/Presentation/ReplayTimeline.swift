@@ -6,7 +6,7 @@ public enum ReplayStage: String, Sendable, CaseIterable {
         switch self {
         case .headers: "Request received"
         case .body: "Input received"
-        case .upstream: "Sent to Jev"
+        case .upstream: "Sent to upstream"
         case .response: "Response received"
         case .terminal: "Processing complete"
         case .delivery: "Return written"

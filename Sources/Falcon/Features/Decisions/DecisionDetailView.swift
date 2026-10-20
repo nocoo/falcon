@@ -147,7 +147,7 @@ struct DecisionDetailView: View {
         VStack(spacing: 0) {
             Picker("Raw evidence", selection: $rawSelection) {
                 Text("Received request").tag(0)
-                Text("Sent to Jev").tag(1)
+                Text("Sent to upstream").tag(1)
                 Text("Upstream response").tag(2)
             }.pickerStyle(.segmented).padding(FalconTheme.Space.medium).frame(maxWidth: 650)
             if (rawSelection == 2 && !model.resultsVisible) || (rawSelection != 2 && !model.inputsVisible) {

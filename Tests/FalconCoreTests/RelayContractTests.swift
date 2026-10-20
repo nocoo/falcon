@@ -3,6 +3,10 @@ import Testing
 
 @testable import FalconCore
 
+@Test func relayTimelineLabelsOnlyDescribeObservedUpstream() {
+    #expect(ReplayStage.upstream.title == "Sent to upstream")
+}
+
 @Test(arguments: [
     "not json", "{}", #"{"error":{"origin":"upstream"}}"#,
     #"{"error":{"origin":"relay","code":"","message":"Error","outcome_unknown":false}}"#,

@@ -395,7 +395,7 @@ private struct WorkspaceFixture {
     #expect(model.inputsVisible && !model.resultsVisible)
     #expect(model.visibleStatus == "Preparing request")
     model.step(forward: true)
-    #expect(model.visibleStatus == "Waiting for Jev")
+    #expect(model.visibleStatus == "Waiting for upstream")
     model.step(forward: true)
     #expect(model.resultsVisible)
     #expect(model.visibleStatus == "Response received")

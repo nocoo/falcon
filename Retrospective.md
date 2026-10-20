@@ -160,3 +160,22 @@ The synthetic one-time-key sheet capture intermittently ran before Sources had l
 The independent review rejected the first light replay screenshot as evidence because it mixed a pre-response heading with final result probabilities. The capture path previously relied only on a fixed 500 ms delay. A bounded readiness check now requires the selected detail, visible input and hidden results before allowing replay capture. Model discovery also gains dedicated mixed-concurrency, in-flight credential rotation and shutdown cancellation regressions rather than inferring coverage from inference-only tests.
 
 The menu-render probe initially assumed a PNG file in the packaged bundle and crashed on a forced unwrap; Xcode packages the scale variants as TIFF. The corrected probe uses the actual packaged resource, and the app's existing bundle-resource resolver remains unchanged. Inspect packaged resource names before writing verification helpers.
+
+## 2026-10-20: Relay errors need one delivery contract
+
+The first relay integration parsed malformed relay errors conservatively for MCP
+and history but still forwarded their original body to HTTP clients. This could
+report an uncertain outcome in one transport and a definite non-execution in
+another. Independent review caught the mismatch. New HTTP/MCP regression tests
+first failed, then the implementation normalized only invalid relay error
+delivery while retaining the original bytes in local audit storage.
+
+The same review found that existing replay labels claimed requests were sent to
+Jev, although the App now only observes sending to the configured upstream,
+which may be a relay that rejects authentication before contacting Jev. Labels
+now describe that observed boundary without inventing evidence of the next hop.
+Future transport additions must review both wire errors and presentation claims.
+
+The initial MCP regression used an assumed tool name instead of the actual
+`jev_decide` contract. It was corrected before accepting the red test evidence.
+Protocol tests must fail for the intended behavioral gap, not fixture mistakes.

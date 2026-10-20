@@ -29,7 +29,7 @@ extension WorkspaceModel {
         guard let detail else { return "No selection" }
         if timeline == nil || terminalVisible { return detail.summary.status.title }
         if resultsVisible { return "Response received" }
-        if reveals(.upstream) { return "Waiting for Jev" }
+        if reveals(.upstream) { return "Waiting for upstream" }
         if inputsVisible { return "Preparing request" }
         return reveals(.headers) ? "Receiving input" : "Not yet received"
     }

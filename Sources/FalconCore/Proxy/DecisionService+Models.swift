@@ -20,7 +20,7 @@ extension DecisionService {
         do {
             let upstream = try await sendUpstream(nil, snapshot: snapshot, id: id, since: receivedInstant)
             return ProxyReply(
-                status: upstream.status, body: upstream.body, headers: Self.upstreamHeaders(upstream),
+                status: upstream.status, body: upstream.downstreamBody, headers: Self.upstreamHeaders(upstream),
                 error: upstream.relayError)
         } catch {
             let failure =

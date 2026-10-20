@@ -272,8 +272,9 @@ extension DecisionService {
         guard try await store.detail(id: id) != nil else { throw AuditLostError() }
         if summary.status == .succeeded || summary.status == .upstreamError {
             return ProxyReply(
-                status: summary.httpStatus ?? 502, body: upstream.body, headers: Self.upstreamHeaders(upstream),
-                requestID: id, error: upstream.relayError, receivedInstant: instant)
+                status: summary.httpStatus ?? 502, body: upstream.downstreamBody,
+                headers: Self.upstreamHeaders(upstream), requestID: id, error: upstream.relayError,
+                receivedInstant: instant)
         }
         return Self.errorReply(
             FalconError("invalid_response", "Invalid Jev response", status: 502, outcomeUnknown: true), id: id,
