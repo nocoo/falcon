@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
-exec uv run --no-project --with 'typesafe-sdk==0.7.1' python -c '
+exec uv run --python 3.12.14 --no-project --with 'typesafe-sdk==0.7.1' python -c '
 import os
 import subprocess
 import sys

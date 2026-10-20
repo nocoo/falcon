@@ -113,6 +113,11 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("GIT_SHA=", deploy)
         self.assertIn("inputs.exact-sha", deploy)
 
+    def test_sdk_check_selects_supported_python_explicitly(self) -> None:
+        text = read("scripts/check-sdk.sh")
+        self.assertIn("uv run --python 3.12.14 --no-project", text)
+        self.assertIn("--with 'typesafe-sdk==0.7.1'", text)
+
     def test_helpers_job_runs_relay_python_tests_and_shell_syntax(self) -> None:
         text = read(".github/workflows/ci.yml")
         self.assertRegex(text, r"(?m)^\s*helpers:\s*$")

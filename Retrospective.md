@@ -241,3 +241,10 @@ delivery state with a finite bound before asserting both written status and its
 timestamp. The production callback order stays unchanged: recording delivery
 before the write finishes would manufacture evidence. Never replace a causal
 synchronization requirement with an arbitrary sleep or retry the inference.
+
+After all 95 native tests passed remotely, the SDK check selected the runner's
+Python 3.9.6, below TypeSafe SDK's minimum of 3.10. Local uv already had a suitable
+managed interpreter and hid that missing declaration. The shared SDK entrypoint
+now explicitly selects the locally verified Python 3.12.14; a workflow-contract
+regression rejects removing that pin. Pin tool interpreters at their entrypoint
+instead of relying on a developer's cache or the runner's PATH.
