@@ -196,3 +196,22 @@ leader exited. A grandchild ignoring SIGTERM could survive that exit and keep
 test output pipes open. A real subprocess regression now verifies escalation
 against the owned group even after leader exit. A closed parent process is not
 proof that its children have been cleaned up.
+
+## 2026-10-20: Validate cache and installed dependency identity
+
+The first real index gate failed before tests because the host Bun cache used a
+temporary mirror namespace while the isolated environment selected the default
+registry. Dependency versions and integrity were correct, but cache identity
+was not. Bootstrap now records an explicitly selected registry in repository-local
+Git config for offline use only; neither global Bun configuration nor lockfile
+tarball URLs are changed. The installed gate subsequently passed in 18.6 seconds.
+
+Remote G2 then found two older transitive `sharp` resolutions despite a patched
+top-level copy. A narrow `sharp@0.35.5` override removes the vulnerable resolutions
+without suppressing the advisory. Bun initially reported no installed-package
+changes, yet resolution from `cf` still found the old nested copy. A clean,
+offline install into the task-owned dependency directory was required; resolution
+from all three consumers now reports the patched version. Verify both the locked
+graph and actual installed resolution rather than trusting an install summary.
+Package metadata is not necessarily exported through Node's public subpaths;
+inspect metadata adjacent to the resolved module instead of assuming otherwise.

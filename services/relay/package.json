@@ -17,6 +17,9 @@
     "harness": "node --experimental-strip-types scripts/harness.ts",
     "dev": "bun run build && bun run harness"
   },
+  "overrides": {
+    "sharp": "0.35.5"
+  },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
     "@cloudflare/vitest-plugin": "1.4.0",
