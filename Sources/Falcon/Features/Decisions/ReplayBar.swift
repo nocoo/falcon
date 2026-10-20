@@ -39,7 +39,7 @@ struct ReplayBar: View {
                 } label: {
                     Image(systemName: "forward.end")
                 }.help("Next event").accessibilityLabel("Next event")
-                Slider(value: Binding(get: { model.replayProgress }, set: model.seek), in: 0...1).tint(
+                Slider(value: Binding(get: { model.replayProgress }, set: { model.seek($0) }), in: 0...1).tint(
                     FalconTheme.accent
                 ).accessibilityLabel("Historical playback position")
                 Text(model.playbackDate.formatted(.dateTime.hour().minute().second().secondFraction(.fractional(3))))

@@ -59,7 +59,7 @@ struct DecisionReviewBar: View {
     private var noteEditor: some View {
         VStack(alignment: .leading, spacing: FalconTheme.Space.regular) {
             Text("Review note").font(FalconTheme.sectionTitle)
-            TextEditor(text: Binding(get: { model.note }, set: model.editNote)).font(FalconTheme.body)
+            TextEditor(text: Binding(get: { model.note }, set: { model.editNote($0) })).font(FalconTheme.body)
                 .scrollContentBackground(.hidden).padding(FalconTheme.Space.compact).frame(
                     height: FalconTheme.Layout.noteEditorHeight
                 ).background(FalconTheme.inset, in: RoundedRectangle(cornerRadius: FalconTheme.Radius.control))

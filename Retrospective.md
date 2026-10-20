@@ -226,3 +226,10 @@ references without changing the CSV contract. A full-row regression checks
 column order, missing values, resolved models and CRLF separators. Keep the
 remote compiler result separate from local build evidence; do not loosen CI or
 change export semantics to hide a type-inference limitation.
+
+Once that expression compiled, the CI runner's Swift 6.3.3 crashed in IR
+generation while converting an actor-isolated note-editing method reference
+into a SwiftUI Binding setter. Local Swift 6.4 did not reproduce the crash.
+The note and replay setters now use explicit closures, preserving their
+main-actor calls without that conversion. Keep the native target in CI instead
+of hiding compiler failures by testing only the core library.
