@@ -1,0 +1,55 @@
+name: Deploy
+run-name: Deploy CI ${{ inputs.source-run-id }} @ ${{ inputs.exact-sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      source-run-id:
+        description: Successful main CI run ID to deploy
+        required: true
+        type: string
+      exact-sha:
+        description: Exact commit SHA proven by that CI run
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  deploy:
+    name: Deploy Worker
+    uses: nocoo/base-ci/.github/workflows/deploy-worker.yml@0394178ebcff0418c442d84a84119220f31f8987 # v2026.9
+    with:
+      expected-workflow-path: .github/workflows/ci.yml
+      expected-workflow-name: CI
+      expected-branch: main
+      source-run-id: ${{ inputs.source-run-id }}
+      source-sha: ${{ inputs.exact-sha }}
+      allowed-source-events: push,workflow_dispatch
+      require-fresh-main: true
+      package-version-match: false
+      package-manager: bun
+      runtime-version: "1.4.3"
+      node-version: "26.8.1"
+      install-policy: blocked
+      working-directory: services/relay
+      deploy-cli: cf
+      cf-version: "1.0.0-beta.13"
+      build-command: |
+        test -f cloudflare.config.ts
+        export GIT_SHA="${{ inputs.exact-sha }}"
+        test -n "$GIT_SHA"
+        bun run build
+      environment: production
+      concurrency-group: deploy-falcon-production
+      timeout-minutes: 20
+      verify-command: |
+        export FALCON_VERIFY_SHA="${{ inputs.exact-sha }}"
+        python3 "${GITHUB_WORKSPACE}/scripts/relay-verify-production.py"
+      verify-retries: 6
+      verify-retry-seconds: 5
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

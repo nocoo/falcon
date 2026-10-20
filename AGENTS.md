@@ -1,6 +1,6 @@
 # Falcon
 
-Falcon is a native macOS Jev proxy with seven-day decision history and indefinitely retained starred decisions.
+Falcon is a native macOS Jev proxy with seven-day decision history, indefinitely retained starred decisions, and an optional Cloudflare relay.
 Human overview: [README.md](README.md). Design index: [docs/README.md](docs/README.md).
 
 ## Scope and current state
@@ -51,6 +51,49 @@ a marked temporary database, and no listener, production credential access, or u
 Only the coordinator runs SwiftPM in this checkout during parallel work.
 Preserve full-suite coverage before the opt-in SDK run replaces SwiftPM's coverage output.
 SwiftLint needs the Xcode `DEVELOPER_DIR` above; do not change global xcode-select.
+
+### Relay service
+
+The Swift package remains at the repository root; the independent Bun package is
+`services/relay`. No root JavaScript workspace or shared runtime package is needed.
+Use Bun 1.4.3 and the locked `cf` CLI under Node, not `bun --bun cf`:
+
+```sh
+cd services/relay
+bun install --frozen-lockfile --ignore-scripts
+bun run typecheck
+bun run lint
+bun run test:coverage
+bun run build
+```
+
+The service generates Cloudflare binding types before strict typechecking. Its
+build reads the product version from root `project.yml`; `GIT_SHA` takes precedence
+over CI metadata and a lazy local Git fallback. Index-snapshot checks must work
+without a `.git` directory. Never substitute a stale build SHA or independent
+package version. Keep production/test compatibility dates aligned with the
+pinned workerd runtime; any date lag must remain explicit.
+
+Install the Worker-only Husky gate with `scripts/relay-bootstrap-hooks.sh` from
+the repository root. If dependencies were installed using a temporary
+`BUN_CONFIG_REGISTRY`, pass that same variable during bootstrap: it records
+`falcon.relayRegistry` in repository-local Git config solely to select the
+offline Bun cache namespace. Never put mirror tarball URLs in `bun.lock` or set
+a global Bun registry. The gate uses a separate index snapshot, HOME and temp
+directory, an offline frozen install with copyfile semantics, and all three
+Worker L1 commands. It does not enforce the native L1 lane.
+
+CI uses immutable `nocoo/base-ci` reusable-workflow revisions for Worker quality,
+native checks, helper tests and deployment. Production deployment is dispatched
+with a successful main CI run ID and its exact SHA, not the latest green commit.
+The deployment must verify anonymous `/api/live` status, product version and SHA.
+Native DMG signing and publication still follow the separate procedure below.
+
+Use the local Caddy URL `https://falcon.dev.hexly.ai` for acceptance. Its upstream
+is loopback port 7060, separate from the native listener on 19823. The local relay
+harness must use synthetic secrets and an intercepted official upstream; never
+run a fake-key dev server that still reaches the real TypeSafe API. Keep it in a
+Herdr tab named `dev server` and retain it while awaiting user acceptance.
 
 ## Versioning
 
@@ -116,8 +159,7 @@ SwiftLint needs the Xcode `DEVELOPER_DIR` above; do not change global xcode-sele
   damaged download. Verify the downloaded SHA-256 before using this workaround.
 - Verify the published tag SHA, asset names/sizes and downloaded checksums.
   Inspect Actions for that exact revision, with a five-minute follow-up if CI
-  is pending. This repository currently has no Actions workflow; report CI as
-  unavailable, not green.
+  is pending. A workflow definition or local passing run is not remote CI success.
 - After authorized publication, quit an existing Falcon cleanly, install the
   verified DMG app at `/Applications/Falcon.app`, verify the installed signature
   and version, and open it without `--preview`. Preserve user configuration and
@@ -132,6 +174,7 @@ SwiftLint needs the Xcode `DEVELOPER_DIR` above; do not change global xcode-sele
 - `FalconCore/Persistence`: GRDB storage, reservations, retention, shared filters and aggregate queries.
 - `FalconCore/Presentation`: observable workspace, truthful replay and export formatting.
 - `Falcon/App`, `Design`, `Features`: application lifecycle and native SwiftUI/AppKit/Charts views.
+- `services/relay`: stateless Cloudflare Worker; optional authenticated upstream for the App.
 
 ## Project boundaries
 
@@ -148,6 +191,10 @@ SwiftLint needs the Xcode `DEVELOPER_DIR` above; do not change global xcode-sele
 - Do not access Keychain, inspect unrelated credentials, or alter machine ACLs/certificates.
 - Preserve Jev request and response semantics. Never invent reasoning or infer agent execution.
 - Keep TypeSafe SDK HTTP interoperability for `/v1/systemone` and `/v1/models` with only the API root and source key replaced. Model discovery uses the bound upstream credential and returns upstream metadata without creating decision history or usage. Preserve official optional/null question fields and allowlisted request-ID/retry headers; never forward local keys upstream.
+- Relay connection credentials use the existing vault and source-to-profile mapping. The relay token, local source keys and official key are separate credentials; changing a connection target requires its own credential. Never automatically fall back to direct access.
+- The Worker forwards only `POST /v1/systemone` and `GET /v1/models` to fixed `https://api.typesafe.ai`. It owns its official key as a Cloudflare Secret, rejects redirects, bounds bodies and deadlines, and never stores payloads or retries inference.
+- Preserve official response bytes/status/allowlisted headers. Worker-generated errors carry `X-Falcon-Error-Origin: relay` and `error.origin/code/message/outcome_unknown`. An inference fetch that may have reached upstream must not be reported as definitely unexecuted. Malformed relay errors are normalized conservatively on the wire while original bytes remain in local audit storage.
+- Anonymous Worker `/api/live` probes models, never inference; enforce a bounded dependency check, no-store responses, and rate limiting. Success proves the tested dependency and build identity, not fixed-region egress or universal regional availability.
 - Keep input, question definitions, and results visible together in the primary review workspace.
 - Historical replay is local and read-only; never call Jev, invent per-question timing, or bypass unstarred expiry with the playback clock.
 - Do not implement result reuse unless the owner explicitly chooses it.
@@ -166,15 +213,16 @@ manual means explicitly performed; N/A requires a concrete reason.
 
 | Dimension | Required contract | Current status |
 | --- | --- | --- |
-| L1 | Unit statements/branches/functions/lines each ≥95%; strict types and check-only lint/format, zero errors/warnings; pre-commit failure blocking | Incomplete. Meaningful tests and strict static checks exist; functions/lines remain below 95%, statements/branches are unavailable, and no commit hook is installed. |
+| L1 | Unit statements/branches/functions/lines each ≥95%; strict types and check-only lint/format, zero errors/warnings; pre-commit failure blocking | Native remains incomplete: functions/lines are below 95%, statements/branches are unavailable, and its pre-commit lane is absent. Worker has separate four-metric 95% thresholds and an installed index-snapshot hook; this does not upgrade the native result. |
 | L2 | Real local HTTP for every endpoint/method, MCP interoperability, SQLite lifecycle and retention integration | Implemented local HTTP, official MCP client, retention/configuration integration and separate official Python SDK checks. External disk exhaustion remains unverified. |
 | L3 | Isolated native critical journeys, appearance and accessibility checks | Manual synthetic app captures cover both appearances, focus, compact, empty, replay and usage. Automated UI journeys and full accessibility/performance matrices remain unverified. |
-| G2 | Dependency and secret scanning; missing required tools fail | Dependencies are pinned in Package.resolved. No enforced dependency/secret-scanning gate is present. |
+| G2 | Dependency and secret scanning; missing required tools fail | Native dependencies are pinned in Package.resolved; Worker dependencies in bun.lock. CI defines OSV and Gitleaks checks through base-ci; verify execution at the exact revision. No local pre-push G2 gate is installed. |
 | D1 | Separate per-run test storage, ports and key namespace; guards before cleanup | Test fixtures use per-run temporary directories, ephemeral ports, memory or isolated file credentials and verified SQLite run markers. Production credentials are not used. |
 
 Pre-commit target: L1 against the index snapshot, under 30 seconds.
 Pre-push target: L2 and G2 against stdin push refs, under three minutes.
-These are targets, not current enforcement. Do not lower requirements or bypass failures.
+The Worker index gate is separate from the incomplete native pre-commit target;
+pre-push remains a target rather than current enforcement. Do not lower requirements or bypass failures.
 Swift metrics absent from tool output remain an explicit gap, not a passing score.
 AppRuntime is not a pure View; its current application-target coverage gap remains explicit.
 The current L1 audit belongs only in nmem: `6dq-audit-github.com-nocoo-falcon-l1`.

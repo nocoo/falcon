@@ -1,0 +1,139 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  workflow-lint:
+    uses: nocoo/base-ci/.github/workflows/workflow-lint.yml@0394178ebcff0418c442d84a84119220f31f8987 # v2026.9
+    with:
+      required-reusable-workflow: nocoo/base-ci/.github/workflows/quality.yml
+
+  quality:
+    uses: nocoo/base-ci/.github/workflows/quality.yml@0394178ebcff0418c442d84a84119220f31f8987 # v2026.9
+    with:
+      package-manager: bun
+      runtime-version: "1.4.3"
+      node-version: "26.8.1"
+      install-policy: blocked
+      working-directory: services/relay
+      typecheck: true
+      lint: true
+      unit: true
+      security: true
+      typecheck-command: GIT_SHA="$GITHUB_SHA" bun run typecheck
+      lint-command: GIT_SHA="$GITHUB_SHA" bun run lint
+      test-command: GIT_SHA="$GITHUB_SHA" bun run test:coverage
+      build: true
+      build-command: GIT_SHA="$GITHUB_SHA" bun run test:http
+      coverage-path: services/relay/coverage
+      lockfiles: bun.lock
+      security-command: |
+        gitleaks detect --no-banner --verbose --redact --no-git --source="${GITHUB_WORKSPACE}"
+
+  helpers:
+    uses: nocoo/base-ci/.github/workflows/test-job.yml@0394178ebcff0418c442d84a84119220f31f8987 # v2026.9
+    with:
+      runner: ubuntu-latest
+      runtime: none
+      timeout-minutes: 10
+      command: |
+        set -euo pipefail
+        # Stdlib helper checks only. Worker TS coverage remains the sole 95% claim.
+        bash -n scripts/relay-bootstrap-hooks.sh
+        bash -n .husky/pre-commit
+        for test in scripts/relay-*.test.py; do
+          python3 "$test"
+        done
+
+  native:
+    uses: nocoo/base-ci/.github/workflows/test-job.yml@0394178ebcff0418c442d84a84119220f31f8987 # v2026.9
+    with:
+      runner: macos-latest
+      runtime: none
+      timeout-minutes: 45
+      artifact-name: native-codecov
+      artifact-path: build/verification/native-codecov
+      pre-command: |
+        set -euo pipefail
+        # Pin exact tool versions; base-ci test-job has no brew-version adapter.
+        curl -LsSf https://astral.sh/uv/0.13.1/install.sh | sh
+        echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
+        export PATH="${HOME}/.local/bin:${PATH}"
+        uv --version | tee /tmp/falcon-uv-version.txt
+        grep -F '0.13.1' /tmp/falcon-uv-version.txt
+        curl -fsSL -o /tmp/swiftlint.zip \
+          https://github.com/realm/SwiftLint/releases/download/0.65.1/portable_swiftlint.zip
+        echo "c1e429b0599cf1b516f369a2d9ec04eaf0e436f3c12b637df8851fa52ff694d0  /tmp/swiftlint.zip" | shasum -a 256 -c -
+        rm -rf /tmp/swiftlint-bin
+        mkdir -p /tmp/swiftlint-bin
+        unzip -q /tmp/swiftlint.zip -d /tmp/swiftlint-bin
+        echo "/tmp/swiftlint-bin" >> "$GITHUB_PATH"
+        export PATH="/tmp/swiftlint-bin:${PATH}"
+        test "$(swiftlint version)" = "0.65.1"
+        command -v uv
+        command -v swiftlint
+      command: |
+        set -euo pipefail
+        export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+        export PATH="$DEVELOPER_DIR/usr/bin:$PATH"
+
+        # Swift coverage gaps remain explicit; do not enforce a 95% Swift floor here.
+        swift test --enable-code-coverage
+        CODECOV_PATH="$(swift test --show-codecov-path)"
+        if [ -f "$CODECOV_PATH" ]; then
+          CODECOV_DIR="$(dirname "$CODECOV_PATH")"
+        elif [ -d "$CODECOV_PATH" ]; then
+          CODECOV_DIR="$CODECOV_PATH"
+        else
+          echo "::error::swift test --show-codecov-path returned missing path: $CODECOV_PATH"
+          exit 1
+        fi
+        rm -rf build/verification/native-codecov
+        mkdir -p build/verification
+        cp -R "$CODECOV_DIR" build/verification/native-codecov
+        scripts/check-sdk.sh
+        swiftlint lint --strict
+        xcrun swift-format lint --strict --recursive Sources Tests
+
+  ci-gate:
+    name: CI Gate
+    if: always()
+    needs: [workflow-lint, quality, helpers, native]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every CI job to succeed on this commit
+        env:
+          WORKFLOW_LINT_RESULT: ${{ needs.workflow-lint.result }}
+          QUALITY_RESULT: ${{ needs.quality.result }}
+          HELPERS_RESULT: ${{ needs.helpers.result }}
+          NATIVE_RESULT: ${{ needs.native.result }}
+          QUALITY_SHA: ${{ needs.quality.outputs.tested-sha }}
+          HELPERS_SHA: ${{ needs.helpers.outputs.tested-sha }}
+          NATIVE_SHA: ${{ needs.native.outputs.tested-sha }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$WORKFLOW_LINT_RESULT" = success
+          test "$QUALITY_RESULT" = success
+          test "$HELPERS_RESULT" = success
+          test "$NATIVE_RESULT" = success
+          test -n "$QUALITY_SHA"
+          test -n "$HELPERS_SHA"
+          test -n "$NATIVE_SHA"
+          test "$QUALITY_SHA" = "$EXPECTED_SHA"
+          test "$HELPERS_SHA" = "$EXPECTED_SHA"
+          test "$NATIVE_SHA" = "$EXPECTED_SHA"
+          echo "Verified CI source ${EXPECTED_SHA}"

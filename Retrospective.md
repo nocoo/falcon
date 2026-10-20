@@ -179,3 +179,20 @@ Future transport additions must review both wire errors and presentation claims.
 The initial MCP regression used an assumed tool name instead of the actual
 `jev_decide` contract. It was corrected before accepting the red test evidence.
 Protocol tests must fail for the intended behavioral gap, not fixture mistakes.
+
+## 2026-10-20: Cancellation must own the whole operation
+
+A relay refactor returned the response-reading promise from inside `try` without
+awaiting it. The `finally` block therefore cleared the deadline before response
+consumption finished. A hanging-body regression exposed this. The initial
+investigation suspected the network mock too early and added unnecessary abort
+races; those per-chunk listeners introduced another resource risk. Awaiting the
+whole response operation and keeping one bounded cancellation path fixes the
+cause. Trace promise ownership and `finally` ordering before replacing fixtures
+or adding timeout machinery.
+
+The index-snapshot gate initially terminated its process group only until the
+leader exited. A grandchild ignoring SIGTERM could survive that exit and keep
+test output pipes open. A real subprocess regression now verifies escalation
+against the owned group even after leader exit. A closed parent process is not
+proof that its children have been cleaned up.

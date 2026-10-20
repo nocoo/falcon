@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+# Worker-only index-snapshot gate. Not whole-repo L1. Not auto-installed.
+# Runs the staged scripts/relay-check-index.py so worktree fixes cannot mask staged bugs.
+set -e
+cd "$(dirname "$0")/.."
+python3 -c 'import subprocess,sys; data=subprocess.check_output(["git","show",":scripts/relay-check-index.py"]); exec(compile(data,"scripts/relay-check-index.py","exec"),{"__name__":"__main__"})'
