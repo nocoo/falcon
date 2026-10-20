@@ -82,7 +82,9 @@ extension DecisionService {
         if let retryAfter = response.retryAfter { headers["Retry-After"] = retryAfter }
         if let retryAfterMS = response.retryAfterMS { headers["retry-after-ms"] = retryAfterMS }
         if let requestID = response.requestID { headers["x-typesafe-request-id"] = requestID }
-        if !(200...299).contains(response.status) { headers["X-Falcon-Error-Origin"] = "upstream" }
+        if !(200...299).contains(response.status) {
+            headers["X-Falcon-Error-Origin"] = response.errorOrigin ?? "upstream"
+        }
         return headers
     }
 
@@ -256,8 +258,13 @@ extension DecisionService {
             }
         } else {
             summary.status = .upstreamError
-            summary.errorCode = "upstream_http_\(upstream.status)"
-            summary.errorMessage = "Upstream returned HTTP \(upstream.status)"
+            let relay = upstream.relayError
+            summary.errorCode = relay?.code ?? "upstream_http_\(upstream.status)"
+            summary.errorMessage = relay?.message ?? "Upstream returned HTTP \(upstream.status)"
+            if let relay {
+                summary.metadata["error_origin"] = "relay"
+                summary.metadata["outcome_unknown"] = String(relay.outcomeUnknown)
+            }
         }
         summary.timing.terminalMS = Self.elapsed(since: instant)
         detail.summary = summary
@@ -266,7 +273,7 @@ extension DecisionService {
         if summary.status == .succeeded || summary.status == .upstreamError {
             return ProxyReply(
                 status: summary.httpStatus ?? 502, body: upstream.body, headers: Self.upstreamHeaders(upstream),
-                requestID: id, receivedInstant: instant)
+                requestID: id, error: upstream.relayError, receivedInstant: instant)
         }
         return Self.errorReply(
             FalconError("invalid_response", "Invalid Jev response", status: 502, outcomeUnknown: true), id: id,

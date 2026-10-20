@@ -144,7 +144,7 @@ private struct SyntheticUpstream: Sendable {
 func withFixture(
     upstreamDelay: Duration = .milliseconds(40), ignoreCancellation: Bool = false, deadline: Duration = .seconds(30),
     oversizedResponse: Bool = false, upstreamStatus: Int = 200, budgetBytes: Int64 = FalconLimits.storageBytes,
-    _ work: (ProxyFixture) async throws -> Void
+    upstreamTransport: JevClient.Transport? = nil, _ work: (ProxyFixture) async throws -> Void
 ) async throws {
     let runID = UUID()
     let directory = FileManager.default.temporaryDirectory.appendingPathComponent("falcon-proxy-\(runID.uuidString)")
@@ -159,7 +159,13 @@ func withFixture(
     let upstream = SyntheticUpstream(
         upstreamDelay: upstreamDelay, ignoreCancellation: ignoreCancellation, oversizedResponse: oversizedResponse,
         upstreamStatus: upstreamStatus, calls: calls)
-    let client = JevClient { request in try await upstream.reply(request) }
+    let client = JevClient { request in
+        if let upstreamTransport {
+            await calls.next(request)
+            return try await upstreamTransport(request)
+        }
+        return try await upstream.reply(request)
+    }
     let service = DecisionService(store: store, configuration: configuration, client: client, deadline: deadline)
     let server = ProxyServer(service: service, configuration: configuration, version: "9.8.7", port: 0)
     let port = try await server.start()

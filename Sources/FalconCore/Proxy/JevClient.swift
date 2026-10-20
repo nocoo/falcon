@@ -7,9 +7,10 @@ public struct JevHTTPResult: Sendable {
     public let retryAfter: String?
     public let retryAfterMS: String?
     public let requestID: String?
+    public let errorOrigin: String?
     public init(
         status: Int, body: Data, contentType: String? = nil, retryAfter: String? = nil, retryAfterMS: String? = nil,
-        requestID: String? = nil
+        requestID: String? = nil, errorOrigin: String? = nil
     ) {
         self.status = status
         self.body = body
@@ -17,6 +18,20 @@ public struct JevHTTPResult: Sendable {
         self.retryAfter = retryAfter
         self.retryAfterMS = retryAfterMS
         self.requestID = requestID
+        self.errorOrigin = errorOrigin == "relay" ? "relay" : nil
+    }
+
+    var relayError: FalconError? {
+        guard status >= 400, errorOrigin == "relay" else { return nil }
+        guard let error = try? JSONValue.decode(body)["error"], error["origin"]?.stringValue == "relay",
+            let code = error["code"]?.stringValue, !code.isEmpty, code.utf8.count <= 120,
+            let message = error["message"]?.stringValue, !message.isEmpty, message.utf8.count <= 512,
+            let unknown = error["outcome_unknown"]?.boolValue
+        else {
+            return FalconError(
+                "relay_invalid_error", "Relay returned an invalid error", status: status, outcomeUnknown: true)
+        }
+        return FalconError(code, message, status: status, outcomeUnknown: unknown)
     }
 }
 
@@ -56,7 +71,8 @@ public struct JevClient: Sendable {
             status: response.statusCode, body: data, contentType: response.value(forHTTPHeaderField: "Content-Type"),
             retryAfter: response.value(forHTTPHeaderField: "Retry-After"),
             retryAfterMS: response.value(forHTTPHeaderField: "retry-after-ms"),
-            requestID: response.value(forHTTPHeaderField: "x-typesafe-request-id"))
+            requestID: response.value(forHTTPHeaderField: "x-typesafe-request-id"),
+            errorOrigin: response.value(forHTTPHeaderField: "X-Falcon-Error-Origin"))
     }
 }
 

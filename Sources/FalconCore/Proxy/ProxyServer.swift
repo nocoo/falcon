@@ -202,7 +202,7 @@ public actor ProxyServer {
 
     private static func toolPayload(_ reply: ProxyReply) -> JSONValue {
         if reply.status >= 400 {
-            let origin = reply.error == nil ? "upstream" : "falcon"
+            let origin = reply.headers["X-Falcon-Error-Origin"] ?? (reply.error == nil ? "upstream" : "falcon")
             let error =
                 reply.error
                 ?? FalconError(
