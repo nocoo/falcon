@@ -1,0 +1,9 @@
+node_modules/
+coverage/
+.wrangler/
+.cloudflare/
+.dev.vars
+.dev.vars.*
+*.vars
+dist/
+.DS_Store

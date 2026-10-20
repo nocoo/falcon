@@ -1,0 +1,34 @@
+{
+  "name": "falcon-relay",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "bun": "1.4.3",
+    "node": "^22.18.0 || ^24.0.0 || >=26.0.0"
+  },
+  "scripts": {
+    "typecheck": "cf workers types && tsc --noEmit && tsc --noEmit -p test/tsconfig.json",
+    "lint": "biome check --error-on-warnings .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:harness": "node --experimental-strip-types scripts/harness-smoke.ts",
+    "test:http": "bun run build && bun run test:harness",
+    "build": "cf build",
+    "harness": "node --experimental-strip-types scripts/harness.ts",
+    "dev": "bun run build && bun run harness"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@cloudflare/vitest-plugin": "1.4.0",
+    "@msw/cloudflare": "0.2.0",
+    "@types/node": "24.7.2",
+    "@vitest/coverage-istanbul": "5.0.4",
+    "cf": "1.0.0-beta.13",
+    "husky": "9.1.7",
+    "miniflare": "5.20261006.1-alpha",
+    "msw": "3.0.3",
+    "typescript": "7.0.2",
+    "vitest": "5.0.4",
+    "wrangler": "4.149.0"
+  }
+}
