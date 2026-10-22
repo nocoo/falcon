@@ -16,12 +16,12 @@ concurrency:
 
 jobs:
   workflow-lint:
-    uses: nocoo/base-ci/.github/workflows/workflow-lint.yml@0394178ebcff0418c442d84a84119220f31f8987 # v2026.9
+    uses: nocoo/base-ci/.github/workflows/workflow-lint.yml@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
     with:
       required-reusable-workflow: nocoo/base-ci/.github/workflows/quality.yml
 
   quality:
-    uses: nocoo/base-ci/.github/workflows/quality.yml@0394178ebcff0418c442d84a84119220f31f8987 # v2026.9
+    uses: nocoo/base-ci/.github/workflows/quality.yml@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
     with:
       package-manager: bun
       runtime-version: "1.4.3"
@@ -43,7 +43,7 @@ jobs:
         gitleaks detect --no-banner --verbose --redact --no-git --source="${GITHUB_WORKSPACE}"
 
   helpers:
-    uses: nocoo/base-ci/.github/workflows/test-job.yml@0394178ebcff0418c442d84a84119220f31f8987 # v2026.9
+    uses: nocoo/base-ci/.github/workflows/test-job.yml@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
     with:
       runner: ubuntu-latest
       runtime: none
@@ -58,7 +58,7 @@ jobs:
         done
 
   native:
-    uses: nocoo/base-ci/.github/workflows/test-job.yml@0394178ebcff0418c442d84a84119220f31f8987 # v2026.9
+    uses: nocoo/base-ci/.github/workflows/test-job.yml@ac635753a869cb85fad1f52aae4ccbd6119f3cae # main 2026-10-22
     with:
       runner: macos-latest
       runtime: none
