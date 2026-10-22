@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE_CI_SHA = "0394178ebcff0418c442d84a84119220f31f8987"
+BASE_CI_SHA = "ac635753a869cb85fad1f52aae4ccbd6119f3cae"
 BASE_CI_PIN = f"nocoo/base-ci/.github/workflows/{{name}}.yml@{BASE_CI_SHA}"
 
 
@@ -51,7 +51,7 @@ class WorkflowContractTests(unittest.TestCase):
         text = read(".github/workflows/ci.yml")
         self.assertRegex(text, r"working-directory:\s*services/relay")
         self.assertRegex(text, r"runtime-version:\s*['\"]1\.4\.3['\"]")
-        self.assertRegex(text, r"node-version:\s*['\"]26\.8\.1['\"]")
+        self.assertRegex(text, r"node-version:\s*['\"]26\.12\.1['\"]")
         self.assertRegex(text, r"coverage-path:\s*services/relay/coverage")
         self.assertRegex(text, r"lockfiles:\s*bun\.lock")
         self.assertIn("bun run typecheck", text)
@@ -165,7 +165,7 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertRegex(text, r"deploy-cli:\s*cf")
         self.assertRegex(text, r"cf-version:\s*['\"]?1\.0\.0-beta\.13['\"]?")
         self.assertRegex(text, r"runtime-version:\s*['\"]1\.4\.3['\"]")
-        self.assertRegex(text, r"node-version:\s*['\"]26\.8\.1['\"]")
+        self.assertRegex(text, r"node-version:\s*['\"]26\.12\.1['\"]")
         self.assertRegex(text, r"working-directory:\s*services/relay")
         self.assertRegex(text, r"environment:\s*.*production")
         self.assertIn("source-sha:", text)
