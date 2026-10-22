@@ -408,7 +408,7 @@ public actor DecisionStore {
         else { throw FalconError("invalid_reservation", "Invalid request reservation.", status: 507) }
         let amount = Self.reservationBytes(requestBytes: requestBytes, questionCount: questionCount)
         if !hasCapacity(amount) {
-            try reclaim()
+            try cleanup()
             guard hasCapacity(amount) else { throw FalconError("storage_full", "Falcon storage is full.", status: 507) }
         }
         reservations[requestID] = (amount, generation, questionCount)
@@ -733,8 +733,6 @@ public actor DecisionStore {
         }
         return Int64(info.f_bavail) * Int64(info.f_frsize)
     }
-
-    private func reclaim() throws { try cleanup() }
 
     private func reclaimPages() throws {
         _ = try db.writeWithoutTransaction { database in
