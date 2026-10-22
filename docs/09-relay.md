@@ -61,7 +61,7 @@ Worker 的 `enable_request_signal` 显式配置在生产与测试环境，不能
 
 Worker 覆盖率范围为 `src/**/*.ts`（不含声明文件）。开发 harness 不计入这四项指标，但参与严格静态检查和真实 HTTP smoke。CLI 构建在本机输出 Docker socket 不可用的探测信息；纯 Worker 构建和 HTTP 检查仍成功，本任务未启动 Docker 或引入容器依赖。
 
-CI 使用 `nocoo/base-ci@0394178ebcff0418c442d84a84119220f31f8987`（`v2026.9`）。Worker 质量、原生 Swift、Python 辅助脚本与 workflow lint 分开执行；汇总门禁要求相同 SHA 的所有任务成功。CD 暂以 `workflow_dispatch` 触发，输入成功的 main CI run ID 和对应完整 SHA；部署前再次检查 main，部署后核对 live 的状态、版本和 SHA。
+CI 使用 `nocoo/base-ci@ac635753a869cb85fad1f52aae4ccbd6119f3cae`（`main 2026-10-22`）。Worker 质量、原生 Swift、Python 辅助脚本与 workflow lint 分开执行；汇总门禁要求相同 SHA 的所有任务成功。CD 暂以 `workflow_dispatch` 触发，输入成功的 main CI run ID 和对应完整 SHA；部署前再次检查 main，部署后核对 live 的状态、版本和 SHA。
 
 生产发布在本地验收确认之后进行。远程 Workflow 运行、正式 Secrets、生产域名/live 和目标区域推理是单独的验收项，不能用本地模拟成功替代。原生 DMG 的个人 Apple Development 签名仍走仓库已有发版流程，不假设 GitHub 托管 runner 能使用本机签名身份。
 
