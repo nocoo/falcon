@@ -7,6 +7,7 @@
     "node": "^22.18.0 || ^24.0.0 || >=26.0.0"
   },
   "scripts": {
+    "prepare": "bash ../../scripts/relay-bootstrap-hooks.sh",
     "typecheck": "cf workers types && tsc --noEmit && tsc --noEmit -p test/tsconfig.json",
     "lint": "biome check --error-on-warnings .",
     "test": "vitest run",

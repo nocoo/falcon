@@ -213,6 +213,12 @@ class HuskyAndScriptContractTests(unittest.TestCase):
         self.assertNotRegex(text, r"(?m)^\s*git config core\.hooksPath \.husky\s*$")
         self.assertIn(".husky/_", text)
 
+    def test_relay_package_prepare_bootstraps_husky(self) -> None:
+        package = json.loads(read("services/relay/package.json"))
+        prepare = package.get("scripts", {}).get("prepare", "")
+        self.assertIn("relay-bootstrap-hooks.sh", prepare)
+        self.assertNotIn("ignore-scripts", prepare)
+
     def test_check_index_and_verify_entrypoints_exist(self) -> None:
         self.assertTrue((ROOT / "scripts/relay-check-index.py").is_file())
         self.assertTrue((ROOT / "scripts/relay-verify-production.py").is_file())
