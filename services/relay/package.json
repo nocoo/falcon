@@ -7,6 +7,7 @@
     "node": "^22.18.0 || ^24.0.0 || >=26.0.0"
   },
   "scripts": {
+    "prepare": "bash ../../scripts/relay-bootstrap-hooks.sh",
     "typecheck": "cf workers types && tsc --noEmit && tsc --noEmit -p test/tsconfig.json",
     "lint": "biome check --error-on-warnings .",
     "test": "vitest run",
@@ -18,7 +19,9 @@
     "dev": "bun run build && bun run harness"
   },
   "overrides": {
-    "sharp": "0.35.5"
+    "sharp": "0.35.5",
+    "undici": "7.30.1",
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

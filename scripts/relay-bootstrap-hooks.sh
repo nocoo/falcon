@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Explicit Husky install for Falcon relay Worker checks.
-# Running this script is the install request. Do not run until the parent is ready.
+# Husky install for Falcon relay Worker checks (index-snapshot pre-commit).
+# Invoked from services/relay package.json `prepare` after `bun install`, or manually
+# from the repository root when reinstalling hooks or recording falcon.relayRegistry.
 # Marker: relay-hooks-bootstrap
 #
 # Optional BUN_CONFIG_REGISTRY: validated and stored as repo-local git config

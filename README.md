@@ -122,7 +122,7 @@ Worker 开发需要 Bun 1.4.3 和 Node；依赖及 `cf` 版本由独立 lockfile
 
 ```sh
 cd services/relay
-bun install --frozen-lockfile --ignore-scripts
+bun install --frozen-lockfile
 bun run typecheck
 bun run lint
 bun run test:coverage
@@ -131,7 +131,7 @@ bun run test:http
 
 `test:http` 构建 Worker 后，在临时 loopback 端口运行真实 HTTP 检查，官方上游被模拟。`bun run dev` 重新构建并启动同一隔离环境，默认端口 7060；本机通过 Caddy 的 HTTPS 域名访问。该环境的合成 token 为 `harness-relay-token`，不能用于生产。
 
-从仓库根目录运行 `scripts/relay-bootstrap-hooks.sh` 安装 Husky。提交时在独立临时目录中检查 Git 暂存快照，离线安装锁定依赖，执行 Worker types、lint 和覆盖率；不会把未暂存的修复当作提交内容。需要先完成依赖安装以准备本机 Bun 缓存。
+在 `services/relay` 下执行 `bun install --frozen-lockfile` 会通过 `prepare` 自动安装 Husky（也可手动运行 `scripts/relay-bootstrap-hooks.sh`）。提交时在独立临时目录中检查 Git 暂存快照，离线安装锁定依赖，执行 Worker types、lint 和覆盖率；不会把未暂存的修复当作提交内容。需要先完成依赖安装以准备本机 Bun 缓存。
 
 若安装依赖时使用了临时镜像，请用同一个 `BUN_CONFIG_REGISTRY` 环境变量运行 bootstrap。它仅在本仓库 Git 配置 `falcon.relayRegistry` 中记录离线缓存的命名空间，不修改全局 Bun 配置或 lockfile；门禁仍禁止联网安装。
 
