@@ -76,14 +76,16 @@ package version. The build records `production` mode to match base-ci deployment
 before starting the synthetic HTTP harness. Keep production/test compatibility
 dates aligned with the pinned workerd runtime; any date lag must remain explicit.
 
-Install the Worker-only Husky gate with `scripts/relay-bootstrap-hooks.sh` from
-the repository root. If dependencies were installed using a temporary
-`BUN_CONFIG_REGISTRY`, pass that same variable during bootstrap: it records
-`falcon.relayRegistry` in repository-local Git config solely to select the
-offline Bun cache namespace. Never put mirror tarball URLs in `bun.lock` or set
-a global Bun registry. The gate uses a separate index snapshot, HOME and temp
-directory, an offline frozen install with copyfile semantics, and all three
-Worker L1 commands. It does not enforce the native L1 lane.
+`cd services/relay && bun install --frozen-lockfile` runs `prepare`, which calls
+`scripts/relay-bootstrap-hooks.sh` and sets `core.hooksPath=.husky/_`. Re-run the
+script from the repository root to reinstall hooks without reinstalling packages.
+If dependencies were installed using a temporary `BUN_CONFIG_REGISTRY`, pass that
+same variable during `bun install` or bootstrap: it records `falcon.relayRegistry`
+in repository-local Git config solely to select the offline Bun cache namespace.
+Never put mirror tarball URLs in `bun.lock` or set a global Bun registry. The gate
+uses a separate index snapshot, HOME and temp directory, an offline frozen install
+with copyfile semantics, and all three Worker L1 commands. It does not enforce the
+native L1 lane. `bun install --ignore-scripts` skips hook install intentionally.
 
 CI uses immutable `nocoo/base-ci` reusable-workflow revisions for Worker quality,
 native checks, helper tests and deployment. Production deployment is dispatched
@@ -215,7 +217,7 @@ manual means explicitly performed; N/A requires a concrete reason.
 
 | Dimension | Required contract | Current status |
 | --- | --- | --- |
-| L1 | Unit statements/branches/functions/lines each ≥95%; strict types and check-only lint/format, zero errors/warnings; pre-commit failure blocking | Native remains incomplete: functions/lines are below 95%, statements/branches are unavailable, and its pre-commit lane is absent. Worker has separate four-metric 95% thresholds and an installed index-snapshot hook; this does not upgrade the native result. |
+| L1 | Unit statements/branches/functions/lines each ≥95%; strict types and check-only lint/format, zero errors/warnings; pre-commit failure blocking | Native remains incomplete: functions/lines are below 95%, statements/branches are unavailable, and its pre-commit lane is absent. Worker has separate four-metric 95% thresholds, index-snapshot pre-commit on staged `scripts/relay-check-index.py`, and Husky auto-installed via `services/relay` `prepare`; this does not upgrade the native result. |
 | L2 | Real local HTTP for every endpoint/method, MCP interoperability, SQLite lifecycle and retention integration | Implemented local HTTP, official MCP client, retention/configuration integration and separate official Python SDK checks. External disk exhaustion remains unverified. |
 | L3 | Isolated native critical journeys, appearance and accessibility checks | Manual synthetic app captures cover both appearances, focus, compact, empty, replay and usage. Automated UI journeys and full accessibility/performance matrices remain unverified. |
 | G2 | Dependency and secret scanning; missing required tools fail | Native dependencies are pinned in Package.resolved; Worker dependencies in bun.lock. CI defines OSV and Gitleaks checks through base-ci; verify execution at the exact revision. No local pre-push G2 gate is installed. |
