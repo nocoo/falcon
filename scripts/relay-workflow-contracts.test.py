@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE_CI_SHA = "633a5545fcfec91b688840650d4edf3e9cc1abbd"
+BASE_CI_SHA = "1ea10ecab22b72512399485391603fe03a161016"
 BASE_CI_PIN = f"nocoo/base-ci/.github/workflows/{{name}}.yml@{BASE_CI_SHA}"
 
 
@@ -36,12 +36,15 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("push:", text)
         self.assertNotIn("BASE_CI_SHA", text)
 
-    def test_ci_pins_base_ci_quality_test_job_and_workflow_lint(self) -> None:
+    def test_ci_pins_base_ci_quality_and_test_job_only(self) -> None:
         text = read(".github/workflows/ci.yml")
         refs = uses_refs(text)
         self.assertIn(BASE_CI_PIN.format(name="quality"), refs)
-        self.assertIn(BASE_CI_PIN.format(name="test-job"), refs)
-        self.assertIn(BASE_CI_PIN.format(name="workflow-lint"), refs)
+        self.assertGreaterEqual(
+            uses_refs(text).count(BASE_CI_PIN.format(name="test-job")),
+            2,
+        )
+        self.assertNotIn(BASE_CI_PIN.format(name="workflow-lint"), refs)
         for ref in refs:
             if ref.startswith("nocoo/base-ci/"):
                 self.assertRegex(ref, r"@[a-f0-9]{40}$")
@@ -57,7 +60,11 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("bun run typecheck", text)
         self.assertIn("bun run lint", text)
         self.assertIn("bun run test:coverage", text)
+        self.assertIn("bun run build", text)
+        self.assertIn("l2: true", text)
         self.assertIn("bun run test:http", text)
+        self.assertIn("workflow-lint: true", text)
+        self.assertIn("slot-status:", text)
         self.assertIn("security-command:", text)
         self.assertIn("gitleaks", text)
         self.assertIn("GITHUB_WORKSPACE", text)
@@ -70,6 +77,8 @@ class WorkflowContractTests(unittest.TestCase):
 
     def test_native_job_uses_documented_xcode_commands_without_swift_95_gate(self) -> None:
         text = read(".github/workflows/ci.yml")
+        self.assertRegex(text, r"(?m)^\s*l1-native-swift:\s*$")
+        self.assertIn('slot-label: "L1: Unit Tests & Coverage"', text)
         self.assertIn("macos", text.lower())
         self.assertIn(
             "DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer",
@@ -150,6 +159,10 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertNotIn("coverage-path", body)
         self.assertIn("needs.helpers.result", text)
         self.assertIn("needs.helpers.outputs.tested-sha", text)
+        self.assertIn("needs.l1-native-swift.result", text)
+        self.assertIn("needs.l1-native-swift.outputs.tested-sha", text)
+        self.assertNotIn("needs.workflow-lint", text)
+        self.assertNotIn("needs.native", text)
         # Coverage artifact remains Worker-scoped only.
         self.assertRegex(text, r"coverage-path:\s*services/relay/coverage")
         self.assertEqual(text.count("coverage-path:"), 1)
