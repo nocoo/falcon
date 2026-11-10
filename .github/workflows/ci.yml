@@ -1,3 +1,5 @@
+# CI slot standard v1 (nocoo/base-ci docs/slots.md): Worker impl S1, S2, S3, G1, G2, B1, L1, L2, Z1 via quality.yml;
+# na L1.5, L3, P1 in slot-status. macOS Swift L1/S2 与 relay helpers 为槽外作业（见 PR）。nocoo/base-ci v2026.12.
 name: CI
 
 on:
@@ -15,13 +17,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  workflow-lint:
-    uses: nocoo/base-ci/.github/workflows/workflow-lint.yml@633a5545fcfec91b688840650d4edf3e9cc1abbd # v2026.10
-    with:
-      required-reusable-workflow: nocoo/base-ci/.github/workflows/quality.yml
-
   quality:
-    uses: nocoo/base-ci/.github/workflows/quality.yml@633a5545fcfec91b688840650d4edf3e9cc1abbd # v2026.10
+    uses: nocoo/base-ci/.github/workflows/quality.yml@1ea10ecab22b72512399485391603fe03a161016 # v2026.12
     with:
       package-manager: bun
       runtime-version: "1.4.3"
@@ -36,14 +33,32 @@ jobs:
       lint-command: GIT_SHA="$GITHUB_SHA" bun run lint
       test-command: GIT_SHA="$GITHUB_SHA" bun run test:coverage
       build: true
-      build-command: GIT_SHA="$GITHUB_SHA" bun run test:http
+      build-command: GIT_SHA="$GITHUB_SHA" bun run build
+      l2: true
+      l2-command: GIT_SHA="$GITHUB_SHA" bun run test:http
       coverage-path: services/relay/coverage
       lockfiles: bun.lock
       security-command: |
         gitleaks detect --no-banner --verbose --redact --no-git --source="${GITHUB_WORKSPACE}"
+      workflow-lint: true
+      workflow-lint-required-workflow: nocoo/base-ci/.github/workflows/deploy-worker.yml
+      slot-status: >-
+        {"S1": {"status": "impl"},
+        "S2": {"status": "impl"},
+        "S3": {"status": "impl"},
+        "G1": {"status": "impl"},
+        "G2": {"status": "impl"},
+        "B1": {"status": "impl"},
+        "L1": {"status": "impl"},
+        "L1.5": {"status": "na", "reason": "Worker 运行时（miniflare）已并入 L1 vitest test:coverage，无独立 L1.5 命令"},
+        "L2": {"status": "impl"},
+        "L3": {"status": "na", "reason": "CI 未接 Playwright；原生 UI 旅程为 manual L3"},
+        "P1": {"status": "na", "reason": "services/relay package.json 为 private，不发布 npm 包"},
+        "Z1": {"status": "impl"}}
 
   helpers:
-    uses: nocoo/base-ci/.github/workflows/test-job.yml@633a5545fcfec91b688840650d4edf3e9cc1abbd # v2026.10
+    name: Relay helper contracts
+    uses: nocoo/base-ci/.github/workflows/test-job.yml@1ea10ecab22b72512399485391603fe03a161016 # v2026.12
     with:
       runner: ubuntu-latest
       runtime: none
@@ -57,9 +72,10 @@ jobs:
           python3 "$test"
         done
 
-  native:
-    uses: nocoo/base-ci/.github/workflows/test-job.yml@633a5545fcfec91b688840650d4edf3e9cc1abbd # v2026.10
+  l1-native-swift:
+    uses: nocoo/base-ci/.github/workflows/test-job.yml@1ea10ecab22b72512399485391603fe03a161016 # v2026.12
     with:
+      slot-label: "L1: Unit Tests & Coverage"
       runner: macos-latest
       runtime: none
       timeout-minutes: 45
@@ -110,23 +126,21 @@ jobs:
   ci-gate:
     name: CI Gate
     if: always()
-    needs: [workflow-lint, quality, helpers, native]
+    needs: [quality, helpers, l1-native-swift]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Require every CI job to succeed on this commit
         env:
-          WORKFLOW_LINT_RESULT: ${{ needs.workflow-lint.result }}
           QUALITY_RESULT: ${{ needs.quality.result }}
           HELPERS_RESULT: ${{ needs.helpers.result }}
-          NATIVE_RESULT: ${{ needs.native.result }}
+          NATIVE_RESULT: ${{ needs.l1-native-swift.result }}
           QUALITY_SHA: ${{ needs.quality.outputs.tested-sha }}
           HELPERS_SHA: ${{ needs.helpers.outputs.tested-sha }}
-          NATIVE_SHA: ${{ needs.native.outputs.tested-sha }}
+          NATIVE_SHA: ${{ needs.l1-native-swift.outputs.tested-sha }}
           EXPECTED_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          test "$WORKFLOW_LINT_RESULT" = success
           test "$QUALITY_RESULT" = success
           test "$HELPERS_RESULT" = success
           test "$NATIVE_RESULT" = success
