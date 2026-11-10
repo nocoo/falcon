@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE_CI_SHA = "ac635753a869cb85fad1f52aae4ccbd6119f3cae"
+BASE_CI_SHA = "633a5545fcfec91b688840650d4edf3e9cc1abbd"
 BASE_CI_PIN = f"nocoo/base-ci/.github/workflows/{{name}}.yml@{BASE_CI_SHA}"
 
 
