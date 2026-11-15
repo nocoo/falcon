@@ -18,47 +18,12 @@ concurrency:
 
 jobs:
   quality:
-    uses: nocoo/base-ci/.github/workflows/quality.yml@1ea10ecab22b72512399485391603fe03a161016 # v2026.12
-    with:
-      package-manager: bun
-      runtime-version: "1.4.3"
-      node-version: "26.12.1"
-      install-policy: blocked
-      working-directory: services/relay
-      typecheck: true
-      lint: true
-      unit: true
-      security: true
-      typecheck-command: GIT_SHA="$GITHUB_SHA" bun run typecheck
-      lint-command: GIT_SHA="$GITHUB_SHA" bun run lint
-      test-command: GIT_SHA="$GITHUB_SHA" bun run test:coverage
-      build: true
-      build-command: GIT_SHA="$GITHUB_SHA" bun run build
-      l2: true
-      l2-command: GIT_SHA="$GITHUB_SHA" bun run test:http
-      coverage-path: services/relay/coverage
-      lockfiles: bun.lock
-      security-command: |
-        gitleaks detect --no-banner --verbose --redact --no-git --source="${GITHUB_WORKSPACE}"
-      workflow-lint: true
-      workflow-lint-required-workflow: nocoo/base-ci/.github/workflows/deploy-worker.yml
-      slot-status: >-
-        {"S1": {"status": "impl"},
-        "S2": {"status": "impl"},
-        "S3": {"status": "impl"},
-        "G1": {"status": "impl"},
-        "G2": {"status": "impl"},
-        "B1": {"status": "impl"},
-        "L1": {"status": "impl"},
-        "L1.5": {"status": "na", "reason": "Worker 运行时（miniflare）已并入 L1 vitest test:coverage，无独立 L1.5 命令"},
-        "L2": {"status": "impl"},
-        "L3": {"status": "na", "reason": "CI 未接 Playwright；原生 UI 旅程为 manual L3"},
-        "P1": {"status": "na", "reason": "services/relay package.json 为 private，不发布 npm 包"},
-        "Z1": {"status": "impl"}}
+    name: quality
+    uses: ./.github/workflows/quality-slots.yml
 
   helpers:
     name: Relay helper contracts
-    uses: nocoo/base-ci/.github/workflows/test-job.yml@1ea10ecab22b72512399485391603fe03a161016 # v2026.12
+    uses: nocoo/base-ci/.github/workflows/test-job.yml@777bbe4f9bacab8a91d8c01974480a6ee23d28e0 # v2026.15
     with:
       runner: ubuntu-latest
       runtime: none
@@ -73,7 +38,7 @@ jobs:
         done
 
   l1-native-swift:
-    uses: nocoo/base-ci/.github/workflows/test-job.yml@1ea10ecab22b72512399485391603fe03a161016 # v2026.12
+    uses: nocoo/base-ci/.github/workflows/test-job.yml@777bbe4f9bacab8a91d8c01974480a6ee23d28e0 # v2026.15
     with:
       slot-label: "L1: Unit Tests & Coverage"
       runner: macos-latest

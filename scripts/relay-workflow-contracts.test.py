@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE_CI_SHA = "1ea10ecab22b72512399485391603fe03a161016"
+BASE_CI_SHA = "777bbe4f9bacab8a91d8c01974480a6ee23d28e0"
 BASE_CI_PIN = f"nocoo/base-ci/.github/workflows/{{name}}.yml@{BASE_CI_SHA}"
 
 
@@ -39,7 +39,7 @@ class WorkflowContractTests(unittest.TestCase):
     def test_ci_pins_base_ci_quality_and_test_job_only(self) -> None:
         text = read(".github/workflows/ci.yml")
         refs = uses_refs(text)
-        self.assertIn(BASE_CI_PIN.format(name="quality"), refs)
+        self.assertIn("./.github/workflows/quality-slots.yml", refs)
         self.assertGreaterEqual(
             uses_refs(text).count(BASE_CI_PIN.format(name="test-job")),
             2,
@@ -51,21 +51,16 @@ class WorkflowContractTests(unittest.TestCase):
                 self.assertTrue(ref.endswith(BASE_CI_SHA))
 
     def test_worker_quality_gate_is_service_scoped(self) -> None:
-        text = read(".github/workflows/ci.yml")
+        text = read(".github/workflows/quality-slots.yml")
         self.assertRegex(text, r"working-directory:\s*services/relay")
-        self.assertRegex(text, r"runtime-version:\s*['\"]1\.4\.3['\"]")
-        self.assertRegex(text, r"node-version:\s*['\"]26\.12\.1['\"]")
-        self.assertRegex(text, r"coverage-path:\s*services/relay/coverage")
-        self.assertRegex(text, r"lockfiles:\s*bun\.lock")
+        self.assertRegex(text, r"BUN_VERSION:\s*['\"]1\.4\.3['\"]")
+        self.assertRegex(text, r"NODE_VERSION:\s*['\"]26\.12\.1['\"]")
+        self.assertRegex(text, r"services/relay/bun\.lock")
         self.assertIn("bun run typecheck", text)
         self.assertIn("bun run lint", text)
         self.assertIn("bun run test:coverage", text)
         self.assertIn("bun run build", text)
-        self.assertIn("l2: true", text)
         self.assertIn("bun run test:http", text)
-        self.assertIn("workflow-lint: true", text)
-        self.assertIn("slot-status:", text)
-        self.assertIn("security-command:", text)
         self.assertIn("gitleaks", text)
         self.assertIn("GITHUB_WORKSPACE", text)
 
@@ -117,7 +112,7 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("Swift coverage gaps remain explicit", text)
 
     def test_worker_build_passes_git_sha_env(self) -> None:
-        ci = read(".github/workflows/ci.yml")
+        ci = read(".github/workflows/quality-slots.yml")
         deploy = read(".github/workflows/deploy.yml")
         self.assertRegex(ci, r"GIT_SHA=.*GITHUB_SHA")
         self.assertIn("GIT_SHA=", deploy)
@@ -163,9 +158,7 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("needs.l1-native-swift.outputs.tested-sha", text)
         self.assertNotIn("needs.workflow-lint", text)
         self.assertNotIn("needs.native", text)
-        # Coverage artifact remains Worker-scoped only.
-        self.assertRegex(text, r"coverage-path:\s*services/relay/coverage")
-        self.assertEqual(text.count("coverage-path:"), 1)
+        self.assertEqual(text.count("gitleaks"), 0)
 
     def test_deploy_is_dispatch_only_with_source_proof(self) -> None:
         text = read(".github/workflows/deploy.yml")
