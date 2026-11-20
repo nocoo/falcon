@@ -23,7 +23,7 @@ jobs:
 
   helpers:
     name: Relay helper contracts
-    uses: nocoo/base-ci/.github/workflows/test-job.yml@777bbe4f9bacab8a91d8c01974480a6ee23d28e0 # v2026.15
+    uses: nocoo/base-ci/.github/workflows/test-job.yml@6424d395d36a815d931f10e557762eb635d511c0 # v2026.16
     with:
       runner: ubuntu-latest
       runtime: none
@@ -38,7 +38,7 @@ jobs:
         done
 
   l1-native-swift:
-    uses: nocoo/base-ci/.github/workflows/test-job.yml@777bbe4f9bacab8a91d8c01974480a6ee23d28e0 # v2026.15
+    uses: nocoo/base-ci/.github/workflows/test-job.yml@6424d395d36a815d931f10e557762eb635d511c0 # v2026.16
     with:
       slot-label: "L1: Unit Tests & Coverage"
       runner: macos-latest
