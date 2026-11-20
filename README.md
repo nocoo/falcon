@@ -34,7 +34,7 @@ xattr -dr com.apple.quarantine /Applications/Falcon.app
 open /Applications/Falcon.app
 ```
 
-此命令不会完成公证，也不能修复损坏的签名。签名及标准发版步骤见 [AGENTS.md](AGENTS.md#standard-macos-release-procedure)。
+此命令不会完成公证，也不能修复损坏的签名。签名及标准发版步骤见 [macOS 发版流程](docs/10-macos-release.md)。
 
 版本只在 [project.yml](project.yml) 的 `MARKETING_VERSION` 中维护；侧栏、设置、关于面板和服务元信息读取同一构建版本。界面使用 `vX.Y.Z`，HTTP `/health` 与 MCP `serverInfo.version` 返回 `X.Y.Z`。变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
