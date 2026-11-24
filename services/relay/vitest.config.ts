@@ -20,6 +20,8 @@ export default defineConfig({
     }),
   ],
   test: {
+    allowOnly: false,
+    passWithNoTests: false,
     fsModuleCache: false,
     setupFiles: ["./test/setup.ts"],
     include: ["test/**/*.test.ts"],
