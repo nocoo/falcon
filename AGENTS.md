@@ -63,7 +63,7 @@ bash -n scripts/relay-bootstrap-hooks.sh .husky/pre-commit && for t in scripts/r
 
 ## Quality & Local Gates
 
-Follows `system1-quality`; Worker CI slots live in `.github/workflows/quality-slots.yml` (`quality / Z1: Gate` required on `main`). `.github/workflows/ci.yml` also runs `helpers` and `l1-native-swift`, checked on the same SHA by `CI Gate`. Status vocabulary: `enforced`, `planned`, `manual`, `N/A`.
+Follows `system1-quality`; Worker CI slots and macOS SwiftLint (`SwiftLint (macOS)`) live in `.github/workflows/quality-slots.yml` (`quality / Z1: Gate` required on `main`). `.github/workflows/ci.yml` also runs `helpers` and `l1-native-swift`, checked on the same SHA by `CI Gate`. Status vocabulary: `enforced`, `planned`, `manual`, `N/A`.
 
 - **Worker enforced**: `S1/S2/S3/G1/G2/B1/L1/L2/Z1` (`L1` >=95% on `services/relay/src/**/*.ts`, excluding harness/declarations; `G2` scans `services/relay/bun.lock`).
 - **Slot gaps**: `L3 Integration` is `N/A` in `quality-slots.yml` (covered by L1/L2 + `l1-native-swift`); `P1 Package` is `N/A` (private); `L4 E2E` is `manual` (automated UI/a11y/perf/disk-fault `planned`).
