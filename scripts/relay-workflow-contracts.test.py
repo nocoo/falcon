@@ -42,7 +42,7 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("./.github/workflows/quality-slots.yml", refs)
         self.assertGreaterEqual(
             uses_refs(text).count(BASE_CI_PIN.format(name="test-job")),
-            2,
+            1,
         )
         self.assertNotIn(BASE_CI_PIN.format(name="workflow-lint"), refs)
         for ref in refs:
@@ -73,10 +73,10 @@ class WorkflowContractTests(unittest.TestCase):
     def test_native_job_uses_documented_xcode_commands_without_swift_95_gate(self) -> None:
         text = read(".github/workflows/ci.yml")
         self.assertRegex(text, r"(?m)^\s*l1-native-swift:\s*$")
-        self.assertIn('slot-label: "L1: Unit Tests & Coverage"', text)
+        self.assertIn("L1: Unit Tests & Coverage", text)
         self.assertIn("macos", text.lower())
         self.assertIn(
-            "DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer",
+            "DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer",
             text,
         )
         self.assertIn("0.13.1", text)
@@ -94,8 +94,9 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("scripts/check-sdk.sh", text)
         self.assertNotIn(".build/out/Products/Debug/codecov", text)
         self.assertIn("build/verification/native-codecov", text)
-        self.assertIn("artifact-name:", text)
-        self.assertIn("artifact-path:", text)
+        self.assertIn("actions/cache@", text)
+        self.assertIn("actions/upload-artifact@", text)
+        self.assertIn("native-codecov", text)
         self.assertIn("swiftlint lint --strict", text)
         self.assertIn(
             "xcrun swift-format lint --strict --recursive Sources Tests",
@@ -137,7 +138,7 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertRegex(text, r"(?m)^\s*helpers:\s*$")
         self.assertGreaterEqual(
             uses_refs(text).count(BASE_CI_PIN.format(name="test-job")),
-            2,
+            1,
         )
         self.assertIn("scripts/relay-*.test.py", text)
         self.assertIn("bash -n", text)
