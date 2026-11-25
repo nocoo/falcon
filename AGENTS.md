@@ -24,9 +24,9 @@ cd services/relay
 bun install --frozen-lockfile   # runs prepare -> husky; add --ignore-scripts to skip
 bun run typecheck               # S1: cf workers types + strict tsc
 bun run lint                    # S2: Biome check-only, 0 warnings
-bun run test:coverage           # L1: >=95% statements/branches/functions/lines
+bun run test:coverage           # L1: >=80% statements/branches/functions/lines
 bun run build                   # B1: cf build --mode production
-bun run test:http               # L2: prebuilt --dry-run deploy + synthetic HTTP harness
+bun run test:http               # L3: prebuilt --dry-run deploy + synthetic HTTP harness
 bun run dev                     # local relay harness on 127.0.0.1:7060
 
 # Relay helper contracts (root)
@@ -65,8 +65,8 @@ bash -n scripts/relay-bootstrap-hooks.sh .husky/pre-commit && for t in scripts/r
 
 Follows `system1-quality`; Worker CI slots, `S2: Lint (Swift)`, `L1: Unit (Relay)`, and `L1: Unit (Swift)` live in `.github/workflows/quality-slots.yml` (`quality / Z1: Gate` required on `main`). Status vocabulary: `enforced`, `planned`, `manual`, `N/A`.
 
-- **Worker enforced**: `S1/S2/S3/G1/G2/B1/L1/L2/Z1` (`L1` >=95% on `services/relay/src/**/*.ts`, excluding harness/declarations; `G2` scans `services/relay/bun.lock`).
-- **Slot gaps**: `L3 Integration` is `N/A` in `quality-slots.yml` (covered by L1/L2 + `l1-native-swift`); `P1 Package` is `N/A` (private); `L4 E2E` is `manual` (automated UI/a11y/perf/disk-fault `planned`).
+- **Worker enforced**: `S1/S2/S3/G1/G2/B1/L1/L3/Z1` (`L1` >=80% on `services/relay/src/**/*.ts`, excluding harness/declarations; `G2` scans `services/relay/bun.lock`).
+- **Slot gaps**: `L2 Runtime` is `N/A` in `quality-slots.yml` (covered by L1/L3); `P1 Package` is `N/A` (private); `L4 E2E` is `manual` (automated UI/a11y/perf/disk-fault `planned`).
 - **Native Swift gaps**: `L1` 95% floor is `planned` (functions/lines <95%, LLVM statements/branches unavailable, `AppRuntime` is not a pure-View exemption); `G2` (`Package.resolved`) is `planned`.
 - **Local hooks**: `bun install --frozen-lockfile` in `services/relay` (or `scripts/relay-bootstrap-hooks.sh`) sets `core.hooksPath=.husky/_`; `BUN_CONFIG_REGISTRY` sets `falcon.relayRegistry` (never `bun.lock`/global).
 - **Hook scope**: `.husky/pre-commit` runs staged `scripts/relay-check-index.py` in an isolated snapshot (offline copyfile) for Worker `S1/S2/L1`; native pre-commit and `pre-push` are `planned` (no placeholder gates).

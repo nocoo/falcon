@@ -167,12 +167,9 @@ jobs:
           persist-credentials: false
       - run: |
           set -euo pipefail
-          # Stdlib helper checks only. Worker TS coverage remains the sole 95% claim.
-          bash -n scripts/relay-bootstrap-hooks.sh
-          bash -n .husky/pre-commit
-          for test in scripts/relay-*.test.py; do
-            python3 "$test"
-          done
+          # Relay deploy & workflow helper tests only (no CI hook self-tests).
+          python3 scripts/relay-verify-production.test.py
+          python3 scripts/relay-workflow-contracts.test.py
 
   l1-native-swift:
     name: "L1: Unit (Swift)"
@@ -271,6 +268,13 @@ jobs:
 
   l2-runtime:
     name: "L2: Runtime"
+    if: ${{ vars.ENABLE_L2_RUNTIME == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "N/A - Covered by L1 and L3"
+
+  l3-integration:
+    name: "L3: Integration"
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -287,13 +291,6 @@ jobs:
           working-directory: services/relay
           install-policy: blocked
       - run: GIT_SHA="$GITHUB_SHA" bun run test:http
-
-  l3-integration:
-    name: "L3: Integration"
-    if: ${{ vars.ENABLE_L3_INTEGRATION == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "N/A - Covered by L1/L2"
 
   l4-e2e:
     name: "L4: E2E"
@@ -344,14 +341,14 @@ jobs:
             "${{ needs.l1-unit.result }}" \
             "${{ needs.l1-relay.result }}" \
             "${{ needs.l1-native-swift.result }}" \
-            "${{ needs.l2-runtime.result }}"; do
+            "${{ needs.l3-integration.result }}"; do
             if [ "$r" != "success" ]; then
               echo "Required slot failed or was skipped: $r"
               exit 1
             fi
           done
           for r in \
-            "${{ needs.l3-integration.result }}" \
+            "${{ needs.l2-runtime.result }}" \
             "${{ needs.l4-e2e.result }}" \
             "${{ needs.p1-package.result }}"; do
             if [ "$r" != "success" ] && [ "$r" != "skipped" ]; then

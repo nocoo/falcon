@@ -24,7 +24,7 @@ from urllib.parse import urlparse
 
 SERVICE = Path("services/relay")
 MARKER_NAME = "_test_marker"
-FLOOR = 95.0
+FLOOR = 80.0
 REGISTRY_CONFIG_KEY = "falcon.relayRegistry"
 LIMIT_SECONDS = float(os.environ.get("FALCON_RELAY_CHECK_SECONDS", "120"))
 

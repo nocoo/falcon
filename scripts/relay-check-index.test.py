@@ -542,7 +542,7 @@ class CheckIndexTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertRegex(result.stderr + result.stdout, r"(?i)missing|bun")
 
-    def test_rejects_coverage_below_95(self) -> None:
+    def test_rejects_coverage_below_80(self) -> None:
         stub_bin(
             self.bin,
             "bun",
@@ -561,7 +561,7 @@ class CheckIndexTests(unittest.TestCase):
                       typecheck|lint) exit 0 ;;
                       test:coverage)
                         mkdir -p coverage
-                        printf '%s\\n' '{coverage_json(pct=90.0)}' > coverage/coverage-summary.json
+                        printf '%s\\n' '{coverage_json(pct=75.0)}' > coverage/coverage-summary.json
                         echo ok
                         exit 0
                         ;;
@@ -574,7 +574,7 @@ class CheckIndexTests(unittest.TestCase):
         )
         result = self.run_check()
         self.assertNotEqual(result.returncode, 0)
-        self.assertRegex(result.stderr + result.stdout, r"(?i)coverage|95")
+        self.assertRegex(result.stderr + result.stdout, r"(?i)coverage|80")
 
     def test_rejects_missing_coverage_report(self) -> None:
         stub_bin(

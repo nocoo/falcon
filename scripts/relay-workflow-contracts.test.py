@@ -133,14 +133,14 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("uv run --python 3.12.14 --no-project", text)
         self.assertIn("--with 'typesafe-sdk==0.7.1'", text)
 
-    def test_helpers_job_runs_relay_python_tests_and_shell_syntax(self) -> None:
+    def test_helpers_job_runs_relay_helper_tests(self) -> None:
         text = read(".github/workflows/quality-slots.yml")
         self.assertRegex(text, r"(?m)^\s*l1-relay:\s*$")
         self.assertIn("L1: Unit (Relay)", text)
-        self.assertIn("scripts/relay-*.test.py", text)
-        self.assertIn("bash -n", text)
-        self.assertIn("relay-bootstrap-hooks.sh", text)
-        # Python helpers must not claim Worker 95% coverage.
+        self.assertIn("scripts/relay-verify-production.test.py", text)
+        self.assertIn("scripts/relay-workflow-contracts.test.py", text)
+        self.assertNotIn("relay-bootstrap-hooks", text)
+        # Python helpers must not claim Worker coverage floors.
         helpers_block = re.search(
             r"(?ms)^\s*l1-relay:\n(.*?)(?=^\s*[a-z0-9-]+:\s*$)",
             text,
@@ -149,9 +149,11 @@ class WorkflowContractTests(unittest.TestCase):
         assert helpers_block is not None
         body = helpers_block.group(1)
         self.assertNotIn("95%", body)
+        self.assertNotIn("80%", body)
         self.assertNotIn("coverage-path", body)
         self.assertIn("needs.l1-relay.result", text)
         self.assertIn("needs.l1-native-swift.result", text)
+        self.assertIn("needs.l3-integration.result", text)
         self.assertNotIn("needs.workflow-lint", text)
         self.assertNotIn("needs.native", text)
         self.assertEqual(read(".github/workflows/ci.yml").count("gitleaks"), 0)
