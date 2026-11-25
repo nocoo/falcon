@@ -24,7 +24,7 @@ def read(relative: str) -> str:
 
 
 def uses_refs(text: str) -> list[str]:
-    return re.findall(r"(?:^\s+uses:\s*|uses:\s*)(\S+)", text, flags=re.MULTILINE)
+    return re.findall(r"^\s*(?:-\s*)?uses:\s*(\S+)", text, flags=re.MULTILINE)
 
 
 class WorkflowContractTests(unittest.TestCase):
@@ -36,16 +36,14 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("push:", text)
         self.assertNotIn("BASE_CI_SHA", text)
 
-    def test_ci_pins_base_ci_quality_and_test_job_only(self) -> None:
-        text = read(".github/workflows/ci.yml")
-        refs = uses_refs(text)
-        self.assertIn("./.github/workflows/quality-slots.yml", refs)
-        self.assertGreaterEqual(
-            uses_refs(text).count(BASE_CI_PIN.format(name="test-job")),
-            1,
-        )
-        self.assertNotIn(BASE_CI_PIN.format(name="workflow-lint"), refs)
-        for ref in refs:
+    def test_ci_delegates_exclusively_to_quality_slots(self) -> None:
+        ci_text = read(".github/workflows/ci.yml")
+        slots_text = read(".github/workflows/quality-slots.yml")
+        ci_refs = uses_refs(ci_text)
+        self.assertEqual(ci_refs, ["./.github/workflows/quality-slots.yml"])
+        self.assertNotIn("ci-gate:", ci_text)
+        self.assertNotIn("CI Gate", ci_text)
+        for ref in uses_refs(slots_text):
             if ref.startswith("nocoo/base-ci/"):
                 self.assertRegex(ref, r"@[a-f0-9]{40}$")
                 self.assertTrue(ref.endswith(BASE_CI_SHA))
@@ -71,9 +69,10 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("--frozen-lockfile", text)
 
     def test_native_job_uses_documented_xcode_commands_without_swift_95_gate(self) -> None:
-        text = read(".github/workflows/ci.yml")
+        text = read(".github/workflows/quality-slots.yml")
         self.assertRegex(text, r"(?m)^\s*l1-native-swift:\s*$")
-        self.assertIn("L1: Unit Tests & Coverage", text)
+        self.assertIn("L1: Unit (Swift)", text)
+        self.assertIn("S2: Lint (Swift)", text)
         self.assertIn("macos", text.lower())
         self.assertIn(
             "DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer",
@@ -134,18 +133,15 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("--with 'typesafe-sdk==0.7.1'", text)
 
     def test_helpers_job_runs_relay_python_tests_and_shell_syntax(self) -> None:
-        text = read(".github/workflows/ci.yml")
-        self.assertRegex(text, r"(?m)^\s*helpers:\s*$")
-        self.assertGreaterEqual(
-            uses_refs(text).count(BASE_CI_PIN.format(name="test-job")),
-            1,
-        )
+        text = read(".github/workflows/quality-slots.yml")
+        self.assertRegex(text, r"(?m)^\s*l1-relay:\s*$")
+        self.assertIn("L1: Unit (Relay)", text)
         self.assertIn("scripts/relay-*.test.py", text)
         self.assertIn("bash -n", text)
         self.assertIn("relay-bootstrap-hooks.sh", text)
         # Python helpers must not claim Worker 95% coverage.
         helpers_block = re.search(
-            r"(?ms)^\s*helpers:\n(.*?)(?=^\s*[a-z0-9-]+:\s*$)",
+            r"(?ms)^\s*l1-relay:\n(.*?)(?=^\s*[a-z0-9-]+:\s*$)",
             text,
         )
         self.assertIsNotNone(helpers_block)
@@ -153,13 +149,11 @@ class WorkflowContractTests(unittest.TestCase):
         body = helpers_block.group(1)
         self.assertNotIn("95%", body)
         self.assertNotIn("coverage-path", body)
-        self.assertIn("needs.helpers.result", text)
-        self.assertIn("needs.helpers.outputs.tested-sha", text)
+        self.assertIn("needs.l1-relay.result", text)
         self.assertIn("needs.l1-native-swift.result", text)
-        self.assertIn("needs.l1-native-swift.outputs.tested-sha", text)
         self.assertNotIn("needs.workflow-lint", text)
         self.assertNotIn("needs.native", text)
-        self.assertEqual(text.count("gitleaks"), 0)
+        self.assertEqual(read(".github/workflows/ci.yml").count("gitleaks"), 0)
 
     def test_deploy_is_dispatch_only_with_source_proof(self) -> None:
         text = read(".github/workflows/deploy.yml")
@@ -188,6 +182,7 @@ class WorkflowContractTests(unittest.TestCase):
     def test_no_floating_action_pins_in_owned_workflows(self) -> None:
         for relative in (
             ".github/workflows/ci.yml",
+            ".github/workflows/quality-slots.yml",
             ".github/workflows/deploy.yml",
         ):
             text = read(relative)

@@ -48,7 +48,7 @@ jobs:
       - run: GIT_SHA="$GITHUB_SHA" bun run lint
 
   s2-swift-lint:
-    name: "SwiftLint (macOS)"
+    name: "S2: Lint (Swift)"
     runs-on: macos-latest
     timeout-minutes: 10
     outputs:
@@ -165,6 +165,118 @@ jobs:
           install-policy: blocked
       - run: GIT_SHA="$GITHUB_SHA" bun run test:coverage
 
+  l1-relay:
+    name: "L1: Unit (Relay)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: |
+          set -euo pipefail
+          # Stdlib helper checks only. Worker TS coverage remains the sole 95% claim.
+          bash -n scripts/relay-bootstrap-hooks.sh
+          bash -n .husky/pre-commit
+          for test in scripts/relay-*.test.py; do
+            python3 "$test"
+          done
+
+  l1-native-swift:
+    name: "L1: Unit (Swift)"
+    runs-on: macos-latest
+    timeout-minutes: 45
+    outputs:
+      tested-sha: ${{ steps.record-sha.outputs.sha }}
+    env:
+      DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Cache native CI tools
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.local/bin
+            ~/.local/share/swiftlint
+            ~/.local/share/uv
+            ~/.cache/uv
+          key: ${{ runner.os }}-falcon-tools-uv0.13.1-swiftlint0.65.1-sdk0.7.1
+
+      - name: Cache SwiftPM build
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: .build
+          key: ${{ runner.os }}-falcon-swift-${{ hashFiles('Package.resolved', 'Package.swift', 'Sources/**', 'Tests/**') }}
+          restore-keys: |
+            ${{ runner.os }}-falcon-swift-${{ hashFiles('Package.resolved', 'Package.swift') }}-
+            ${{ runner.os }}-falcon-swift-
+
+      - name: Install native CI tools
+        run: |
+          set -euo pipefail
+          # Pin exact tool versions; install missing tools only on cache miss.
+          mkdir -p "${HOME}/.local/bin" "${HOME}/.local/share/swiftlint"
+          echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
+          echo "${HOME}/.local/share/swiftlint" >> "$GITHUB_PATH"
+          export PATH="${HOME}/.local/bin:${HOME}/.local/share/swiftlint:${PATH}"
+          if ! command -v uv >/dev/null || ! uv --version | grep -qF '0.13.1'; then
+            curl -LsSf https://astral.sh/uv/0.13.1/install.sh | sh
+          fi
+          uv --version | tee /tmp/falcon-uv-version.txt
+          grep -F '0.13.1' /tmp/falcon-uv-version.txt
+          if ! command -v swiftlint >/dev/null || [ "$(swiftlint version)" != "0.65.1" ]; then
+            curl -fsSL -o /tmp/swiftlint.zip \
+              https://github.com/realm/SwiftLint/releases/download/0.65.1/portable_swiftlint.zip
+            echo "c1e429b0599cf1b516f369a2d9ec04eaf0e436f3c12b637df8851fa52ff694d0  /tmp/swiftlint.zip" | shasum -a 256 -c -
+            rm -rf "${HOME}/.local/share/swiftlint"
+            mkdir -p "${HOME}/.local/share/swiftlint"
+            unzip -q /tmp/swiftlint.zip -d "${HOME}/.local/share/swiftlint"
+          fi
+          test "$(swiftlint version)" = "0.65.1"
+          command -v uv
+          command -v swiftlint
+
+      - name: Run Swift tests, coverage, SDK interop, and lint
+        run: |
+          set -euo pipefail
+          export PATH="$DEVELOPER_DIR/usr/bin:$PATH"
+
+          # Swift coverage gaps remain explicit; do not enforce a 95% Swift floor here.
+          swift test --enable-code-coverage
+          CODECOV_PATH="$(swift test --show-codecov-path)"
+          if [ -f "$CODECOV_PATH" ]; then
+            CODECOV_DIR="$(dirname "$CODECOV_PATH")"
+          elif [ -d "$CODECOV_PATH" ]; then
+            CODECOV_DIR="$CODECOV_PATH"
+          else
+            echo "::error::swift test --show-codecov-path returned missing path: $CODECOV_PATH"
+            exit 1
+          fi
+          rm -rf build/verification/native-codecov
+          mkdir -p build/verification
+          cp -R "$CODECOV_DIR" build/verification/native-codecov
+          scripts/check-sdk.sh
+          swiftlint lint --strict
+          xcrun swift-format lint --strict --recursive Sources Tests
+
+      - name: Record tested SHA
+        id: record-sha
+        if: always()
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload native coverage artifact
+        if: "!cancelled()"
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: native-codecov
+          path: build/verification/native-codecov
+          retention-days: 7
+          if-no-files-found: error
+
   l2-runtime:
     name: "L2: Runtime"
     runs-on: ubuntu-latest
@@ -214,6 +326,8 @@ jobs:
       - g2-dependencies
       - b1-build
       - l1-unit
+      - l1-relay
+      - l1-native-swift
       - l2-runtime
       - l3-integration
       - l4-e2e
@@ -234,6 +348,8 @@ jobs:
             "${{ needs.g2-dependencies.result }}" \
             "${{ needs.b1-build.result }}" \
             "${{ needs.l1-unit.result }}" \
+            "${{ needs.l1-relay.result }}" \
+            "${{ needs.l1-native-swift.result }}" \
             "${{ needs.l2-runtime.result }}"; do
             if [ "$r" != "success" ]; then
               echo "Required slot failed or was skipped: $r"
