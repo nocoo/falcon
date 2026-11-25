@@ -1,5 +1,5 @@
 # CI slot standard v1 (nocoo/base-ci docs/slots.md): S1, S2, S3, G1, G2, B1, L1, L2, Z1 via quality-slots.yml;
-# na L3, L4, P1 in slot-status. nocoo/base-ci v2026.16.
+# na L3, L4, P1 in slot-status. nocoo/base-ci v2026.17.
 name: CI
 
 on:

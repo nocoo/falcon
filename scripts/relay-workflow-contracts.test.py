@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE_CI_SHA = "6424d395d36a815d931f10e557762eb635d511c0"
+BASE_CI_SHA = "dc858360aa7812db61fd9d825943e4efd4dcd0e7"
 BASE_CI_PIN = f"nocoo/base-ci/.github/workflows/{{name}}.yml@{BASE_CI_SHA}"
 
 
@@ -59,8 +59,9 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("bun run test:coverage", text)
         self.assertIn("bun run build", text)
         self.assertIn("bun run test:http", text)
-        self.assertIn("gitleaks", text)
-        self.assertIn("GITHUB_WORKSPACE", text)
+        self.assertIn("nocoo/base-ci/.github/actions/lint-workflows@", text)
+        self.assertIn("nocoo/base-ci/.github/actions/scan-secrets@", text)
+        self.assertIn("nocoo/base-ci/.github/actions/scan-dependencies@", text)
 
     def test_check_index_install_uses_copyfile_backend(self) -> None:
         text = read("scripts/relay-check-index.py")
