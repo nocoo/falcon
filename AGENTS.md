@@ -59,7 +59,7 @@ bash -n scripts/relay-bootstrap-hooks.sh .husky/pre-commit && for t in scripts/r
 - Keep Hummingbird's default address reuse for immediate same-port restarts while still rejecting a second live listener.
 - Source icons are presentation metadata (default `Unknown`; never infer harness from name or change identity); bind source editor sheets to one identifiable item carrying the selected source.
 - No production payloads, keys, or machine-private paths in fixtures or committed screenshots.
-- Releases/deploys need explicit authorization: DMG follows [docs/10-macos-release.md](docs/10-macos-release.md); Worker deploy (`deploy.yml`) takes a green `main` CI run ID + exact SHA and verifies `/api/live`.
+- Releases/deploys need explicit authorization: DMG follows [docs/10-macos-release.md](docs/10-macos-release.md); Worker deploy (`release.yml`) takes a green `main` CI run ID + exact SHA and verifies `/api/live`.
 
 ## Quality & Local Gates
 

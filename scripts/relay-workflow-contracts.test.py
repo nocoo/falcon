@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE_CI_SHA = "bfaac83b5a4d5c7ed26320bb5b09f3ca0a01932c"
+BASE_CI_SHA = "98fc023423f82b010f17e0ebbc9dd580fe68736a"
 BASE_CI_PIN = f"nocoo/base-ci/.github/workflows/{{name}}.yml@{BASE_CI_SHA}"
 
 
@@ -114,7 +114,7 @@ class WorkflowContractTests(unittest.TestCase):
 
     def test_worker_build_passes_git_sha_env(self) -> None:
         ci = read(".github/workflows/quality-slots.yml")
-        deploy = read(".github/workflows/deploy.yml")
+        deploy = read(".github/workflows/release.yml")
         self.assertRegex(ci, r"GIT_SHA=.*GITHUB_SHA")
         self.assertIn("GIT_SHA=", deploy)
         self.assertIn("inputs.exact-sha", deploy)
@@ -161,8 +161,8 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertEqual(read(".github/workflows/ci.yml").count("gitleaks"), 0)
 
     def test_deploy_is_dispatch_only_with_source_proof(self) -> None:
-        text = read(".github/workflows/deploy.yml")
-        self.assertRegex(text, r"(?m)^name:\s*Deploy\s*$")
+        text = read(".github/workflows/release.yml")
+        self.assertRegex(text, r"(?m)^name:\s*Release\s*$")
         self.assertIn("workflow_dispatch:", text)
         self.assertIn("source-run-id:", text)
         self.assertIn("exact-sha:", text)
@@ -188,7 +188,7 @@ class WorkflowContractTests(unittest.TestCase):
         for relative in (
             ".github/workflows/ci.yml",
             ".github/workflows/quality-slots.yml",
-            ".github/workflows/deploy.yml",
+            ".github/workflows/release.yml",
         ):
             text = read(relative)
             for ref in uses_refs(text):
