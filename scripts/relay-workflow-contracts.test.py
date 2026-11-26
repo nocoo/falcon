@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE_CI_SHA = "dc858360aa7812db61fd9d825943e4efd4dcd0e7"
+BASE_CI_SHA = "bfaac83b5a4d5c7ed26320bb5b09f3ca0a01932c"
 BASE_CI_PIN = f"nocoo/base-ci/.github/workflows/{{name}}.yml@{BASE_CI_SHA}"
 
 
@@ -151,9 +151,11 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertNotIn("95%", body)
         self.assertNotIn("80%", body)
         self.assertNotIn("coverage-path", body)
-        self.assertIn("needs.l1-relay.result", text)
-        self.assertIn("needs.l1-native-swift.result", text)
-        self.assertIn("needs.l3-integration.result", text)
+        self.assertIn("nocoo/base-ci/.github/actions/z1-gate@", text)
+        self.assertIn("needs-json: ${{ toJSON(needs) }}", text)
+        self.assertIn("l1-relay", text)
+        self.assertIn("l1-native-swift", text)
+        self.assertIn("l3-integration", text)
         self.assertNotIn("needs.workflow-lint", text)
         self.assertNotIn("needs.native", text)
         self.assertEqual(read(".github/workflows/ci.yml").count("gitleaks"), 0)
