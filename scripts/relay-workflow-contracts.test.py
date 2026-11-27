@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE_CI_SHA = "e5876a604547b1ddb0916f16dd841a4f832609a0"
+BASE_CI_SHA = "3703a073693d598159e87f77f99587e586c14cfe"
 BASE_CI_PIN = f"nocoo/base-ci/.github/workflows/{{name}}.yml@{BASE_CI_SHA}"
 
 
@@ -28,21 +28,31 @@ def uses_refs(text: str) -> list[str]:
 
 
 class WorkflowContractTests(unittest.TestCase):
-    def test_ci_workflow_exists_and_triggers(self) -> None:
-        text = read(".github/workflows/ci.yml")
-        self.assertRegex(text, r"(?m)^name:\s*CI\s*$")
+    def test_pipeline_workflow_exists_and_triggers(self) -> None:
+        text = read(".github/workflows/pipeline.yml")
+        self.assertRegex(text, r"(?m)^name:\s*Pipeline\s*$")
         self.assertIn("pull_request:", text)
         self.assertRegex(text, r"branches:\s*\[\s*main\s*\]")
         self.assertIn("push:", text)
+        self.assertIn("workflow_dispatch:", text)
+        self.assertNotIn("tags:", text)
         self.assertNotIn("BASE_CI_SHA", text)
+        self.assertFalse((ROOT / ".github/workflows/ci.yml").exists())
+        self.assertFalse((ROOT / ".github/workflows/release.yml").exists())
 
-    def test_ci_delegates_exclusively_to_quality_slots(self) -> None:
-        ci_text = read(".github/workflows/ci.yml")
+    def test_pipeline_delegates_quality_and_deploy(self) -> None:
+        pipeline_text = read(".github/workflows/pipeline.yml")
         slots_text = read(".github/workflows/quality-slots.yml")
-        ci_refs = uses_refs(ci_text)
-        self.assertEqual(ci_refs, ["./.github/workflows/quality-slots.yml"])
-        self.assertNotIn("ci-gate:", ci_text)
-        self.assertNotIn("CI Gate", ci_text)
+        pipeline_refs = uses_refs(pipeline_text)
+        self.assertEqual(
+            pipeline_refs,
+            [
+                "./.github/workflows/quality-slots.yml",
+                BASE_CI_PIN.format(name="deploy-worker"),
+            ],
+        )
+        self.assertNotIn("ci-gate:", pipeline_text)
+        self.assertNotIn("CI Gate", pipeline_text)
         for ref in uses_refs(slots_text):
             if ref.startswith("nocoo/base-ci/"):
                 self.assertRegex(ref, r"@[a-f0-9]{40}$")
@@ -115,12 +125,12 @@ class WorkflowContractTests(unittest.TestCase):
         )
         self.assertIn("Swift coverage gaps remain explicit", text)
 
-    def test_worker_build_passes_git_sha_env(self) -> None:
+    def test_worker_build_passes_git_sha_and_uploads_artifact(self) -> None:
         ci = read(".github/workflows/quality-slots.yml")
-        deploy = read(".github/workflows/release.yml")
         self.assertRegex(ci, r"GIT_SHA=.*GITHUB_SHA")
-        self.assertIn("GIT_SHA=", deploy)
-        self.assertIn("inputs.exact-sha", deploy)
+        self.assertIn("b1-relay-build", ci)
+        self.assertIn("services/relay/.cloudflare/output/", ci)
+        self.assertIn("include-hidden-files: true", ci)
 
     def test_ci_checks_production_prebuilt_deployment(self) -> None:
         scripts = json.loads(read("services/relay/package.json"))["scripts"]
@@ -161,14 +171,13 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("l3-integration", text)
         self.assertNotIn("needs.workflow-lint", text)
         self.assertNotIn("needs.native", text)
-        self.assertEqual(read(".github/workflows/ci.yml").count("gitleaks"), 0)
+        self.assertEqual(read(".github/workflows/pipeline.yml").count("gitleaks"), 0)
 
-    def test_deploy_is_dispatch_only_with_source_proof(self) -> None:
-        text = read(".github/workflows/release.yml")
-        self.assertRegex(text, r"(?m)^name:\s*Release\s*$")
+    def test_deploy_is_gated_on_quality_and_reuses_b1(self) -> None:
+        text = read(".github/workflows/pipeline.yml")
+        self.assertRegex(text, r"(?m)^name:\s*Pipeline\s*$")
+        self.assertIn("needs: [quality]", text)
         self.assertIn("workflow_dispatch:", text)
-        self.assertIn("source-run-id:", text)
-        self.assertIn("exact-sha:", text)
         self.assertNotIn("workflow_run:", text)
         self.assertIn(BASE_CI_PIN.format(name="deploy-worker"), text)
         self.assertRegex(text, r"deploy-cli:\s*cf")
@@ -176,22 +185,19 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertRegex(text, r"runtime-version:\s*['\"]1\.4\.3['\"]")
         self.assertRegex(text, r"node-version:\s*['\"]26\.12\.1['\"]")
         self.assertRegex(text, r"working-directory:\s*services/relay")
+        self.assertRegex(text, r"artifact-name:\s*b1-relay-build")
+        self.assertRegex(text, r"artifact-path:\s*services/relay/\.cloudflare/output")
+        self.assertNotIn("build-command:", text)
         self.assertRegex(text, r"environment:\s*.*production")
-        self.assertIn("source-sha:", text)
-        self.assertIn("inputs.exact-sha", text)
-        self.assertIn("inputs.source-run-id", text)
         self.assertIn("scripts/relay-verify-production", text)
-        self.assertIn("cloudflare.config.ts", text.lower() + text)
-        # Prefer an explicit non-cancel note via reusable concurrency; caller may set group.
         self.assertTrue(
             "concurrency-group:" in text or "cancel-in-progress: false" in text
         )
 
     def test_no_floating_action_pins_in_owned_workflows(self) -> None:
         for relative in (
-            ".github/workflows/ci.yml",
+            ".github/workflows/pipeline.yml",
             ".github/workflows/quality-slots.yml",
-            ".github/workflows/release.yml",
         ):
             text = read(relative)
             for ref in uses_refs(text):
